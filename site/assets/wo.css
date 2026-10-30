@@ -159,8 +159,9 @@ button { font: inherit; color: inherit; }
 .wo-magazine-placeholder .wo-icon { width: 44px; height: 44px; }
 /* Use the standard event-card typography, vertical spacing and colour band. */
 .wo-magazine-body { background: var(--wo-accent); color: #fff; }
-.wo-magazine-body .wo-card-title {
-  color: #fff; display: -webkit-box; -webkit-box-orient: vertical;
+.wo-magazine-body .wo-card-title { color: #fff; }
+.wo-magazine-title {
+  display: -webkit-box; -webkit-box-orient: vertical;
   -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: anywhere;
 }
 .wo-magazine-body .wo-card-meta { color: var(--wo-accent2); font-weight: 600; }
