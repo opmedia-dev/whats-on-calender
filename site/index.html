@@ -42,32 +42,63 @@
         <div><label for="accent">Accent colour</label><input id="accent" type="text" placeholder="#7a1424"></div>
         <div><label for="accent2">Banner date colour</label><input id="accent2" type="text" placeholder="#f3df8f"></div>
         <div><label for="exclude">Hide events whose title contains (comma separated)</label><input id="exclude" type="text" placeholder="rehearsal, booking"></div>
+        <div><label for="font">Body font (CSS font-family, optional)</label><input id="font" type="text" placeholder="Arial, sans-serif"></div>
+        <div><label for="headingFont">Heading font (CSS font-family, optional)</label><input id="headingFont" type="text" placeholder="Georgia, serif"></div>
+        <div><label for="radius">Corner radius (pixels, optional)</label><input id="radius" type="number" min="0" max="40" step="1" placeholder="14"></div>
+        <div><label for="clock">Time display</label><select id="clock"><option value="">Use each view's default</option><option value="24">24-hour</option><option value="12">12-hour</option></select></div>
         <div>
           <label for="flipbook">Banner: flipbook column</label>
           <label class="inline"><input id="flipbook" type="checkbox"> Show the latest magazine as a 4th column</label>
           <input id="flipbookLink" type="url" placeholder="Magazine archive page URL (optional, adds a 'View all issues' button)">
+          <p class="muted">The flipbook is shown only in the homepage banner, not on the What's On page or calendar.</p>
         </div>
       </div>
     </section>
 
     <section class="panel">
-      <h2>1. Hero timetable (next 7 days)</h2>
+      <h2>1. Hero timetable</h2>
+      <div class="grid2">
+        <div><label for="ttDays">Days ahead</label><input id="ttDays" type="number" min="1" max="60" value="7"></div>
+        <div><label for="ttMaxHeight">Maximum list height in pixels (0 = grow naturally)</label><input id="ttMaxHeight" type="number" min="0" max="2400" value="0"></div>
+      </div>
       <textarea id="code-timetable" readonly></textarea>
       <div class="row"><button class="wo-btn copy" data-target="code-timetable">Copy code</button> <a id="open-timetable" target="_blank">Open preview</a></div>
     </section>
     <section class="panel">
       <h2>2. "What's happening" banner</h2>
+      <div class="grid2">
+        <div><label for="bannerTitle">Section heading</label><input id="bannerTitle" type="text" value="What's happening at St John's"></div>
+        <div><label for="bannerShow">Events to show</label><select id="bannerShow"><option value="featured">Events with posters/images</option><option value="all">All events</option></select></div>
+        <div><label for="bannerPerPage">Event cards per page (maximum)</label><input id="bannerPerPage" type="number" min="1" max="6" value="3"></div>
+        <div><label for="bannerMax">Maximum events in carousel</label><input id="bannerMax" type="number" min="1" max="60" value="12"></div>
+        <div><label for="flipbookWidth">Magazine column width (pixels)</label><input id="flipbookWidth" type="number" min="200" max="500" value="300"></div>
+        <div><label for="flipbookHeight">Magazine preview height (pixels)</label><input id="flipbookHeight" type="number" min="250" max="900" value="360"></div>
+        <div><label for="flipbookUrl">Flipbook preview URL (optional)</label><input id="flipbookUrl" type="url" placeholder="https://opmedia-dev.github.io/flipbook/preview.html"></div>
+      </div>
       <textarea id="code-banner" readonly></textarea>
       <div class="row"><button class="wo-btn copy" data-target="code-banner">Copy code</button> <a id="open-banner" target="_blank">Open preview</a></div>
     </section>
     <section class="panel">
       <h2>3. What's On page (regular events, search, all events, event details)</h2>
       <p class="muted">Put this on the page whose URL you entered above.</p>
+      <div class="grid2">
+        <div><label class="inline"><input id="regular" type="checkbox" checked> Show regular/repeating events row</label></div>
+        <div><label class="inline"><input id="filters" type="checkbox" checked> Show event category filters</label></div>
+        <div><label class="inline"><input id="search" type="checkbox" checked> Show event search field</label></div>
+        <div><label for="whatsonFilter">Default event filter</label><select id="whatsonFilter"><option value="">Automatic (highlights first)</option><option value="week">This week</option><option value="month">This month</option><option value="all">All events</option></select></div>
+        <div><label for="whatsonCols">Maximum columns</label><input id="whatsonCols" type="number" min="1" max="5" value="3"></div>
+        <div><label for="whatsonPerPage">Events per page</label><input id="whatsonPerPage" type="number" min="1" max="60" value="9"></div>
+      </div>
       <textarea id="code-whatson" readonly></textarea>
       <div class="row"><button class="wo-btn copy" data-target="code-whatson">Copy code</button> <a id="open-whatson" target="_blank">Open preview</a></div>
     </section>
     <section class="panel">
       <h2>4. Monthly calendar</h2>
+      <div class="grid2">
+        <div><label for="calView">Calendar view</label><select id="calView"><option value="auto">Month / list toggle (list on mobiles)</option><option value="grid">Month grid</option><option value="list">Agenda list</option></select></div>
+        <div><label for="calMaxPerDay">Visible events per day before +more</label><input id="calMaxPerDay" type="number" min="1" max="12" value="3"></div>
+        <div><label for="calCellHeight">Minimum day cell height in pixels</label><input id="calCellHeight" type="number" min="80" max="400" value="128"></div>
+      </div>
       <textarea id="code-calendar" readonly></textarea>
       <div class="row"><button class="wo-btn copy" data-target="code-calendar">Copy code</button> <a id="open-calendar" target="_blank">Open preview</a></div>
     </section>
@@ -122,25 +153,51 @@ if(d.type==='event'&&deep){var u=new URL(location.href);if(d.id)u.searchParams.s
       const q = new URLSearchParams();
       if (hex('accent')) q.set('accent', hex('accent'));
       if (val('exclude')) q.set('exclude', val('exclude'));
+      for (const name of ['font', 'headingFont', 'clock']) if (val(name)) q.set(name, val(name));
+      const setInt = (query, name, id, min, max) => {
+        const raw = val(id);
+        if (raw === '') return;
+        const n = Number(raw);
+        if (Number.isInteger(n) && n >= min && n <= max) query.set(name, String(n));
+      };
+      setInt(q, 'radius', 'radius', 0, 40);
       const link = val('link');
       const withLink = new URLSearchParams(q);
       if (link) withLink.set('link', link);
 
       const tt = new URLSearchParams(withLink);
       if (val('calendarLink')) tt.set('moreLink', val('calendarLink'));
+      setInt(tt, 'days', 'ttDays', 1, 60);
+      setInt(tt, 'maxHeight', 'ttMaxHeight', 0, 2400);
       const bn = new URLSearchParams(withLink);
-      bn.set('title', "What's happening at St John's");
+      bn.set('title', val('bannerTitle') || '0');
+      bn.set('show', val('bannerShow'));
+      setInt(bn, 'perPage', 'bannerPerPage', 1, 6);
+      setInt(bn, 'max', 'bannerMax', 1, 60);
       if (hex('accent2')) bn.set('accent2', hex('accent2'));
       if (document.getElementById('flipbook').checked) {
         bn.set('flipbook', '1');
         if (val('flipbookLink')) bn.set('flipbookLink', val('flipbookLink'));
+        if (val('flipbookUrl')) bn.set('flipbookUrl', val('flipbookUrl'));
+        setInt(bn, 'flipbookWidth', 'flipbookWidth', 200, 500);
+        setInt(bn, 'flipbookHeight', 'flipbookHeight', 250, 900);
       }
+      const wn = new URLSearchParams(q);
+      if (!document.getElementById('regular').checked) wn.set('regular', '0');
+      if (!document.getElementById('filters').checked) wn.set('filters', '0');
+      if (!document.getElementById('search').checked) wn.set('search', '0');
+      if (val('whatsonFilter')) wn.set('filter', val('whatsonFilter'));
+      setInt(wn, 'cols', 'whatsonCols', 1, 5);
+      setInt(wn, 'perPage', 'whatsonPerPage', 1, 60);
       const cal = new URLSearchParams(withLink);
+      cal.set('view', val('calView'));
+      setInt(cal, 'maxPerDay', 'calMaxPerDay', 1, 12);
+      setInt(cal, 'cellHeight', 'calCellHeight', 80, 400);
 
       const snippets = {
         timetable: iframe('timetable.html', tt, 520, 'Weekly timetable'),
         banner: iframe('banner.html', bn, 520, "What's happening"),
-        whatson: iframe('whats-on.html', q, 1600, "What's On", ' data-deeplink'),
+        whatson: iframe('whats-on.html', wn, 1600, "What's On", ' data-deeplink'),
         calendar: iframe('calendar.html', cal, 1100, 'Calendar'),
       };
       for (const [k, s] of Object.entries(snippets)) {
@@ -148,7 +205,10 @@ if(d.type==='event'&&deep){var u=new URL(location.href);if(d.id)u.searchParams.s
         document.getElementById(`open-${k}`).href = s.src;
       }
     }
-    document.querySelectorAll('input').forEach((i) => i.addEventListener('input', update));
+    document.querySelectorAll('input,select').forEach((i) => {
+      i.addEventListener('input', update);
+      i.addEventListener('change', update);
+    });
     document.querySelectorAll('button.copy').forEach((b) => b.addEventListener('click', async () => {
       const ta = document.getElementById(b.dataset.target);
       ta.select();
