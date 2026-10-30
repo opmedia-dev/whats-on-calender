@@ -56,38 +56,49 @@
       if (param('accent') && !fullPreview.searchParams.has('accent')) fullPreview.searchParams.set('accent', param('accent'));
 
       const side = h('aside', { class: 'wo-banner-side', 'aria-label': 'Latest parish magazine' });
-      const width = Math.max(260, Math.min(500, num('flipbookWidth', 350)));
       banner.classList.add('has-side');
-      banner.style.setProperty('--wo-side', `${width}px`);
       banner.append(side);
 
       const card = (issue) => {
         const label = param('flipbookTitle', 'Latest magazine');
         return h('a', {
-          class: 'wo-magazine-card',
+          class: 'wo-card wo-magazine-card',
           href: fullPreview.href,
           target: '_blank',
           rel: 'noopener noreferrer',
           'aria-label': `Open ${issue.title} in the full interactive magazine reader`,
         },
-          h('div', { class: 'wo-magazine-cover' },
+          h('div', { class: 'wo-card-media wo-magazine-cover' },
             issue.cover
               ? h('img', { src: issue.cover, alt: `Cover of ${issue.title}`, loading: 'lazy' })
               : h('div', { class: 'wo-magazine-placeholder' }, icon('file'), 'Magazine')),
-          h('div', { class: 'wo-magazine-body' },
-            h('p', { class: 'wo-magazine-kicker' }, label !== '0' ? label : 'Magazine'),
-            h('h3', { class: 'wo-magazine-title' }, issue.title),
-            h('span', { class: 'wo-magazine-link' }, 'Read magazine', icon('arrow'))));
+          h('div', { class: 'wo-card-body wo-magazine-body' },
+            h('h3', { class: 'wo-card-title wo-magazine-title' }, issue.title),
+            h('p', { class: 'wo-card-meta' }, icon('file'), h('span', {}, label !== '0' ? label : 'Magazine')),
+            h('p', { class: 'wo-card-meta' }, icon('arrow'), h('span', {}, 'Read magazine'))));
       };
 
       side.replaceChildren(card({ title: 'Latest parish magazine', cover: null }));
       loadMagazineIssue(preview.href)
-        .then((issue) => side.replaceChildren(card(issue)))
+        .then((issue) => { side.replaceChildren(card(issue)); syncMagazineHeight(); })
         .catch((error) => {
           // A missing or inaccessible catalogue must not affect event cards.
           console.warn('Magazine cover unavailable; keeping the reader link:', error);
         });
     }
+
+    // Event card heights are determined by the tallest title/metadata in the
+    // three-card grid. Align the magazine precisely to that actual row height,
+    // rather than assuming both card bodies happen to have the same text height.
+    // The magazine stacks naturally below the event grid on narrower embeds.
+    const syncMagazineHeight = () => {
+      const card = banner.querySelector('.wo-magazine-card');
+      const event = cardsEl.querySelector('.wo-card');
+      if (!card) return;
+      card.style.height = event && banner.clientWidth > 1120
+        ? `${Math.ceil(event.getBoundingClientRect().height)}px`
+        : '';
+    };
 
     const allLink = param('moreLink', param('link'));
     if (/^https?:\/\//.test(allLink) && param('moreText') !== '0') {
@@ -117,7 +128,11 @@
         if (!items.length) cardsEl.replaceChildren(emptyState(param('emptyText', 'More events coming soon.')));
       };
       render();
-      new ResizeObserver(() => { if (perPage() !== current) render(); }).observe(cardsEl);
+      syncMagazineHeight();
+      new ResizeObserver(() => {
+        if (perPage() !== current) render();
+        syncMagazineHeight();
+      }).observe(cardsEl);
       const seconds = num('autoplay', 0);
       if (seconds > 0) {
         let paused = false;
