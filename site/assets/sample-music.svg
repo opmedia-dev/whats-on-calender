@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 750" role="img" aria-labelledby="title">
+<title id="title">SAMPLE musical event artwork</title>
+<rect width="1200" height="750" fill="#242d46"/>
+<path d="M0 615Q300 400 600 615T1200 615V750H0Z" fill="#7a1424"/>
+<circle cx="965" cy="155" r="90" fill="#f3df8f"/>
+<path d="M120 140Q370 50 610 155T1080 155" fill="none" stroke="#f3df8f" stroke-width="3" opacity=".5"/>
+<text x="600" y="180" text-anchor="middle" font-family="Arial,sans-serif" font-size="36" letter-spacing="12" fill="#f3df8f">SAMPLE EVENT</text>
+<text x="600" y="362" text-anchor="middle" font-family="Georgia,serif" font-size="106" fill="white">Music &amp;</text>
+<text x="600" y="482" text-anchor="middle" font-family="Georgia,serif" font-size="106" fill="white">Community</text>
+<text x="600" y="658" text-anchor="middle" font-family="Arial,sans-serif" font-size="32" fill="#fff">Preview artwork • Not a real event</text>
+</svg>

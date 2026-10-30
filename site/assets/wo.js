@@ -120,6 +120,13 @@ export async function loadEvents() {
   const res = await fetch(new URL('../events.json', import.meta.url), { cache: 'no-cache' });
   if (!res.ok) throw new Error(`Could not load events (${res.status})`);
   const data = await res.json();
+  if (data.preview && !document.querySelector('.wo-demo-notice')) {
+    const notice = document.createElement('div');
+    notice.className = 'wo-demo-notice';
+    notice.setAttribute('role', 'status');
+    notice.textContent = 'PREVIEW MODE — Sample events only. Not connected to Google Calendar.';
+    document.body.prepend(notice);
+  }
   tz = data.timeZone || tz;
   const base = new URL('../', import.meta.url);
   const resolve = (rel) => (rel && !/^https?:/i.test(rel) ? new URL(rel, base).href : rel);
@@ -139,7 +146,10 @@ export async function loadEvents() {
   return { ...data, events };
 }
 
-export const isUpcoming = (e, now = new Date()) => e.endDate > now || e.endKey >= dayKey(now);
+// An event is upcoming while it has not finished, including events in progress.
+// endKey is a calendar-day label, not an end-time: comparing it here would
+// incorrectly retain an 8am event until midnight on the same day.
+export const isUpcoming = (e, now = new Date()) => e.endDate > now;
 
 // One entry per series (its next date), e.g. for cards; series with the same
 // title (e.g. "Toddler Group" on Tuesdays and on Thursdays) are merged.

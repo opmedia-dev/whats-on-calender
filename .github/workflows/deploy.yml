@@ -26,7 +26,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     outputs:
-      changed: ${{ steps.sync.outputs.changed || 'true' }}
+      changed: ${{ steps.decide.outputs.changed }}
     steps:
       - uses: actions/checkout@v4
 
@@ -48,8 +48,24 @@ jobs:
           key: attachments-${{ github.run_id }}
           restore-keys: attachments-
 
+      # Without the Google API secret we publish explicitly labelled sample
+      # events for pre-rollout review. Never claim to show real calendar data.
+      - name: Detect preview or live data source
+        id: source
+        env:
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+        run: |
+          if [ -n "$GOOGLE_API_KEY" ]; then
+            echo "mode=live" >> "$GITHUB_OUTPUT"
+            echo "Google Calendar configured: building live event data."
+          else
+            echo "mode=preview" >> "$GITHUB_OUTPUT"
+            echo "::warning::GOOGLE_API_KEY is not configured. This deployment will show DEMONSTRATION events, never real calendar events."
+          fi
+
       - name: Sync Google Calendar
         id: sync
+        if: steps.source.outputs.mode == 'live'
         env:
           GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
           GCAL_ID: ${{ vars.GCAL_ID }}
@@ -57,12 +73,36 @@ jobs:
           FORCE: ${{ inputs.force || 'false' }}
         run: node scripts/sync-calendar.mjs
 
+      - name: Generate demonstration calendar
+        if: steps.source.outputs.mode == 'preview' && github.event_name != 'schedule'
+        run: node scripts/preview-data.mjs
+
+      - name: Decide whether to publish
+        id: decide
+        env:
+          MODE: ${{ steps.source.outputs.mode }}
+          EVENT: ${{ github.event_name }}
+          SYNC_CHANGED: ${{ steps.sync.outputs.changed }}
+        run: |
+          if [ "$MODE" = 'preview' ]; then
+            # Avoid redeploying unchanged sample content every 15 minutes.
+            if [ "$EVENT" = 'schedule' ]; then
+              echo "changed=false" >> "$GITHUB_OUTPUT"
+            else
+              echo "changed=true" >> "$GITHUB_OUTPUT"
+            fi
+          elif [ "$SYNC_CHANGED" = 'false' ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Build site
-        if: steps.sync.outputs.changed != 'false'
+        if: steps.decide.outputs.changed == 'true'
         run: node scripts/build.mjs
 
       - uses: actions/upload-pages-artifact@v3
-        if: steps.sync.outputs.changed != 'false'
+        if: steps.decide.outputs.changed == 'true'
         with:
           path: _site
 

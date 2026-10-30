@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 750" role="img" aria-labelledby="title">
+<title id="title">SAMPLE community event artwork</title>
+<rect width="1200" height="750" fill="#7a1424"/>
+<circle cx="1050" cy="90" r="280" fill="#f3df8f" opacity=".13"/>
+<circle cx="110" cy="690" r="290" fill="#f3df8f" opacity=".09"/>
+<path d="M90 100h1020M90 645h1020" stroke="#f3df8f" stroke-width="4"/>
+<text x="600" y="170" text-anchor="middle" fill="#f3df8f" font-family="Arial,sans-serif" font-size="35" letter-spacing="11">SAMPLE EVENT</text>
+<text x="600" y="352" text-anchor="middle" fill="#fff" font-family="Georgia,serif" font-size="100">Community</text>
+<text x="600" y="458" text-anchor="middle" fill="#fff" font-family="Georgia,serif" font-size="100">Gathering</text>
+<text x="600" y="566" text-anchor="middle" fill="#f3df8f" font-family="Arial,sans-serif" font-size="33">Preview artwork • Not a real event</text>
+</svg>
