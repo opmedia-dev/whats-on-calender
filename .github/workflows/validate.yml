@@ -27,6 +27,8 @@ jobs:
         run: npm ci
       - name: Test event parsing and presentation
         run: npm test
+      - name: Create realistic API-free preview data
+        run: node scripts/preview-data.mjs
       - name: Check static site build (without live calendar credentials)
         run: npm run build
       - name: Check generated preview pages
@@ -37,3 +39,6 @@ jobs:
           test -s _site/whats-on.html
           test -s _site/calendar.html
           test -s _site/events.json
+          test -s _site/assets/sample-community.svg
+          test -s _site/assets/sample-fair.svg
+          node -e "const d=require('./_site/events.json');if(!d.preview||d.events.length<25)process.exit(1);"
