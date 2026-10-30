@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en" data-detail="inline">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Parish Weekly Mailings</title>
+  <link rel="stylesheet" href="assets/wo.css">
+</head>
+<body>
+  <main class="wo-wrap wo-mailings-wrap">
+    <h1 class="wo-heading">Parish Weekly Mailings</h1>
+    <p class="wo-mailings-intro">Catch up with recent parish news, worship information and community announcements.</p>
+    <label class="wo-search"><input id="mailingSearch" type="search" placeholder="Search past mailings" aria-label="Search weekly mailings"></label>
+    <p class="wo-mailings-count" id="mailingCount" aria-live="polite"></p>
+    <div id="mailings" class="wo-mailings-list"><p class="wo-loading">Loading mailings…</p></div>
+  </main>
+  <script type="module">
+    import { init, h, icon, showError } from './assets/wo.js';
+    import { loadMailings } from './assets/mailings.js';
+    await init();
+    const list = document.getElementById('mailings');
+    const search = document.getElementById('mailingSearch');
+    const count = document.getElementById('mailingCount');
+    try {
+      const { preview, mailings } = await loadMailings();
+      if (preview) {
+        const notice = h('div', { class: 'wo-demo-notice', role: 'status' },
+          'MAILING PREVIEW — Sample weekly mailing. Not connected to Mailchimp.');
+        document.body.prepend(notice);
+      }
+      const render = () => {
+        const q = search.value.trim().toLowerCase();
+        const results = mailings.filter((m) => (m.title + ' ' + m.summary).toLowerCase().includes(q));
+        count.textContent = `${results.length} mailing${results.length === 1 ? '' : 's'}`;
+        list.replaceChildren(...results.map((m) => h('a', {
+          class: 'wo-mailing-row', href: m.url, target: '_blank', rel: 'noopener noreferrer',
+        },
+          h('span', { class: 'wo-mailing-row-date' }, new Intl.DateTimeFormat('en-GB', {
+            timeZone: 'Europe/London', day: 'numeric', month: 'short', year: 'numeric',
+          }).format(new Date(m.published))),
+          h('span', { class: 'wo-mailing-row-content' },
+            h('strong', {}, m.title),
+            m.summary ? h('span', { class: 'wo-mailing-row-summary' }, m.summary) : null),
+          h('span', { class: 'wo-mailing-row-link' }, preview ? 'Sample mailing' : 'Read mailing', icon('arrow')))));
+        if (!results.length) list.replaceChildren(h('p', { class: 'wo-empty' },
+          q ? 'No mailings match your search.' : 'No weekly mailings available.'));
+      };
+      search.addEventListener('input', render);
+      render();
+    } catch (error) {
+      console.error(error);
+      showError(list, 'Weekly mailings could not be loaded.');
+    }
+  </script>
+</body>
+</html>
