@@ -1,6 +1,6 @@
 # What's On
 
-Four What's On embeds for a Duda site (or any site), built from a public Google Calendar.
+Four What's On event embeds plus an independent weekly mailing archive for a Duda site (or any site), built from a public Google Calendar and a public Mailchimp RSS feed.
 Hosted for free on GitHub Pages, so there's no server to run.
 
 | Page | Embed |
@@ -9,6 +9,7 @@ Hosted for free on GitHub Pages, so there's no server to run.
 | `banner.html` | "What's happening" banner: paged cards of events with pictures, with a fourth card for the latest magazine issue |
 | `whats-on.html` | What's On page: regular (repeating) events, search, a card grid and full event details |
 | `calendar.html` | Monthly calendar with Today/prev/next, a Month/List switch and "+N more" for busy days; switches to a list on phones |
+| `mailings.html` | Independent, searchable Parish Weekly Mailings archive (links open on Mailchimp) |
 | `index.html` | Embed codes to copy into Duda, plus notes for editors |
 
 Every embed can open an event's **detail view**, which shows:
@@ -23,6 +24,24 @@ Every embed can open an event's **detail view**, which shows:
 - Add to Google, Apple or Outlook calendar, and Share
 
 Live site: https://opmedia-dev.github.io/whats-on-calender/
+
+## Weekly Mailchimp mailing (independent of Duda)
+
+The latest **sent** campaign from the public Mailchimp RSS feed appears as one rotating card
+in `banner.html` (default `mailing=1`). Past issues appear **only** in
+`mailings.html`. They are never inserted into `whats-on.html`, `calendar.html`,
+the hero timetable or the Google Calendar event feed. The monthly parish magazine remains a
+separate fixed card in the banner.
+
+Configure repository **Settings → Secrets and variables → Actions → Variables →
+New repository variable** with the name `MAILCHIMP_RSS_URL` and the exact public
+sent-campaign RSS address currently used for the manual Duda blog import.
+The scheduled GitHub Action checks the feed approximately every 15 minutes, retains
+up to 24 issues, deduplicates by campaign GUID and skips redeployment when unchanged.
+If the URL is absent, the preview uses an explicitly labelled **sample mailing**.
+The full email opens via the campaign URL supplied by Mailchimp; no Duda
+blog import, Mailchimp credentials or subscription/contact data are involved.
+The archive is a separate optional fifth embed.
 
 ## Managing events (in Google Calendar)
 
@@ -78,16 +97,20 @@ on each run, but if syncing ever stops, press **Run workflow**.
 ## Embedding in Duda
 
 Open <https://opmedia-dev.github.io/whats-on-calender/>, enter your What's On page URL, then
-configure **each of the four embeds** independently before copying its HTML snippet into a Duda
+configure **each embed** independently before copying its HTML snippet into a Duda
 **HTML** widget. The visual embed generator provides these controls without hand-editing URLs:
 
 - **Shared:** brand colours, font families, corner radius, 12/24-hour clock and excluded titles.
 - **Hero timetable:** number of days and optional scrollable maximum height.
 - **Homepage banner:** heading, featured/all events, cards per page, maximum events,
-  and optional alternate HTTPS magazine-preview URL. With the magazine enabled,
+  **14-day** lookahead (configurable), **8-second** automatic paging (configurable;
+  pauses on hover, focus, event detail, hidden tabs and reduced motion), latest
+  weekly mailing toggle, and optional alternate HTTPS magazine-preview URL.
+  With the magazine enabled,
   the banner lays out three event cards and the latest magazine as four equal-width
   columns; the magazine matches the tallest event card in the row. The cover comes
   from the flipbook's published `issues.json` and opens the complete flipbook.
+- **Weekly Mailings:** searchable independent archive of sent Mailchimp campaigns.
 - **What's On page:** regular events row, search, filters, default tab, grid columns and page size.
 - **Monthly calendar:** grid/list/automatic view, events per day and minimum cell height.
 
@@ -132,9 +155,10 @@ under the list), `emptyText`.
 `banner.html`:
 
 - `title` (`0` hides it)
-- `perPage` (3, fewer on narrow screens), `max` (12), `minCardWidth` (240)
-- `show=all` (include events without pictures), `days` (only the next N days)
-- `autoplay` (seconds per page)
+- `perPage` (3, fewer on narrow screens), `max` (9), `minCardWidth` (240)
+- `show=all` (include events without pictures), `days` (14 by default, 1–90 permitted)
+- `autoplay` (8 seconds by default, `0` disables; 3–60 seconds permitted)
+- `mailing=0` hides the latest sent weekly mailing card; its archive remains separate
 - `style=plain` (no colour band), `ratio=4:3`
 - `moreLink` + `moreText` ("See all events" link beside the pager; defaults to `link`, `moreText=0` hides it)
 - `flipbook=1`, `flipbookUrl`, `flipbookLink` (archive page passed to the full reader), `flipbookTitle` ("Latest magazine"). The banner shows a **cover card** using the latest issue image/title from the flipbook's `issues.json`. Clicking it opens the full interactive reader in a separate tab. Magazine width is automatically matched to the event cards; old `flipbookWidth` and `flipbookHeight` options are ignored.

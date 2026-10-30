@@ -63,6 +63,14 @@ jobs:
             echo "::warning::GOOGLE_API_KEY is not configured. This deployment will show DEMONSTRATION events, never real calendar events."
           fi
 
+      - name: Sync Mailchimp sent-campaign RSS
+        id: mailings
+        env:
+          MAILCHIMP_RSS_URL: ${{ vars.MAILCHIMP_RSS_URL }}
+          SITE_URL: ${{ github.event_name == 'schedule' && format('https://{0}.github.io/{1}/', github.repository_owner, github.event.repository.name) || '' }}
+          FORCE: ${{ inputs.force || 'false' }}
+        run: node scripts/sync-mailings.mjs
+
       - name: Sync Google Calendar
         id: sync
         if: steps.source.outputs.mode == 'live'
@@ -70,11 +78,13 @@ jobs:
           GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
           GCAL_ID: ${{ vars.GCAL_ID }}
           SITE_URL: ${{ github.event_name == 'schedule' && format('https://{0}.github.io/{1}/', github.repository_owner, github.event.repository.name) || '' }}
-          FORCE: ${{ inputs.force || 'false' }}
+          # A mailing-only change still needs a complete events.json and
+          # associated media copied into this combined Pages deployment.
+          FORCE: ${{ steps.mailings.outputs.changed == 'true' || inputs.force || 'false' }}
         run: node scripts/sync-calendar.mjs
 
       - name: Generate demonstration calendar
-        if: steps.source.outputs.mode == 'preview' && github.event_name != 'schedule'
+        if: steps.source.outputs.mode == 'preview'
         run: node scripts/preview-data.mjs
 
       - name: Decide whether to publish
@@ -83,18 +93,12 @@ jobs:
           MODE: ${{ steps.source.outputs.mode }}
           EVENT: ${{ github.event_name }}
           SYNC_CHANGED: ${{ steps.sync.outputs.changed }}
+          MAILINGS_CHANGED: ${{ steps.mailings.outputs.changed }}
         run: |
-          if [ "$MODE" = 'preview' ]; then
-            # Avoid redeploying unchanged sample content every 15 minutes.
-            if [ "$EVENT" = 'schedule' ]; then
-              echo "changed=false" >> "$GITHUB_OUTPUT"
-            else
-              echo "changed=true" >> "$GITHUB_OUTPUT"
-            fi
-          elif [ "$SYNC_CHANGED" = 'false' ]; then
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-          else
+          if [ "$EVENT" != 'schedule' ] || [ "$MAILINGS_CHANGED" = 'true' ] || { [ "$MODE" = 'live' ] && [ "$SYNC_CHANGED" != 'false' ]; }; then
             echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Build site

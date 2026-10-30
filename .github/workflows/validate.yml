@@ -29,6 +29,8 @@ jobs:
         run: npm test
       - name: Create realistic API-free preview data
         run: node scripts/preview-data.mjs
+      - name: Create sample weekly mailing for standalone preview
+        run: node scripts/sync-mailings.mjs
       - name: Check static site build (without live calendar credentials)
         run: npm run build
       - name: Check generated preview pages
@@ -38,7 +40,10 @@ jobs:
           test -s _site/banner.html
           test -s _site/whats-on.html
           test -s _site/calendar.html
+          test -s _site/mailings.html
+          test -s _site/mailings.json
           test -s _site/events.json
           test -s _site/assets/sample-community.svg
           test -s _site/assets/sample-fair.svg
           node -e "const d=require('./_site/events.json');if(!d.preview||d.events.length<25)process.exit(1);"
+          node -e "const d=require('./_site/mailings.json');if(!d.preview||!d.mailings.some(m=>m.title.includes('sample')))process.exit(1);"

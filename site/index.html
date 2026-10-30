@@ -68,7 +68,10 @@
           <p class="muted" id="flipbookHelp" role="status" aria-live="polite">Magazine disabled. Tick this box or enter a preview URL below.</p>
         </div>
         <div><label for="bannerPerPage">Event cards per page (maximum)</label><input id="bannerPerPage" type="number" min="1" max="6" value="3"></div>
-        <div><label for="bannerMax">Maximum events in carousel</label><input id="bannerMax" type="number" min="1" max="60" value="12"></div>
+        <div><label for="bannerMax">Maximum upcoming events in carousel</label><input id="bannerMax" type="number" min="1" max="60" value="9"></div>
+        <div><label for="bannerDays">Look ahead (days)</label><input id="bannerDays" type="number" min="1" max="90" value="14"><p class="muted">Only upcoming events within this window appear in the banner; the full calendar is unaffected.</p></div>
+        <div><label for="bannerAutoplay">Automatically change page every (seconds; 0 = off)</label><input id="bannerAutoplay" type="number" min="0" max="60" value="8"><p class="muted">Pauses when hovered, keyboard-focused, an event is open, or reduced motion is enabled.</p></div>
+        <div><label class="inline"><input id="bannerMailing" type="checkbox" checked> Include latest weekly Mailchimp mailing as a rotating card</label><p class="muted">Mailing appears among event cards. The magazine remains in its separate, fixed fourth column when enabled.</p></div>
         <div>
           <label for="flipbookUrl">Magazine preview URL (optional)</label>
           <input id="flipbookUrl" type="url" placeholder="https://opmedia-dev.github.io/flipbook/preview.html">
@@ -84,7 +87,14 @@
       <div class="row"><button class="wo-btn copy" data-target="code-banner">Copy code</button> <a id="open-banner" target="_blank">Open preview</a></div>
     </section>
     <section class="panel">
-      <h2>3. What's On page (regular events, search, all events, event details)</h2>
+      <h2>3. Weekly Mailing archive</h2>
+      <p class="muted">An independent, searchable list of sent weekly mailings. The full email opens in Mailchimp. Set the public RSS URL in GitHub Actions variable <code>MAILCHIMP_RSS_URL</code> to replace the sample mailing.</p>
+      <textarea id="code-mailings" readonly></textarea>
+      <div class="row"><button class="wo-btn copy" data-target="code-mailings">Copy code</button> <a id="open-mailings" target="_blank">Open mailing archive preview</a></div>
+    </section>
+
+    <section class="panel">
+      <h2>4. What's On page (regular events, search, all events, event details)</h2>
       <p class="muted">Put this on the page whose URL you entered above.</p>
       <div class="grid2">
         <div><label class="inline"><input id="regular" type="checkbox" checked> Show regular/repeating events row</label></div>
@@ -98,7 +108,7 @@
       <div class="row"><button class="wo-btn copy" data-target="code-whatson">Copy code</button> <a id="open-whatson" target="_blank">Open preview</a></div>
     </section>
     <section class="panel">
-      <h2>4. Monthly calendar</h2>
+      <h2>5. Monthly calendar</h2>
       <div class="grid2">
         <div><label for="calView">Calendar view</label><select id="calView"><option value="auto">Month / list toggle (list on mobiles)</option><option value="grid">Month grid</option><option value="list">Agenda list</option></select></div>
         <div><label for="calMaxPerDay">Visible events per day before +more</label><input id="calMaxPerDay" type="number" min="1" max="12" value="3"></div>
@@ -187,6 +197,9 @@ if(d.type==='event'&&deep){var u=new URL(location.href);if(d.id)u.searchParams.s
       bn.set('show', val('bannerShow'));
       setInt(bn, 'perPage', 'bannerPerPage', 1, 6);
       setInt(bn, 'max', 'bannerMax', 1, 60);
+      setInt(bn, 'days', 'bannerDays', 1, 90);
+      setInt(bn, 'autoplay', 'bannerAutoplay', 0, 60);
+      if (!document.getElementById('bannerMailing').checked) bn.set('mailing', '0');
       if (hex('accent2')) bn.set('accent2', hex('accent2'));
       const showFlipbook = document.getElementById('flipbook').checked;
       document.getElementById('flipbookHelp').textContent = showFlipbook
@@ -212,6 +225,7 @@ if(d.type==='event'&&deep){var u=new URL(location.href);if(d.id)u.searchParams.s
       const snippets = {
         timetable: iframe('timetable.html', tt, 520, 'Weekly timetable'),
         banner: iframe('banner.html', bn, 520, "What's happening"),
+        mailings: iframe('mailings.html', q, 800, 'Parish weekly mailings'),
         whatson: iframe('whats-on.html', wn, 1600, "What's On", ' data-deeplink'),
         calendar: iframe('calendar.html', cal, 1100, 'Calendar'),
       };

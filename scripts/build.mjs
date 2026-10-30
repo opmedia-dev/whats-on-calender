@@ -15,6 +15,14 @@ if (fs.existsSync(path.join(data, 'events.json'))) {
   console.warn('data/events.json not found: run scripts/sync-calendar.mjs first. Publishing an empty calendar.');
   fs.writeFileSync(path.join(out, 'events.json'), JSON.stringify({ generated: new Date().toISOString(), timeZone: 'Europe/London', events: [], details: {} }));
 }
+if (fs.existsSync(path.join(data, 'mailings.json'))) {
+  fs.copyFileSync(path.join(data, 'mailings.json'), path.join(out, 'mailings.json'));
+} else {
+  // Keep this second content source independent of the calendar.
+  fs.writeFileSync(path.join(out, 'mailings.json'), JSON.stringify({
+    preview: true, generated: new Date().toISOString(), mailings: [],
+  }));
+}
 fs.writeFileSync(path.join(out, '.nojekyll'), '');
 const { events = [] } = JSON.parse(fs.readFileSync(path.join(out, 'events.json'), 'utf8'));
 console.log(`Built _site/ with ${events.length} event(s)`);
