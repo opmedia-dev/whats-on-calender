@@ -46,12 +46,6 @@
         <div><label for="headingFont">Heading font (CSS font-family, optional)</label><input id="headingFont" type="text" placeholder="Georgia, serif"></div>
         <div><label for="radius">Corner radius (pixels, optional)</label><input id="radius" type="number" min="0" max="40" step="1" placeholder="14"></div>
         <div><label for="clock">Time display</label><select id="clock"><option value="">Use each view's default</option><option value="24">24-hour</option><option value="12">12-hour</option></select></div>
-        <div>
-          <label for="flipbook">Banner: flipbook column</label>
-          <label class="inline"><input id="flipbook" type="checkbox"> Show the latest magazine as a 4th column</label>
-          <input id="flipbookLink" type="url" placeholder="Magazine archive page URL (optional, adds a 'View all issues' button)">
-          <p class="muted">The flipbook is shown only in the homepage banner, not on the What's On page or calendar.</p>
-        </div>
       </div>
     </section>
 
@@ -69,11 +63,24 @@
       <div class="grid2">
         <div><label for="bannerTitle">Section heading</label><input id="bannerTitle" type="text" value="What's happening at St John's"></div>
         <div><label for="bannerShow">Events to show</label><select id="bannerShow"><option value="featured">Events with posters/images</option><option value="all">All events</option></select></div>
+        <div>
+          <label class="inline" for="flipbook"><input id="flipbook" type="checkbox"> Show latest magazine beside event cards</label>
+          <p class="muted" id="flipbookHelp" role="status" aria-live="polite">Magazine disabled. Tick this box or enter a preview URL below.</p>
+        </div>
         <div><label for="bannerPerPage">Event cards per page (maximum)</label><input id="bannerPerPage" type="number" min="1" max="6" value="3"></div>
         <div><label for="bannerMax">Maximum events in carousel</label><input id="bannerMax" type="number" min="1" max="60" value="12"></div>
         <div><label for="flipbookWidth">Magazine column width (pixels)</label><input id="flipbookWidth" type="number" min="200" max="500" value="300"></div>
         <div><label for="flipbookHeight">Magazine preview height (pixels)</label><input id="flipbookHeight" type="number" min="250" max="900" value="360"></div>
-        <div><label for="flipbookUrl">Flipbook preview URL (optional)</label><input id="flipbookUrl" type="url" placeholder="https://opmedia-dev.github.io/flipbook/preview.html"></div>
+        <div>
+          <label for="flipbookUrl">Magazine preview URL (optional)</label>
+          <input id="flipbookUrl" type="url" placeholder="https://opmedia-dev.github.io/flipbook/preview.html">
+          <p class="muted">Leave blank for the latest issue. For a custom link, use a <code>preview.html</code> page, not the flipbook embed generator. Entering a URL automatically enables the magazine.</p>
+        </div>
+        <div>
+          <label for="flipbookLink">Magazine archive URL (optional)</label>
+          <input id="flipbookLink" type="url" placeholder="https://opmedia-dev.github.io/flipbook/library.html">
+          <p class="muted">Adds a “View all issues” button. Entering a URL also enables the magazine.</p>
+        </div>
       </div>
       <textarea id="code-banner" readonly></textarea>
       <div class="row"><button class="wo-btn copy" data-target="code-banner">Copy code</button> <a id="open-banner" target="_blank">Open preview</a></div>
@@ -183,7 +190,11 @@ if(d.type==='event'&&deep){var u=new URL(location.href);if(d.id)u.searchParams.s
       setInt(bn, 'perPage', 'bannerPerPage', 1, 6);
       setInt(bn, 'max', 'bannerMax', 1, 60);
       if (hex('accent2')) bn.set('accent2', hex('accent2'));
-      if (document.getElementById('flipbook').checked) {
+      const showFlipbook = document.getElementById('flipbook').checked;
+      document.getElementById('flipbookHelp').textContent = showFlipbook
+        ? (val('flipbookUrl') ? 'Magazine enabled: using your preview URL.' : 'Magazine enabled: showing the latest issue from the flipbook.')
+        : 'Magazine disabled. Tick this box or enter a preview URL below.';
+      if (showFlipbook) {
         bn.set('flipbook', '1');
         if (val('flipbookLink')) bn.set('flipbookLink', val('flipbookLink'));
         if (val('flipbookUrl')) bn.set('flipbookUrl', val('flipbookUrl'));
@@ -212,6 +223,13 @@ if(d.type==='event'&&deep){var u=new URL(location.href);if(d.id)u.searchParams.s
         document.getElementById(`code-${k}`).value = s.html;
         document.getElementById(`open-${k}`).href = s.src;
       }
+    }
+    // A URL alone is a request to enable the magazine; do not require a
+    // separate checkbox elsewhere in the generator. Manual unticking still works.
+    for (const id of ['flipbookUrl', 'flipbookLink']) {
+      document.getElementById(id).addEventListener('input', () => {
+        if (val(id)) document.getElementById('flipbook').checked = true;
+      });
     }
     document.querySelectorAll('input,select').forEach((i) => {
       i.addEventListener('input', update);
