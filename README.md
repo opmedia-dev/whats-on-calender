@@ -77,8 +77,22 @@ on each run, but if syncing ever stops, press **Run workflow**.
 
 ## Embedding in Duda
 
-Open <https://opmedia-dev.github.io/whats-on-calender/>, enter your What's On page URL (and the
-other settings), then copy each snippet into an **HTML** widget.
+Open <https://opmedia-dev.github.io/whats-on-calender/>, enter your What's On page URL, then
+configure **each of the four embeds** independently before copying its HTML snippet into a Duda
+**HTML** widget. The visual embed generator provides these controls without hand-editing URLs:
+
+- **Shared:** brand colours, font families, corner radius, 12/24-hour clock and excluded titles.
+- **Hero timetable:** number of days and optional scrollable maximum height.
+- **Homepage banner:** heading, featured/all events, cards per page, maximum events, magazine
+  column width and preview height, and optional alternate HTTPS preview URL.
+- **What's On page:** regular events row, search, filters, default tab, grid columns and page size.
+- **Monthly calendar:** grid/list/automatic view, events per day and minimum cell height.
+
+The magazine column is a banner-only integration with the separate `flipbook` repository;
+it is not embedded into the standalone What's On page or monthly calendar.
+
+A timed event disappears from *upcoming* lists after its actual end time, while events in progress
+remain visible. The monthly calendar continues to display events on their scheduled dates.
 
 The snippet's script does three things:
 
