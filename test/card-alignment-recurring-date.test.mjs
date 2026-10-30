@@ -67,7 +67,7 @@ test('magazine card uses event card image/body/title/meta structure', () => {
   assert.match(html, /wo-card-media wo-magazine-cover/);
   assert.match(html, /wo-card-body wo-magazine-body/);
   assert.match(html, /wo-card-title wo-magazine-title/);
-  assert.match(html, /syncMagazineHeight\(\)/);
-  assert.match(css, /\.wo-banner\.has-side\s*\{\s*grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\)/);
+  assert.match(html, /syncFixedCardHeights\(\)/);
+  assert.match(css, /\.wo-banner\.has-side,\s*\.wo-banner\.has-mailing\s*\{\s*grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\)/);
   assert.match(css, /\.wo-tag-regular\s*\{\s*left:\s*auto;\s*right:\s*12px/);
 });

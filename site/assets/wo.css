@@ -126,12 +126,15 @@ button { font: inherit; color: inherit; }
 
 /* ---------- Banner ---------- */
 .wo-banner { display: grid; gap: 22px; grid-template-columns: minmax(0, 1fr); align-items: start; }
-/* Four equal columns ensure the magazine and three event cards have exactly
-   the same width; the inner cards grid uses the same gap. */
-.wo-banner.has-side { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-.wo-banner.has-side .wo-banner-main { grid-column: span 3; }
-.wo-banner.has-side .wo-banner-side { grid-column: span 1; }
-.wo-banner-main, .wo-banner-side { min-width: 0; }
+/* Four equal slots: with both publications, two event columns rotate
+   while the weekly mailing and magazine each occupy a persistent column.
+   With just one publication, three event columns remain available. */
+.wo-banner.has-side, .wo-banner.has-mailing { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.wo-banner.has-side .wo-banner-main, .wo-banner.has-mailing .wo-banner-main { grid-column: span 3; }
+.wo-banner.has-side.has-mailing .wo-banner-main { grid-column: span 2; }
+.wo-banner.has-mailing .wo-banner-mailing, .wo-banner.has-side .wo-banner-side { grid-column: span 1; }
+.wo-banner-main, .wo-banner-side, .wo-banner-mailing { min-width: 0; }
+.wo-banner-mailing .wo-card { width: 100%; min-width: 0; }
 /* The magazine card also uses .wo-card, so it shares the same radius,
    hover transition, shadows and intrinsic width rules as event cards. */
 .wo-magazine-card { width: 100%; min-width: 0; }
@@ -167,9 +170,26 @@ button { font: inherit; color: inherit; }
 .wo-magazine-body .wo-card-meta { color: var(--wo-accent2); font-weight: 600; }
 .wo-magazine-body .wo-card-meta .wo-icon { color: var(--wo-accent2); }
 @media (max-width: 1120px) {
-  .wo-banner.has-side { grid-template-columns: minmax(0, 1fr); }
-  .wo-banner.has-side .wo-banner-main, .wo-banner.has-side .wo-banner-side { grid-column: auto; }
-  .wo-banner-side { width: 100%; max-width: 420px; margin: 0 auto; }
+  /* Tablet: events take a full row and both publications sit side by side.
+     Single-publication banners retain the previous stacked-card treatment. */
+  .wo-banner.has-side, .wo-banner.has-mailing { grid-template-columns: minmax(0, 1fr); }
+  .wo-banner.has-side .wo-banner-main, .wo-banner.has-side .wo-banner-side,
+  .wo-banner.has-mailing .wo-banner-main, .wo-banner.has-mailing .wo-banner-mailing { grid-column: auto; }
+  .wo-banner-side, .wo-banner-mailing { width: 100%; max-width: 420px; margin: 0 auto; }
+  .wo-banner.has-side.has-mailing { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .wo-banner.has-side.has-mailing .wo-banner-main { grid-column: span 2; }
+  .wo-banner.has-side.has-mailing .wo-banner-side,
+  .wo-banner.has-side.has-mailing .wo-banner-mailing {
+    grid-column: span 1; width: 100%; max-width: none; margin: 0;
+  }
+}
+@media (max-width: 760px) {
+  .wo-banner.has-side.has-mailing { grid-template-columns: minmax(0, 1fr); }
+  .wo-banner.has-side.has-mailing .wo-banner-main,
+  .wo-banner.has-side.has-mailing .wo-banner-mailing,
+  .wo-banner.has-side.has-mailing .wo-banner-side { grid-column: auto; }
+  .wo-banner.has-side.has-mailing .wo-banner-mailing,
+  .wo-banner.has-side.has-mailing .wo-banner-side { max-width: 420px; margin: 0 auto; }
 }
 
 

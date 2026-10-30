@@ -6,7 +6,7 @@ Hosted for free on GitHub Pages, so there's no server to run.
 | Page | Embed |
 | --- | --- |
 | `timetable.html` | Hero timetable: the next 7 days grouped by day, with today highlighted |
-| `banner.html` | "What's happening" banner: paged cards of events with pictures, with a fourth card for the latest magazine issue |
+| `banner.html` | "What's happening": rotating event cards plus a fixed weekly mailing and fixed latest parish magazine |
 | `whats-on.html` | What's On page: regular (repeating) events, search, a card grid and full event details |
 | `calendar.html` | Monthly calendar with Today/prev/next, a Month/List switch and "+N more" for busy days; switches to a list on phones |
 | `mailings.html` | Independent, searchable Parish Weekly Mailings archive (links open on Mailchimp) |
@@ -27,8 +27,8 @@ Live site: https://opmedia-dev.github.io/whats-on-calender/
 
 ## Weekly Mailchimp mailing (independent of Duda)
 
-The latest **sent** campaign from the public Mailchimp RSS feed appears as one rotating card
-in `banner.html` (default `mailing=1`). Past issues appear **only** in
+The latest **sent** campaign from the public Mailchimp RSS feed appears as a **fixed card**
+in `banner.html` (default `mailing=1`), while calendar events rotate. Past issues appear **only** in
 `mailings.html`. They are never inserted into `whats-on.html`, `calendar.html`,
 the hero timetable or the Google Calendar event feed. The monthly parish magazine remains a
 separate fixed card in the banner.
@@ -107,8 +107,9 @@ configure **each embed** independently before copying its HTML snippet into a Du
   pauses on hover, focus, event detail, hidden tabs and reduced motion), latest
   weekly mailing toggle, and optional alternate HTTPS magazine-preview URL.
   With the magazine enabled,
-  the banner lays out three event cards and the latest magazine as four equal-width
-  columns; the magazine matches the tallest event card in the row. The cover comes
+  the banner lays out two rotating event cards, the fixed latest weekly mailing,
+  and the fixed latest magazine as four equal-width columns. Both publications
+  stay visible as the event pages change. The cards match height and typography. The cover comes
   from the flipbook's published `issues.json` and opens the complete flipbook.
 - **Weekly Mailings:** searchable independent archive of sent Mailchimp campaigns.
 - **What's On page:** regular events row, search, filters, default tab, grid columns and page size.
@@ -158,7 +159,7 @@ under the list), `emptyText`.
 - `perPage` (3, fewer on narrow screens), `max` (9), `minCardWidth` (240)
 - `show=all` (include events without pictures), `days` (14 by default, 1–90 permitted)
 - `autoplay` (8 seconds by default, `0` disables; 3–60 seconds permitted)
-- `mailing=0` hides the latest sent weekly mailing card; its archive remains separate
+- `mailing=0` hides the fixed latest sent weekly mailing card. With both publications enabled, only two event cards rotate at a time. The mailing archive is a separate optional embed; no archive button is shown beneath the carousel.
 - `style=plain` (no colour band), `ratio=4:3`
 - `moreLink` + `moreText` ("See all events" link beside the pager; defaults to `link`, `moreText=0` hides it)
 - `flipbook=1`, `flipbookUrl`, `flipbookLink` (archive page passed to the full reader), `flipbookTitle` ("Latest magazine"). The banner shows a **cover card** using the latest issue image/title from the flipbook's `issues.json`. Clicking it opens the full interactive reader in a separate tab. Magazine width is automatically matched to the event cards; old `flipbookWidth` and `flipbookHeight` options are ignored.
