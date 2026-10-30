@@ -175,3 +175,25 @@ node scripts/build.mjs
 python3 -m http.server -d _site 8080
 npm test
 ```
+
+## Pre-rollout testing without a Google API key
+
+GitHub Pages can publish **demonstration content** when `GOOGLE_API_KEY` has
+not been configured. This is the intended first-rollout experience:
+
+1. Merge the implementation PRs into `main` and enable GitHub Pages using
+   **GitHub Actions** as the source.
+2. On a push to `main`, or by manually running **Build and deploy What's On**,
+   the workflow generates example events from `scripts/preview-data.mjs`.
+3. Open the GitHub Pages homepage (embed generator) and each of the four
+   linked standalone preview pages. No Duda HTML widget or Google API key is
+   needed to preview appearance, recurrence, posters, contacts and downloads.
+4. All sample views show a conspicuous **PREVIEW MODE** notice. Nothing in
+   this demo feed is an actual event.
+
+When a valid `GOOGLE_API_KEY` repository secret is added, subsequent runs switch
+automatically to Google Calendar content. If the key exists but the Calendar API
+fails, the deployment **fails instead of silently using sample events**.
+Do not embed the preview in the public parish website. The preview mode is not
+a validation of Google Calendar or Drive API access: live sync, attachment
+permissions and event accuracy need separate testing.
