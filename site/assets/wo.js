@@ -139,7 +139,10 @@ export async function loadEvents() {
   return { ...data, events };
 }
 
-export const isUpcoming = (e, now = new Date()) => e.endDate > now || e.endKey >= dayKey(now);
+// An event is upcoming while it has not finished, including events in progress.
+// endKey is a calendar-day label, not an end-time: comparing it here would
+// incorrectly retain an 8am event until midnight on the same day.
+export const isUpcoming = (e, now = new Date()) => e.endDate > now;
 
 // One entry per series (its next date), e.g. for cards; series with the same
 // title (e.g. "Toddler Group" on Tuesdays and on Thursdays) are merged.
