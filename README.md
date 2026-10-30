@@ -83,10 +83,11 @@ configure **each of the four embeds** independently before copying its HTML snip
 
 - **Shared:** brand colours, font families, corner radius, 12/24-hour clock and excluded titles.
 - **Hero timetable:** number of days and optional scrollable maximum height.
-- **Homepage banner:** heading, featured/all events, cards per page, maximum events, magazine
-  card width, and optional alternate HTTPS preview URL. The magazine uses the latest
-  cover from the flipbook's published `issues.json` and opens the complete
-  page-turning flipbook when clicked; this keeps all four cards comparable in height.
+- **Homepage banner:** heading, featured/all events, cards per page, maximum events,
+  and optional alternate HTTPS magazine-preview URL. With the magazine enabled,
+  the banner lays out three event cards and the latest magazine as four equal-width
+  columns; the magazine matches the tallest event card in the row. The cover comes
+  from the flipbook's published `issues.json` and opens the complete flipbook.
 - **What's On page:** regular events row, search, filters, default tab, grid columns and page size.
 - **Monthly calendar:** grid/list/automatic view, events per day and minimum cell height.
 
@@ -136,7 +137,7 @@ under the list), `emptyText`.
 - `autoplay` (seconds per page)
 - `style=plain` (no colour band), `ratio=4:3`
 - `moreLink` + `moreText` ("See all events" link beside the pager; defaults to `link`, `moreText=0` hides it)
-- `flipbook=1`, `flipbookUrl`, `flipbookLink` (archive page passed to the full reader), `flipbookTitle` ("Latest magazine", `0` hides the label), `flipbookWidth` (350). The banner shows a **cover card**, using the latest issue image/title from the flipbook's `issues.json`. Clicking it opens the full interactive page-turning reader in a separate tab. `flipbookHeight` is no longer used.
+- `flipbook=1`, `flipbookUrl`, `flipbookLink` (archive page passed to the full reader), `flipbookTitle` ("Latest magazine"). The banner shows a **cover card** using the latest issue image/title from the flipbook's `issues.json`. Clicking it opens the full interactive reader in a separate tab. Magazine width is automatically matched to the event cards; old `flipbookWidth` and `flipbookHeight` options are ignored.
 
 `whats-on.html`:
 
