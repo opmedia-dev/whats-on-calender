@@ -43,15 +43,29 @@
       } catch {
         src = new URL(defaultPreview);
       }
-      if (!src.searchParams.has('title')) src.searchParams.set('title', '0');
-      if (!src.searchParams.has('maxHeight')) src.searchParams.set('maxHeight', String(num('flipbookHeight', 360)));
+      // The full flipbook needs at least 260px for a page *inside* its own
+      // 32px wrapper and this banner's padding. A 300px sidebar clips pages.
+      // Keep the small column as a compact reader and offer a full-size link.
+      const fullPreview = new URL(src.href);
       if (param('flipbookLink')) src.searchParams.set('link', param('flipbookLink'));
       if (param('accent') && !src.searchParams.has('accent')) src.searchParams.set('accent', param('accent'));
-      const frame = h('iframe', { src: src.href, title: 'Latest magazine', allow: 'fullscreen; web-share; clipboard-write', allowfullscreen: true, loading: 'lazy' });
+      if (!src.searchParams.has('title')) src.searchParams.set('title', '0');
+      if (!src.searchParams.has('maxHeight')) src.searchParams.set('maxHeight', String(num('flipbookHeight', 300)));
+      if (!src.searchParams.has('tools')) src.searchParams.set('tools', 'none');
+      const frame = h('iframe', {
+        src: src.href, title: 'Latest magazine — compact flipbook',
+        allow: 'fullscreen; web-share; clipboard-write', allowfullscreen: true,
+        loading: 'lazy',
+      });
       banner.classList.add('has-side');
-      if (num('flipbookWidth', 0) > 0) banner.style.setProperty('--wo-side', `${num('flipbookWidth', 300)}px`);
+      const width = Math.max(340, Math.min(500, num('flipbookWidth', 350)));
+      banner.style.setProperty('--wo-side', `${width}px`);
       const sideTitle = param('flipbookTitle', 'Latest magazine');
-      banner.append(h('aside', { class: 'wo-banner-side' }, sideTitle !== '0' ? h('p', { class: 'wo-side-title' }, sideTitle) : null, frame));
+      banner.append(h('aside', { class: 'wo-banner-side' },
+        sideTitle !== '0' ? h('p', { class: 'wo-side-title' }, sideTitle) : null,
+        frame,
+        h('a', { class: 'wo-magazine-full', href: fullPreview.href,
+          target: '_blank', rel: 'noopener noreferrer' }, 'Open full magazine', icon('arrow'))));
       window.addEventListener('message', (e) => {
         if (e.origin !== src.origin || e.source !== frame.contentWindow || e.data?.source !== 'flipbook' || e.data.type !== 'height') return;
         const height = Number(e.data.height);
