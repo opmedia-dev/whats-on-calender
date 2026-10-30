@@ -135,14 +135,22 @@ button { font: inherit; color: inherit; }
   transition: transform .25s ease, box-shadow .25s ease;
 }
 .wo-magazine-card:hover { transform: translateY(-4px); box-shadow: var(--wo-shadow-hover); }
+/* A portrait cover's intrinsic dimensions must never dictate grid/card
+   size. The media area is a fixed-ratio positioning box, just like event cards.
+   Its absolutely positioned image is removed from flex intrinsic sizing. */
 .wo-magazine-cover {
-  aspect-ratio: var(--wo-ratio, 16 / 10); overflow: hidden; display: flex;
-  align-items: center; justify-content: center; padding: 8px;
+  position: relative; flex: 0 0 auto; width: 100%; min-width: 0;
+  aspect-ratio: var(--wo-ratio, 16 / 10); overflow: hidden;
   background: linear-gradient(125deg, #f4f0e8, #ffffff 48%, #eee5de);
 }
 .wo-magazine-cover img {
-  display: block; height: 100%; width: auto; max-width: 100%;
-  object-fit: contain; box-shadow: 0 2px 10px rgba(0,0,0,.18);
+  position: absolute; display: block; inset: 8px;
+  width: calc(100% - 16px); height: calc(100% - 16px);
+  min-width: 0; max-width: 100%; max-height: 100%;
+  object-fit: contain; object-position: center;
+}
+.wo-magazine-cover .wo-magazine-placeholder {
+  position: absolute; inset: 8px;
 }
 .wo-magazine-placeholder {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -157,7 +165,11 @@ button { font: inherit; color: inherit; }
   font-size: .76rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
   color: var(--wo-accent2); margin: 0 0 3px;
 }
-.wo-magazine-title { margin: 0; font-size: 1rem; line-height: 1.25; font-weight: 700; color: #fff; }
+.wo-magazine-title {
+  margin: 0; font-size: 1rem; line-height: 1.25; font-weight: 700; color: #fff;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+  overflow: hidden; overflow-wrap: anywhere;
+}
 .wo-magazine-link {
   margin-top: auto; display: inline-flex; gap: .35em; align-items: center;
   font-size: .87rem; font-weight: 700; color: var(--wo-accent2);
