@@ -156,7 +156,11 @@
         cardsEl.style.setProperty('--wo-cols', String(current));
         cardsEl.replaceChildren(...items.slice(page * current, page * current + current)
           .map((event) => renderCard(event, { showRecurrence: event.recurring })));
-        pagerEl.replaceChildren(renderPager(page, pages, (p) => { page = p; render(); }));
+        pagerEl.replaceChildren(renderPager(page, pages, (p) => {
+          page = p;
+          render();
+          syncFixedCardHeights();
+        }));
         if (!items.length) cardsEl.replaceChildren(emptyState(param('emptyText', 'More events coming soon.')));
       };
       render();
