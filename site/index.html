@@ -119,8 +119,16 @@
     const REPO = 'opmedia-dev/whats-on-calender';
     document.getElementById('run-link').href = `https://github.com/${REPO}/actions/workflows/deploy.yml`;
     fetch('events.json', { cache: 'no-cache' }).then((r) => r.json()).then((d) => {
+      if (d.preview) {
+        const notice = document.createElement('div');
+        notice.className = 'wo-demo-notice';
+        notice.setAttribute('role', 'status');
+        notice.textContent = 'PREVIEW MODE — Sample events only. The live Google Calendar has not been connected.';
+        document.body.prepend(notice);
+        document.getElementById('generated').textContent = '(sample data)';
+      }
       document.getElementById('count').textContent = (d.events || []).length;
-      if (d.generated) document.getElementById('generated').textContent = `(updated ${new Date(d.generated).toLocaleString('en-GB')})`;
+      if (!d.preview && d.generated) document.getElementById('generated').textContent = `(updated ${new Date(d.generated).toLocaleString('en-GB')})`;
     }).catch(() => { document.getElementById('count').textContent = 'unknown'; });
 
     const base = new URL('.', location.href).href;
