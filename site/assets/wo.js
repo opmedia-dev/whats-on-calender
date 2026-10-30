@@ -312,14 +312,17 @@ export function currentEventId() {
   return m ? decodeURIComponent(m[1]) : null;
 }
 
-// Wires #event=<id> to a detail view rendered in place of the main view.
+// Wires #event=<id> to an inline detail. The detail's Back control is
+// intentionally "Back to this embed's list", NOT browser history.back(): a
+// visitor can follow several future dates inside a recurring series and should
+// never need to traverse those date pages to return to the calendar/list.
 export function routeDetails({ main, detail, events, backLabel }) {
   let scrollY = 0;
-  let depth = 0; // detail views opened from this page's list (so Back = history.back())
   let showingList = !currentEventId();
-  const onBack = () => {
-    if (depth > 0) { history.back(); return; }
-    history.replaceState(null, '', location.pathname + location.search);
+  const changeDetail = (id) => {
+    const url = new URL(location.href);
+    url.hash = id ? `event=${encodeURIComponent(id)}` : '';
+    history.replaceState(history.state, '', url.href);
     render();
   };
   const render = () => {
@@ -328,28 +331,26 @@ export function routeDetails({ main, detail, events, backLabel }) {
     if (ev) {
       if (showingList) scrollY = window.scrollY;
       showingList = false;
-      detail.replaceChildren(renderDetail(ev, events, { backLabel, onBack }));
+      detail.replaceChildren(renderDetail(ev, events, {
+        backLabel, onBack: () => changeDetail(null), onNavigate: changeDetail,
+      }));
       main.hidden = true;
       detail.hidden = false;
       window.scrollTo(0, 0);
       scrollHostToTop();
       postToParent({ type: 'event', id: ev.id, title: ev.title });
     } else {
+      const returningFromDetail = !showingList;
       showingList = true;
-      depth = 0;
       detail.hidden = true;
       detail.replaceChildren();
       main.hidden = false;
-      window.scrollTo(0, scrollY);
+      // A first render of an ordinary list must not reset the visitor's scroll.
+      if (returningFromDetail) window.scrollTo(0, scrollY);
       postToParent({ type: 'event', id: null });
     }
   };
-  window.addEventListener('hashchange', (ev) => {
-    const wasEvent = /#event=/.test(new URL(ev.oldURL).hash);
-    const isEvent = Boolean(currentEventId());
-    if (isEvent) depth = wasEvent ? depth + (depth > 0 ? 1 : 0) : 1;
-    render();
-  });
+  window.addEventListener('hashchange', render);
   render();
   return render;
 }
@@ -424,7 +425,7 @@ export function shortLocation(loc = '') {
 
 const formatShortDate = (d) => fmt({ weekday: 'short', day: 'numeric', month: 'short' }).format(d).replace(',', '');
 
-export function renderDetail(e, events, { backLabel = 'Back', onBack } = {}) {
+export function renderDetail(e, events, { backLabel = 'Back', onBack, onNavigate } = {}) {
   const info = e.info || {};
   const img = info.image;
   const portrait = img && img.height > img.width * 1.05;
@@ -489,8 +490,10 @@ export function renderDetail(e, events, { backLabel = 'Back', onBack } = {}) {
 
   const dates = moreDates.length
     ? h('section', { class: 'wo-detail-section' }, h('h3', {}, 'Next dates'),
-      h('ul', { class: 'wo-dates' }, moreDates.map((x) => h('li', {}, h('a', { href: `#event=${encodeURIComponent(x.id)}` },
-        formatShortDate(x.startDate), x.allDay ? '' : ` · ${formatTime(x.startDate, clock)}`)))))
+      h('ul', { class: 'wo-dates' }, moreDates.map((x) => h('li', {}, h('a', {
+        href: `#event=${encodeURIComponent(x.id)}`,
+        onclick: onNavigate ? (ev) => { ev.preventDefault(); onNavigate(x.id); } : null,
+      }, formatShortDate(x.startDate), x.allDay ? '' : ` · ${formatTime(x.startDate, clock)}`)))))
     : null;
 
   const eyebrow = e.recurring && e.recurrence ? 'Regular event' : `${formatShortDate(e.startDate)}${e.allDay ? '' : ` · ${formatTime(e.startDate, clock)}`}`;

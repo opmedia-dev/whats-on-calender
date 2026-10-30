@@ -125,11 +125,15 @@ button { font: inherit; color: inherit; }
 
 /* ---------- Banner ---------- */
 .wo-banner { display: grid; gap: 28px; grid-template-columns: minmax(0, 1fr); align-items: start; }
-.wo-banner.has-side { grid-template-columns: minmax(0, 1fr) var(--wo-side, 300px); }
+.wo-banner.has-side { grid-template-columns: minmax(0, 1fr) var(--wo-side, 350px); }
+.wo-banner-main, .wo-banner-side { min-width: 0; }
 .wo-banner-side { background: var(--wo-card); border-radius: var(--wo-radius); box-shadow: var(--wo-shadow); padding: 14px 12px 12px; }
 .wo-side-title { margin: 0 0 10px; text-align: center; font-size: .74rem; text-transform: uppercase; letter-spacing: .12em; font-weight: 800; color: var(--wo-accent); }
 .wo-banner-side iframe { width: 100%; border: 0; display: block; min-height: 300px; }
+.wo-magazine-full { display: flex; align-items: center; justify-content: center; gap: .4em; margin: 8px auto 0; padding: 9px; color: var(--wo-accent); font-size: .9rem; font-weight: 700; text-decoration: none; }
+.wo-magazine-full:hover { text-decoration: underline; }
 @media (max-width: 760px) { .wo-banner.has-side { grid-template-columns: minmax(0, 1fr); } .wo-banner-side { max-width: 420px; margin: 0 auto; width: 100%; } }
+@media (max-width: 380px) { .wo-banner-side { padding: 12px 0 6px; } .wo-magazine-full { padding: 9px 12px; } }
 
 /* ---------- What's On page ---------- */
 .wo-section + .wo-section { margin-top: 44px; }

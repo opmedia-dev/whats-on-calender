@@ -91,8 +91,7 @@ configure **each of the four embeds** independently before copying its HTML snip
 The magazine column is a banner-only integration with the separate `flipbook` repository;
 it is not embedded into the standalone What's On page or monthly calendar.
 
-A timed event disappears from *upcoming* lists after its actual end time, while events in progress
-remain visible. The monthly calendar continues to display events on their scheduled dates.
+The detail view's Back button always returns to its own timetable, banner or events list (instead of stepping backwards through future dates in a repeating event).\n\nA timed event disappears from *upcoming* lists after its actual end time, while events in progress\nremain visible. The monthly calendar continues to display events on their scheduled dates.
 
 The snippet's script does three things:
 
@@ -135,7 +134,7 @@ under the list), `emptyText`.
 - `autoplay` (seconds per page)
 - `style=plain` (no colour band), `ratio=4:3`
 - `moreLink` + `moreText` ("See all events" link beside the pager; defaults to `link`, `moreText=0` hides it)
-- `flipbook=1`, `flipbookUrl`, `flipbookLink` (archive page), `flipbookTitle` ("Latest magazine", `0` hides it), `flipbookWidth` (300), `flipbookHeight` (360)
+- `flipbook=1`, `flipbookUrl`, `flipbookLink` (archive page), `flipbookTitle` ("Latest magazine", `0` hides it), `flipbookWidth` (350; minimum 340px to avoid a clipped page), `flipbookHeight` (300). The banner shows a compact page-turning reader with an **Open full magazine** link for the complete toolbar.
 
 `whats-on.html`:
 

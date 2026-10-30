@@ -69,8 +69,8 @@
         </div>
         <div><label for="bannerPerPage">Event cards per page (maximum)</label><input id="bannerPerPage" type="number" min="1" max="6" value="3"></div>
         <div><label for="bannerMax">Maximum events in carousel</label><input id="bannerMax" type="number" min="1" max="60" value="12"></div>
-        <div><label for="flipbookWidth">Magazine column width (pixels)</label><input id="flipbookWidth" type="number" min="200" max="500" value="300"></div>
-        <div><label for="flipbookHeight">Magazine preview height (pixels)</label><input id="flipbookHeight" type="number" min="250" max="900" value="360"></div>
+        <div><label for="flipbookWidth">Magazine column width (pixels, minimum 340)</label><input id="flipbookWidth" type="number" min="340" max="500" value="350"></div>
+        <div><label for="flipbookHeight">Magazine preview height (pixels)</label><input id="flipbookHeight" type="number" min="250" max="900" value="300"></div>
         <div>
           <label for="flipbookUrl">Magazine preview URL (optional)</label>
           <input id="flipbookUrl" type="url" placeholder="https://opmedia-dev.github.io/flipbook/preview.html">
@@ -198,7 +198,7 @@ if(d.type==='event'&&deep){var u=new URL(location.href);if(d.id)u.searchParams.s
         bn.set('flipbook', '1');
         if (val('flipbookLink')) bn.set('flipbookLink', val('flipbookLink'));
         if (val('flipbookUrl')) bn.set('flipbookUrl', val('flipbookUrl'));
-        setInt(bn, 'flipbookWidth', 'flipbookWidth', 200, 500);
+        setInt(bn, 'flipbookWidth', 'flipbookWidth', 340, 500);
         setInt(bn, 'flipbookHeight', 'flipbookHeight', 250, 900);
       }
       const wn = new URLSearchParams(q);
