@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en" data-detail="inline">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>What's On</title>
+  <link rel="stylesheet" href="assets/wo.css">
+</head>
+<body>
+  <main class="wo-wrap">
+    <div id="main">
+      <section class="wo-section" id="regular-section" hidden>
+        <h2 class="wo-section-title" id="regular-title" hidden></h2>
+        <div id="regular" class="wo-cards is-overlay"></div>
+      </section>
+      <section class="wo-section" id="upcoming-section">
+        <h2 class="wo-section-title" id="upcoming-title" hidden></h2>
+        <label class="wo-search" id="search-box"><input id="search" type="search" placeholder="Search events" aria-label="Search events" autocomplete="off"><svg class="wo-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM21 21l-4.3-4.3"/></svg></label>
+        <div id="cards" class="wo-cards"><p class="wo-loading">Loading…</p></div>
+        <div id="pager"></div>
+      </section>
+    </div>
+    <div id="detail" hidden></div>
+  </main>
+  <script type="module">
+    import { init, loadEvents, params, param, num, flag, h, isUpcoming, nextPerSeries, renderCard, renderPager, routeDetails, scrollHostToTop, showError, emptyState } from './assets/wo.js';
+
+    await init();
+    const cardsEl = document.getElementById('cards');
+    const pagerEl = document.getElementById('pager');
+    const regularEl = document.getElementById('regular');
+    const search = document.getElementById('search');
+    const setTitle = (id, text) => { const el = document.getElementById(id); if (text && text !== '0') { el.textContent = text; el.hidden = false; } };
+    if (!flag('search', true)) document.getElementById('search-box').hidden = true;
+    if (param('searchText')) search.placeholder = param('searchText');
+    if (params.has('ratio')) cardsEl.style.setProperty('--wo-ratio', param('ratio').replace(':', ' / '));
+    if (param('style') === 'band') cardsEl.classList.add('is-band');
+
+    try {
+      const { events } = await loadEvents();
+      const now = new Date();
+      const upcoming = events.filter((e) => isUpcoming(e, now));
+      const series = nextPerSeries(upcoming);
+
+      // Regular events: repeating events with a picture, one tile per series.
+      const showRegular = flag('regular', true);
+      const regular = showRegular ? series.filter((e) => e.recurring && e.featured).slice(0, num('regularMax', 6)) : [];
+      if (regular.length) {
+        document.getElementById('regular-section').hidden = false;
+        setTitle('regular-title', param('regularTitle', ''));
+        regularEl.style.setProperty('--wo-cols', String(Math.min(3, regular.length)));
+        regularEl.replaceChildren(...regular.map((e) => {
+          const card = renderCard(e, { showRecurrence: true });
+          card.querySelector('.wo-card-body').append(h('span', { class: 'wo-card-more' }, param('moreText', 'More info')));
+          return card;
+        }));
+      }
+      setTitle('upcoming-title', param('upcomingTitle', ''));
+
+      const base = series.filter((e) => e.featured && (!regular.length || !e.recurring) || (param('show') === 'all' && !(regular.includes(e))));
+      const perPageMax = num('perPage', 9);
+      let page = 0;
+      let cols = 3;
+      const columns = () => Math.max(1, Math.min(num('cols', 3), Math.floor(cardsEl.clientWidth / num('minCardWidth', 260)) || 1));
+
+      const matches = (e, q) => [e.title, e.location, e.info.summary, e.recurrence].join(' ').toLowerCase().includes(q);
+      const render = (scroll) => {
+        const q = search.value.trim().toLowerCase();
+        // Searching covers every upcoming event, not just the ones with pictures.
+        const items = q ? series.filter((e) => matches(e, q)) : base;
+        cols = columns();
+        const perPage = Math.max(cols, Math.floor(perPageMax / cols) * cols || cols);
+        const pages = Math.ceil(items.length / perPage);
+        page = Math.min(page, Math.max(0, pages - 1));
+        cardsEl.style.setProperty('--wo-cols', String(cols));
+        regularEl.style.setProperty('--wo-cols', String(Math.min(cols, regular.length || 1)));
+        cardsEl.replaceChildren(...items.slice(page * perPage, (page + 1) * perPage).map((e) => renderCard(e, { showRecurrence: e.recurring })));
+        if (!items.length) cardsEl.replaceChildren(emptyState(q ? `No events match “${search.value.trim()}”.` : param('emptyText', 'More events coming soon.')));
+        pagerEl.replaceChildren(renderPager(page, pages, (p) => { page = p; render(true); }));
+        if (scroll) { document.getElementById('upcoming-section').scrollIntoView({ block: 'start' }); scrollHostToTop(); }
+      };
+      search.addEventListener('input', () => { page = 0; render(); });
+      render();
+      new ResizeObserver(() => { if (columns() !== cols) render(); }).observe(cardsEl);
+      routeDetails({ main: document.getElementById('main'), detail: document.getElementById('detail'), events, backLabel: param('backText', "Back to What's On") });
+    } catch (e) {
+      console.error(e);
+      showError(cardsEl, 'Sorry, events could not be loaded.');
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,19 @@
+{
+  "name": "whats-on-calendar",
+  "private": true,
+  "type": "module",
+  "description": "What's On embeds (timetable, banner, events page, monthly calendar) built from a public Google Calendar and hosted on GitHub Pages.",
+  "scripts": {
+    "sync": "node scripts/sync-calendar.mjs",
+    "build": "node scripts/build.mjs",
+    "test": "node --test test/*.test.mjs",
+    "serve": "python3 -m http.server -d _site 8080"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "sanitize-html": "^2.13.0",
+    "sharp": "^0.35.5"
+  }
+}

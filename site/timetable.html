@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en" data-detail="inline">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Weekly timetable</title>
+  <link rel="stylesheet" href="assets/wo.css">
+</head>
+<body>
+  <main class="wo-wrap">
+    <div id="main"><div id="list" class="wo-timetable"><p class="wo-loading">Loading…</p></div></div>
+    <div id="detail" hidden></div>
+  </main>
+  <script type="module">
+    import { init, loadEvents, param, num, flag, h, dayKey, addDays, formatDayHeader, formatTime, eventHref, isUpcoming, routeDetails, showError, emptyState } from './assets/wo.js';
+
+    await init();
+    const list = document.getElementById('list');
+    try {
+      const { events } = await loadEvents();
+      const now = new Date();
+      const today = dayKey(now);
+      const last = addDays(today, num('days', 7) - 1);
+      let items = events.filter((e) => e.startKey <= last && e.endKey >= today && isUpcoming(e, now));
+      if (flag('featured', false)) items = items.filter((e) => e.featured);
+      const max = num('max', 0);
+      if (max > 0) items = items.slice(0, max);
+
+      const days = new Map();
+      for (const e of items) {
+        const key = e.startKey < today ? today : e.startKey;
+        if (!days.has(key)) days.set(key, []);
+        days.get(key).push(e);
+      }
+      const showLocation = flag('location', true);
+      list.replaceChildren(...[...days].map(([key, evs]) => h('section', { class: 'wo-day' },
+        h('div', { class: 'wo-day-head' }, formatDayHeader(new Date(`${key}T12:00:00Z`))),
+        h('ul', { class: 'wo-day-list' }, evs.map((e) => {
+          const { href, target } = eventHref(e);
+          return h('li', { class: `wo-tt-item${key === today && flag('highlightToday', true) ? ' is-today' : ''}` },
+            h('a', { href, target },
+              h('span', { class: 'wo-tt-time' }, `${e.allDay ? 'All day' : formatTime(e.startDate)} –`),
+              e.title,
+              showLocation && e.location ? h('span', { class: 'wo-tt-loc' }, e.location) : null));
+        })))));
+      if (!items.length) list.replaceChildren(emptyState(param('emptyText', 'Nothing on this week.')));
+      if (num('maxHeight', 0) > 0) {
+        list.classList.add('is-scroll');
+        list.style.maxHeight = `${num('maxHeight', 0)}px`;
+      }
+      const more = param('moreLink');
+      if (more && /^https?:\/\//.test(more)) {
+        list.after(h('p', { class: 'wo-tt-more' }, h('a', { href: more, target: '_top' }, param('moreText', 'See our full calendar'))));
+      }
+      routeDetails({ main: document.getElementById('main'), detail: document.getElementById('detail'), events, backLabel: param('backText', 'Back to timetable') });
+    } catch (e) {
+      console.error(e);
+      showError(list, 'Sorry, the timetable could not be loaded.');
+    }
+  </script>
+</body>
+</html>

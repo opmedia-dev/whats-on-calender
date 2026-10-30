@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en" data-detail="inline">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>What's happening</title>
+  <link rel="stylesheet" href="assets/wo.css">
+</head>
+<body>
+  <main class="wo-wrap">
+    <div id="main">
+      <h2 class="wo-heading" id="heading" hidden></h2>
+      <div class="wo-banner" id="banner">
+        <div class="wo-banner-main"><div id="cards" class="wo-cards is-band"><p class="wo-loading">Loading…</p></div><div id="pager"></div></div>
+      </div>
+    </div>
+    <div id="detail" hidden></div>
+  </main>
+  <script type="module">
+    import { init, loadEvents, params, param, num, flag, h, isUpcoming, nextPerSeries, renderCard, renderPager, routeDetails, showError, emptyState } from './assets/wo.js';
+
+    await init();
+    const cardsEl = document.getElementById('cards');
+    const pagerEl = document.getElementById('pager');
+    const banner = document.getElementById('banner');
+
+    const title = param('title', "What's happening");
+    if (title !== '0') {
+      const head = document.getElementById('heading');
+      head.textContent = title;
+      head.hidden = false;
+    }
+    if (param('style') === 'plain') cardsEl.classList.remove('is-band');
+    if (params.has('ratio')) cardsEl.style.setProperty('--wo-ratio', param('ratio').replace(':', ' / '));
+
+    // Optional fixed flipbook column (the latest issue of the parish magazine).
+    if (flag('flipbook', false)) {
+      const src = new URL(param('flipbookUrl', 'https://opmedia-dev.github.io/flipbook/preview.html'));
+      if (!src.searchParams.has('title')) src.searchParams.set('title', '0');
+      if (!src.searchParams.has('maxHeight')) src.searchParams.set('maxHeight', String(num('flipbookHeight', 360)));
+      if (param('flipbookLink')) src.searchParams.set('link', param('flipbookLink'));
+      if (param('accent') && !src.searchParams.has('accent')) src.searchParams.set('accent', param('accent'));
+      const frame = h('iframe', { src: src.href, title: 'Latest magazine', allow: 'fullscreen; web-share; clipboard-write', allowfullscreen: true, loading: 'lazy' });
+      banner.classList.add('has-side');
+      if (num('flipbookWidth', 0) > 0) banner.style.setProperty('--wo-side', `${num('flipbookWidth', 300)}px`);
+      banner.append(h('aside', { class: 'wo-banner-side' }, frame));
+      window.addEventListener('message', (e) => {
+        if (e.source === frame.contentWindow && e.data?.source === 'flipbook' && e.data.type === 'height') frame.style.height = `${e.data.height}px`;
+      });
+    }
+
+    try {
+      const { events } = await loadEvents();
+      const now = new Date();
+      let items = nextPerSeries(events.filter((e) => isUpcoming(e, now) && (param('show', 'featured') === 'all' || e.featured)));
+      const days = num('days', 0);
+      if (days > 0) items = items.filter((e) => e.startDate - now < days * 86400000);
+      items = items.slice(0, num('max', 12));
+
+      let page = 0;
+      const perPageMax = num('perPage', 3);
+      const perPage = () => Math.max(1, Math.min(perPageMax, Math.floor(cardsEl.clientWidth / num('minCardWidth', 240)) || 1));
+      let current = perPage();
+      const render = () => {
+        current = perPage();
+        const pages = Math.ceil(items.length / current);
+        page = Math.min(page, Math.max(0, pages - 1));
+        cardsEl.style.setProperty('--wo-cols', String(current));
+        cardsEl.replaceChildren(...items.slice(page * current, page * current + current)
+          .map((e) => renderCard(e, { showRecurrence: e.recurring })));
+        pagerEl.replaceChildren(renderPager(page, pages, (p) => { page = p; render(); }));
+        if (!items.length) cardsEl.replaceChildren(emptyState(param('emptyText', 'More events coming soon.')));
+      };
+      render();
+      new ResizeObserver(() => { if (perPage() !== current) render(); }).observe(cardsEl);
+      const seconds = num('autoplay', 0);
+      if (seconds > 0) {
+        let paused = false;
+        banner.addEventListener('mouseenter', () => { paused = true; });
+        banner.addEventListener('mouseleave', () => { paused = false; });
+        setInterval(() => {
+          const pages = Math.ceil(items.length / current);
+          if (!paused && pages > 1 && !document.hidden) { page = (page + 1) % pages; render(); }
+        }, seconds * 1000);
+      }
+      routeDetails({ main: document.getElementById('main'), detail: document.getElementById('detail'), events, backLabel: param('backText', 'Back') });
+    } catch (e) {
+      console.error(e);
+      showError(cardsEl, 'Sorry, events could not be loaded.');
+    }
+  </script>
+</body>
+</html>

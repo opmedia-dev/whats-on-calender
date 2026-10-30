@@ -1,0 +1,86 @@
+name: Build and deploy What's On
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: Rebuild even if the calendar is unchanged
+        type: boolean
+        default: false
+
+permissions:
+  actions: write
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.sync.outputs.changed || 'true' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Install poppler (PDF posters)
+        run: sudo apt-get update && sudo apt-get install -y poppler-utils
+
+      # Downloaded attachments are cached between runs so Google Drive isn't
+      # asked for the same posters every 15 minutes.
+      - uses: actions/cache@v4
+        with:
+          path: .cache
+          key: attachments-${{ github.run_id }}
+          restore-keys: attachments-
+
+      - name: Sync Google Calendar
+        id: sync
+        env:
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+          GCAL_ID: ${{ vars.GCAL_ID }}
+          SITE_URL: ${{ github.event_name == 'schedule' && format('https://{0}.github.io/{1}/', github.repository_owner, github.event.repository.name) || '' }}
+          FORCE: ${{ inputs.force || 'false' }}
+        run: node scripts/sync-calendar.mjs
+
+      - name: Build site
+        if: steps.sync.outputs.changed != 'false'
+        run: node scripts/build.mjs
+
+      - uses: actions/upload-pages-artifact@v3
+        if: steps.sync.outputs.changed != 'false'
+        with:
+          path: _site
+
+      # GitHub pauses scheduled workflows in public repos after 60 days without
+      # commits; re-enabling via the API keeps the calendar sync running.
+      - name: Keep schedule alive
+        if: github.event_name == 'schedule'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X PUT "repos/${{ github.repository }}/actions/workflows/deploy.yml/enable" || true
+
+  deploy:
+    needs: build
+    if: needs.build.outputs.changed != 'false'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

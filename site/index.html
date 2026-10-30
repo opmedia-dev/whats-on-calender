@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>What's On – embed codes</title>
+  <meta name="robots" content="noindex">
+  <link rel="stylesheet" href="assets/wo.css">
+  <style>
+    body { background: #f5f5f7; }
+    .page { max-width: 980px; margin: 0 auto; padding: 16px; }
+    section.panel { background: #fff; border-radius: 10px; padding: 18px 20px; margin: 18px 0; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+    h1 { margin: 8px 0 0; } h2 { margin-top: 0; font-size: 1.15rem; }
+    label { display: block; font-weight: 600; margin: 12px 0 4px; font-size: .9rem; }
+    label.inline { display: flex; gap: 8px; align-items: center; font-weight: 400; }
+    input[type=url], input[type=text], select { width: 100%; padding: .55rem .7rem; border: 1px solid #ccc; border-radius: 6px; font: inherit; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 18px; } @media (max-width: 700px) { .grid2 { grid-template-columns: 1fr; } }
+    textarea { width: 100%; height: 130px; font: 12px/1.45 ui-monospace, Menlo, Consolas, monospace; padding: .6rem; border-radius: 6px; border: 1px solid #ccc; background: #fafafa; }
+    .row { display: flex; gap: 12px; align-items: center; margin-top: 8px; }
+    .row a { color: var(--wo-accent); }
+    ol li, ul li { margin: .3rem 0; } code { background: #eef; padding: 0 .25rem; border-radius: 3px; }
+    .muted { color: #666; font-size: .9rem; }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <h1>What's On embeds</h1>
+    <p>Copy these into a Duda <strong>HTML widget</strong>. Events published: <strong id="count">…</strong> <span class="muted" id="generated"></span></p>
+
+    <section class="panel">
+      <h2>Settings</h2>
+      <div class="grid2">
+        <div>
+          <label for="link">What's On page URL on your site</label>
+          <input id="link" type="url" placeholder="https://www.stjohnsoldmalden.org.uk/events-calendar">
+          <p class="muted">Clicking an event in the timetable, banner or calendar opens it on this page. Leave blank to open events inside each embed.</p>
+        </div>
+        <div>
+          <label for="calendarLink">Calendar page URL (timetable "See our full calendar" link, optional)</label>
+          <input id="calendarLink" type="url" placeholder="https://www.stjohnsoldmalden.org.uk/calendar">
+        </div>
+        <div><label for="accent">Accent colour</label><input id="accent" type="text" placeholder="#7a1424"></div>
+        <div><label for="accent2">Banner date colour</label><input id="accent2" type="text" placeholder="#f3df8f"></div>
+        <div><label for="exclude">Hide events whose title contains (comma separated)</label><input id="exclude" type="text" placeholder="rehearsal, booking"></div>
+        <div>
+          <label for="flipbook">Banner: flipbook column</label>
+          <label class="inline"><input id="flipbook" type="checkbox"> Show the latest magazine as a 4th column</label>
+          <input id="flipbookLink" type="url" placeholder="Magazine archive page URL (optional, adds a 'View all issues' button)">
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>1. Hero timetable (next 7 days)</h2>
+      <textarea id="code-timetable" readonly></textarea>
+      <div class="row"><button class="wo-btn copy" data-target="code-timetable">Copy code</button> <a id="open-timetable" target="_blank">Open preview</a></div>
+    </section>
+    <section class="panel">
+      <h2>2. "What's happening" banner</h2>
+      <textarea id="code-banner" readonly></textarea>
+      <div class="row"><button class="wo-btn copy" data-target="code-banner">Copy code</button> <a id="open-banner" target="_blank">Open preview</a></div>
+    </section>
+    <section class="panel">
+      <h2>3. What's On page (regular events, search, all events, event details)</h2>
+      <p class="muted">Put this on the page whose URL you entered above.</p>
+      <textarea id="code-whatson" readonly></textarea>
+      <div class="row"><button class="wo-btn copy" data-target="code-whatson">Copy code</button> <a id="open-whatson" target="_blank">Open preview</a></div>
+    </section>
+    <section class="panel">
+      <h2>4. Monthly calendar</h2>
+      <textarea id="code-calendar" readonly></textarea>
+      <div class="row"><button class="wo-btn copy" data-target="code-calendar">Copy code</button> <a id="open-calendar" target="_blank">Open preview</a></div>
+    </section>
+
+    <section class="panel">
+      <h2>Adding events</h2>
+      <ul>
+        <li>Everything comes from the parish Google Calendar. Changes appear within about 15 minutes; to publish straight away open <a id="run-link" target="_blank">the deploy workflow</a> and press <strong>Run workflow</strong>.</li>
+        <li><strong>Repeating events</strong> show on every date, and the What's On page shows them once with the pattern ("Second Monday of each month").</li>
+        <li><strong>Posters / header images:</strong> in the event, choose <em>Add attachment</em> and pick an image or PDF from Google Drive. The file must be shared as <em>Anyone with the link</em>. The first image (or the first page of the first PDF) becomes the picture; events with a picture appear in the banner and on the What's On page. PDFs and other files are listed as downloads.</li>
+        <li><strong>Description:</strong> bold, italics, lists and links from the Google Calendar editor are kept. Email addresses and phone numbers become clickable and are shown in a Contact box.</li>
+        <li><strong>Location:</strong> full addresses get a map link.</li>
+        <li><strong>Hiding events</strong> (room bookings, rehearsals): set the event's visibility to <em>Private</em> in Google Calendar.</li>
+      </ul>
+    </section>
+  </main>
+  <script type="module">
+    const REPO = 'opmedia-dev/whats-on-calender';
+    document.getElementById('run-link').href = `https://github.com/${REPO}/actions/workflows/deploy.yml`;
+    fetch('events.json', { cache: 'no-cache' }).then((r) => r.json()).then((d) => {
+      document.getElementById('count').textContent = (d.events || []).length;
+      if (d.generated) document.getElementById('generated').textContent = `(updated ${new Date(d.generated).toLocaleString('en-GB')})`;
+    }).catch(() => { document.getElementById('count').textContent = 'unknown'; });
+
+    const base = new URL('.', location.href).href;
+    const origin = location.origin;
+
+    // Sizes the iframe to its content, scrolls it into view when an event opens,
+    // and lets the What's On page open/share ?event=<id> links.
+    const listener = () => `<script>
+(function(){if(window.__whatsonHost)return;window.__whatsonHost=1;var O='${origin}';
+function frame(w){var f=document.querySelectorAll('iframe[data-whatson]');for(var i=0;i<f.length;i++)if(f[i].contentWindow===w)return f[i];}
+window.addEventListener('message',function(e){if(e.origin!==O||!e.data||e.data.source!=='whatson')return;var f=frame(e.source),d=e.data;if(!f)return;
+var deep=f.hasAttribute('data-deeplink');
+if(d.type==='hello')e.source.postMessage({source:'whatson-host',type:'hello',page:location.origin+location.pathname,event:deep?new URLSearchParams(location.search).get('event'):null},O);
+if(d.type==='height')f.style.height=d.height+'px';
+if(d.type==='scrollToTop'){var r=f.getBoundingClientRect();if(r.top<0||r.top>innerHeight*0.6)f.scrollIntoView({behavior:'smooth',block:'start'});}
+if(d.type==='event'&&deep){var u=new URL(location.href);if(d.id)u.searchParams.set('event',d.id);else u.searchParams.delete('event');if(u.href!==location.href)history.replaceState(history.state,'',u.href);}
+});})();
+<\/script>`;
+
+    const esc = (s) => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+    function iframe(page, query, height, title, extra = '') {
+      const qs = query.toString();
+      const src = `${base}${page}${qs ? `?${qs}` : ''}`;
+      return { src, html: `<iframe data-whatson${extra} src="${esc(src)}" title="${title}" style="width:100%;height:${height}px;border:0;display:block" allow="fullscreen; web-share; clipboard-write" loading="lazy"></iframe>\n${listener()}` };
+    }
+    const val = (id) => document.getElementById(id).value.trim();
+    const hex = (id) => val(id).replace(/^#/, '');
+
+    function update() {
+      const q = new URLSearchParams();
+      if (hex('accent')) q.set('accent', hex('accent'));
+      if (val('exclude')) q.set('exclude', val('exclude'));
+      const link = val('link');
+      const withLink = new URLSearchParams(q);
+      if (link) withLink.set('link', link);
+
+      const tt = new URLSearchParams(withLink);
+      if (val('calendarLink')) tt.set('moreLink', val('calendarLink'));
+      const bn = new URLSearchParams(withLink);
+      bn.set('title', "What's happening at St John's");
+      if (hex('accent2')) bn.set('accent2', hex('accent2'));
+      if (document.getElementById('flipbook').checked) {
+        bn.set('flipbook', '1');
+        if (val('flipbookLink')) bn.set('flipbookLink', val('flipbookLink'));
+      }
+      const cal = new URLSearchParams(withLink);
+
+      const snippets = {
+        timetable: iframe('timetable.html', tt, 520, 'Weekly timetable'),
+        banner: iframe('banner.html', bn, 520, "What's happening"),
+        whatson: iframe('whats-on.html', q, 1600, "What's On", ' data-deeplink'),
+        calendar: iframe('calendar.html', cal, 1100, 'Calendar'),
+      };
+      for (const [k, s] of Object.entries(snippets)) {
+        document.getElementById(`code-${k}`).value = s.html;
+        document.getElementById(`open-${k}`).href = s.src;
+      }
+    }
+    document.querySelectorAll('input').forEach((i) => i.addEventListener('input', update));
+    document.querySelectorAll('button.copy').forEach((b) => b.addEventListener('click', async () => {
+      const ta = document.getElementById(b.dataset.target);
+      ta.select();
+      try { await navigator.clipboard.writeText(ta.value); } catch { document.execCommand('copy'); }
+      b.textContent = 'Copied!';
+      setTimeout(() => { b.textContent = 'Copy code'; }, 1500);
+    }));
+    update();
+  </script>
+</body>
+</html>
