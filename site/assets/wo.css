@@ -246,3 +246,14 @@ button { font: inherit; color: inherit; }
   .wo-cal.is-auto .wo-cal-board, .wo-cal.is-auto #view-toggle { display: none; }
   .wo-cal.is-auto .wo-cal-list { display: grid; }
 }
+
+/* Public staging mode is always labelled, including inside individual embeds. */
+.wo-demo-notice {
+  padding: 10px 16px;
+  background: #fff0c4;
+  border-bottom: 2px solid #bf8d2d;
+  color: #503b16;
+  text-align: center;
+  font: 700 13px/1.5 system-ui, sans-serif;
+  letter-spacing: .02em;
+}
