@@ -250,6 +250,8 @@ export const icon = (name) => {
     file: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6',
     share: 'M18 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM6 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM18 22a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM8.6 13.5l6.8 4M15.4 6.5l-6.8 4',
     plus: 'M12 5v14M5 12h14', search: 'M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM21 21l-4.3-4.3',
+    arrow: 'M5 12h14M13 6l6 6-6 6', download: 'M12 3v12M7 10l5 5 5-5M5 21h14',
+    grid: 'M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z', list: 'M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01',
   };
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   svg.setAttribute('viewBox', '0 0 24 24');
@@ -401,90 +403,150 @@ function fileKind(a) {
   return 'File';
 }
 
+const mapLink = (loc) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(loc)}`;
+
+// "St John the Baptist Church, Old Malden, …, UK / coffee lounge" -> "St John the Baptist Church · coffee lounge"
+export function shortLocation(loc = '') {
+  const [addr, room] = loc.split(/\s+\/\s+/);
+  const first = addr.split(',')[0].trim();
+  return room ? `${first} · ${room.trim()}` : first;
+}
+
+const formatShortDate = (d) => fmt({ weekday: 'short', day: 'numeric', month: 'short' }).format(d).replace(',', '');
+
 export function renderDetail(e, events, { backLabel = 'Back', onBack } = {}) {
   const info = e.info || {};
   const img = info.image;
   const portrait = img && img.height > img.width * 1.05;
   const now = new Date();
+  const clock = param('clock', '12');
+  const multiDay = e.startKey !== e.endKey;
+  const year = e.startDate.getFullYear() !== now.getFullYear();
   const moreDates = e.recurring
     ? events.filter((x) => x.series === e.series && x.id !== e.id && isUpcoming(x, now) && x.startDate > e.startDate).slice(0, num('moreDates', 6))
     : [];
 
   const back = h('button', { class: 'wo-back', type: 'button', onclick: () => onBack?.() }, icon('left'), backLabel);
 
-  const meta = h('ul', { class: 'wo-meta' },
-    h('li', {}, icon('calendar'), h('span', {}, formatWhen(e, { year: e.startDate.getFullYear() !== now.getFullYear() }))),
-    e.recurrence && h('li', {}, icon('repeat'), h('span', {}, e.recurrence, !e.allDay ? `, ${formatTime(e.startDate, param('clock', '12'))}` : '')),
-    e.location && h('li', {}, icon('pin'), looksLikeAddress(e.location)
-      ? h('a', { href: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(e.location)}`, target: '_blank', rel: 'noopener' }, e.location)
-      : h('span', {}, e.location)));
+  let media = null;
+  if (img) {
+    media = h('figure', { class: `wo-detail-media${portrait ? ' is-portrait' : ''}` },
+      h('a', { href: img.src, target: '_blank', rel: 'noopener', title: 'Open full size' },
+        h('img', { src: img.src, alt: img.alt || e.title, width: img.width, height: img.height })));
+    media.style.setProperty('--wo-media-bg', `url("${(img.small || img.src).replace(/"/g, '%22')}")`);
+  }
+
+  const row = (name, label, ...value) => h('li', {}, icon(name),
+    h('div', {}, h('span', { class: 'wo-info-label' }, label), h('span', { class: 'wo-info-value' }, ...value)));
+  const info_ = h('ul', { class: 'wo-info' },
+    row('calendar', 'Date', multiDay ? formatWhen(e, { clock, year }) : formatLongDate(e.startDate, year)),
+    !multiDay && row('clock', 'Time', formatTimeRange(e, clock)),
+    e.recurrence && row('repeat', 'Repeats', e.recurrence),
+    e.location && row('pin', 'Where', e.location,
+      looksLikeAddress(e.location) ? h('a', { class: 'wo-info-link', href: mapLink(e.location), target: '_blank', rel: 'noopener' }, 'Get directions', icon('arrow')) : null));
 
   const share = h('button', { class: 'wo-btn wo-btn-ghost', type: 'button', onclick: async (ev) => {
+    const btn = ev.currentTarget;
     const url = shareUrl(e);
     try {
       if (navigator.share) { await navigator.share({ title: e.title, url }); return; }
     } catch (err) { if (err?.name === 'AbortError') return; }
-    try { await navigator.clipboard.writeText(url); ev.currentTarget.lastChild.textContent = 'Link copied'; } catch { prompt('Copy this link', url); }
+    try { await navigator.clipboard.writeText(url); btn.lastChild.textContent = 'Link copied'; } catch { prompt('Copy this link', url); }
   } }, icon('share'), h('span', {}, 'Share'));
 
   const actions = h('div', { class: 'wo-actions' },
-    h('a', { class: 'wo-btn', href: googleCalendarLink(e), target: '_blank', rel: 'noopener' }, icon('plus'), 'Google Calendar'),
-    h('button', { class: 'wo-btn wo-btn-ghost', type: 'button', onclick: () => downloadIcs(e) }, icon('calendar'), 'Apple / Outlook'),
-    share);
+    h('a', { class: 'wo-btn', href: googleCalendarLink(e), target: '_blank', rel: 'noopener' }, icon('plus'), 'Add to Google Calendar'),
+    h('div', { class: 'wo-actions-row' },
+      h('button', { class: 'wo-btn wo-btn-ghost', type: 'button', onclick: () => downloadIcs(e) }, icon('calendar'), 'Apple / Outlook'),
+      share));
 
   const contacts = info.contacts && (info.contacts.emails.length || info.contacts.phones.length) && flag('contacts', true)
-    ? h('section', { class: 'wo-box' }, h('h3', {}, 'Contact'),
+    ? h('section', { class: 'wo-panel' }, h('h3', {}, 'Contact'),
       h('ul', { class: 'wo-contact' },
         info.contacts.emails.map((m) => h('li', {}, icon('mail'), h('a', { href: `mailto:${m}?subject=${encodeURIComponent(e.title)}` }, m))),
         info.contacts.phones.map((p) => h('li', {}, icon('phone'), h('a', { href: p.href }, p.number)))))
     : null;
 
   const files = info.attachments?.length
-    ? h('section', { class: 'wo-box' }, h('h3', {}, info.attachments.length > 1 ? 'Downloads' : 'Download'),
+    ? h('section', { class: 'wo-panel' }, h('h3', {}, info.attachments.length > 1 ? 'Downloads' : 'Download'),
       h('ul', { class: 'wo-files' }, info.attachments.map((a) => h('li', {},
         h('a', { href: a.url, target: '_blank', rel: 'noopener', download: a.url.startsWith(location.origin) ? '' : null },
-          icon('file'), h('span', { class: 'wo-file-name' }, a.title),
-          h('span', { class: 'wo-file-kind' }, [fileKind(a), fileSize(a.size)].filter(Boolean).join(' · ')))))))
+          icon('file'),
+          h('span', { class: 'wo-file-text' }, h('span', { class: 'wo-file-name' }, a.title),
+            h('span', { class: 'wo-file-kind' }, [fileKind(a), fileSize(a.size)].filter(Boolean).join(' · '))),
+          icon('download'))))))
     : null;
 
   const dates = moreDates.length
-    ? h('section', { class: 'wo-box' }, h('h3', {}, 'Next dates'),
-      h('ul', { class: 'wo-dates' }, moreDates.map((x) => h('li', {}, h('a', { href: `#event=${encodeURIComponent(x.id)}` }, formatWhen(x))))))
+    ? h('section', { class: 'wo-detail-section' }, h('h3', {}, 'Next dates'),
+      h('ul', { class: 'wo-dates' }, moreDates.map((x) => h('li', {}, h('a', { href: `#event=${encodeURIComponent(x.id)}` },
+        formatShortDate(x.startDate), x.allDay ? '' : ` · ${formatTime(x.startDate, clock)}`)))))
     : null;
 
-  const body = h('div', { class: 'wo-detail-body' },
-    h('h2', { class: 'wo-detail-title' }, e.title),
-    meta,
-    actions,
-    info.html ? h('div', { class: 'wo-description', html: info.html }) : null,
-    contacts, files, dates);
+  const eyebrow = e.recurring && e.recurrence ? 'Regular event' : `${formatShortDate(e.startDate)}${e.allDay ? '' : ` · ${formatTime(e.startDate, clock)}`}`;
 
-  const figure = img && h('figure', { class: `wo-detail-image${portrait ? ' is-portrait' : ''}` },
-    h('a', { href: img.src, target: '_blank', rel: 'noopener', title: 'Open full size' },
-      h('img', { src: img.src, alt: img.alt || e.title, width: img.width, height: img.height })));
-
-  return h('article', { class: `wo-detail${portrait ? ' has-poster' : img ? ' has-header' : ''}` },
-    back,
-    portrait ? h('div', { class: 'wo-detail-grid' }, figure, body) : [figure, body]);
+  return h('article', { class: `wo-detail${img ? ' has-media' : ''}` },
+    h('div', { class: 'wo-detail-top' }, back),
+    media,
+    h('div', { class: 'wo-detail-layout' },
+      h('header', { class: 'wo-detail-head' },
+        h('p', { class: 'wo-eyebrow' }, eyebrow),
+        h('h2', { class: 'wo-detail-title' }, e.title)),
+      h('aside', { class: 'wo-detail-aside' }, h('div', { class: 'wo-panel' }, info_, actions), contacts, files),
+      h('div', { class: 'wo-detail-body' },
+        info.html ? h('div', { class: 'wo-description', html: info.html }) : null,
+        dates)));
 }
 
-// A card: image (or placeholder), title band, date line.
-export function renderCard(e, { showRecurrence = false, clock } = {}) {
+// A card: image (or placeholder) with a date badge, title, when and where.
+export function renderCard(e, { showRecurrence = false, clock, summary = false, location = flag('cardLocation', true), more = null } = {}) {
   const img = e.info?.image;
   const { href, target } = eventHref(e);
-  const when = showRecurrence && e.recurrence
-    ? `${e.recurrence}${e.allDay ? '' : `, ${formatTime(e.startDate, clock || param('clock', '12'))}`}`
-    : formatWhen(e, { clock });
+  const c = clock || param('clock', '12');
+  const regular = showRecurrence && e.recurring && e.recurrence;
+  let when;
+  if (regular) when = `${e.recurrence}${e.allDay ? '' : `, ${formatTime(e.startDate, c)}`}`;
+  else if (e.startKey !== e.endKey) when = formatWhen(e, { clock: c, ordinals: false });
+  else when = `${formatShortDate(e.startDate)} · ${formatTimeRange(e, c)}`;
   const d = e.startDate;
   return h('a', { class: `wo-card${img ? '' : ' no-image'}`, href, target },
-    h('div', { class: 'wo-card-media' }, img
-      ? h('img', { src: img.small || img.src, alt: '', loading: 'lazy', width: img.width, height: img.height })
-      : h('div', { class: 'wo-card-placeholder', 'aria-hidden': 'true' },
-        h('span', { class: 'wo-ph-day' }, fmt({ day: 'numeric' }).format(d)),
-        h('span', { class: 'wo-ph-month' }, fmt({ month: 'short' }).format(d)))),
+    h('div', { class: 'wo-card-media' },
+      img
+        ? h('img', { src: img.small || img.src, alt: '', loading: 'lazy', width: img.width, height: img.height })
+        : h('div', { class: 'wo-card-placeholder', 'aria-hidden': 'true' }, icon('calendar')),
+      regular
+        ? h('span', { class: 'wo-tag' }, icon('repeat'), 'Regular')
+        : h('span', { class: 'wo-date-badge', 'aria-hidden': 'true' },
+          h('b', {}, fmt({ day: 'numeric' }).format(d)), h('span', {}, fmt({ month: 'short' }).format(d)))),
     h('div', { class: 'wo-card-body' },
       h('h3', { class: 'wo-card-title' }, e.title),
-      h('p', { class: 'wo-card-when' }, when)));
+      h('p', { class: 'wo-card-meta' }, icon(regular ? 'repeat' : 'clock'), h('span', {}, when)),
+      location && e.location ? h('p', { class: 'wo-card-meta' }, icon('pin'), h('span', {}, shortLocation(e.location))) : null,
+      summary && e.info?.summary ? h('p', { class: 'wo-card-summary' }, e.info.summary) : null,
+      more ? h('span', { class: 'wo-card-link' }, more, icon('arrow')) : null));
+}
+
+// One day of the agenda (timetable and the calendar's list view).
+export function renderAgendaDay(key, evs, { today = null, showLocation = flag('location', true), clock } = {}) {
+  const d = new Date(`${key}T12:00:00Z`);
+  const isToday = today && key === today;
+  const isTomorrow = today && key === addDays(today, 1);
+  return h('section', { class: `wo-day${isToday ? ' is-today' : ''}` },
+    h('header', { class: 'wo-day-head' },
+      h('span', { class: 'wo-day-name' }, fmt({ weekday: 'long' }).format(d)),
+      h('span', { class: 'wo-day-date' }, fmt({ day: 'numeric', month: 'long' }).format(d)),
+      isToday ? h('span', { class: 'wo-badge' }, 'Today') : isTomorrow ? h('span', { class: 'wo-badge is-soft' }, 'Tomorrow') : null),
+    h('ul', { class: 'wo-day-list' }, evs.map((e) => {
+      const { href, target } = eventHref(e);
+      const thumb = e.info?.image;
+      return h('li', { class: 'wo-tt-item' }, h('a', { class: 'wo-tt-row', href, target },
+        h('span', { class: 'wo-tt-time' }, e.allDay ? 'All day' : formatTime(e.startDate, clock)),
+        h('span', { class: 'wo-tt-main' },
+          h('span', { class: 'wo-tt-title' }, e.title),
+          showLocation && e.location ? h('span', { class: 'wo-tt-loc' }, shortLocation(e.location)) : null),
+        thumb ? h('img', { class: 'wo-tt-thumb', src: thumb.small || thumb.src, alt: '', loading: 'lazy' }) : h('span'),
+        icon('right')));
+    })));
 }
 
 // Numbered pager like the Duda blog widget: ‹ 1 2 3 ›

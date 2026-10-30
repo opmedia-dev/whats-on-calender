@@ -10,20 +10,23 @@
   <main class="wo-wrap">
     <div id="main" class="wo-cal is-auto">
       <div class="wo-cal-head">
-        <button type="button" class="wo-cal-today" id="today" title="Back to this month" aria-label="Back to this month"></button>
-        <button type="button" class="wo-cal-prev" id="prev" aria-label="Previous month"></button>
         <h2 id="month" aria-live="polite"></h2>
-        <button type="button" class="wo-cal-next" id="next" aria-label="Next month"></button>
-        <span></span>
+        <div class="wo-cal-nav">
+          <div class="wo-group"><button type="button" id="today">Today</button></div>
+          <div class="wo-group"><button type="button" id="prev" aria-label="Previous month"></button><button type="button" id="next" aria-label="Next month"></button></div>
+          <div class="wo-group" id="view-toggle" role="group" aria-label="View"><button type="button" data-view="grid" aria-pressed="true"></button><button type="button" data-view="list" aria-pressed="false"></button></div>
+        </div>
       </div>
-      <div class="wo-cal-weekdays" id="weekdays"></div>
-      <div class="wo-cal-grid" id="grid"><p class="wo-loading">Loading…</p></div>
+      <div class="wo-cal-board">
+        <div class="wo-cal-weekdays" id="weekdays"></div>
+        <div class="wo-cal-grid" id="grid"><p class="wo-loading">Loading…</p></div>
+      </div>
       <div class="wo-cal-list" id="list"></div>
     </div>
     <div id="detail" hidden></div>
   </main>
   <script type="module">
-    import { init, loadEvents, param, num, flag, h, icon, dayKey, addDays, formatMonth, formatTime, formatDayHeader, eventHref, routeDetails, showError, emptyState } from './assets/wo.js';
+    import { init, loadEvents, param, num, flag, h, icon, dayKey, addDays, formatMonth, formatTime, eventHref, renderAgendaDay, routeDetails, showError, emptyState } from './assets/wo.js';
 
     // Google Calendar's event colours, by colorId.
     const COLORS = { 1: '#7986cb', 2: '#33b679', 3: '#8e24aa', 4: '#e67c73', 5: '#f6bf26', 6: '#f4511e', 7: '#039be5', 8: '#616161', 9: '#3f51b5', 10: '#0b8043', 11: '#d50000' };
@@ -35,7 +38,16 @@
     main.classList.toggle('is-auto', view === 'auto');
     main.classList.toggle('is-list', view === 'list');
     if (num('cellHeight', 0) > 0) main.style.setProperty('--wo-cell', `${num('cellHeight', 150)}px`);
-    document.getElementById('today').append(icon('calendar'));
+    const toggle = document.getElementById('view-toggle');
+    toggle.hidden = view !== 'auto';
+    toggle.children[0].append(icon('grid'), 'Month');
+    toggle.children[1].append(icon('list'), 'List');
+    for (const b of toggle.children) b.addEventListener('click', () => {
+      const list = b.dataset.view === 'list';
+      main.classList.toggle('is-list', list);
+      main.classList.toggle('is-auto', !list);
+      for (const x of toggle.children) x.setAttribute('aria-pressed', String(x === b));
+    });
     document.getElementById('prev').append(icon('left'));
     document.getElementById('next').append(icon('right'));
     const short = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -60,12 +72,12 @@
       const maxPerDay = num('maxPerDay', 3);
       const dots = flag('dots', false);
       const expanded = new Set();
+      let showEarlier = false;
 
       const item = (e) => {
         const { href, target } = eventHref(e);
-        return h('li', { class: `wo-cal-ev${e.featured ? ' is-featured' : ''}` },
-          h('a', { href, target, title: [e.title, e.location].filter(Boolean).join(' – ') },
-            dots ? h('span', { class: 'wo-dot', style: `background:${COLORS[e.colorId] || 'var(--wo-accent)'}` }) : null,
+        return h('li', { class: `wo-cal-ev${e.featured ? ' is-featured' : ''}`, style: dots && COLORS[e.colorId] ? `--wo-ev:${COLORS[e.colorId]}` : null },
+          h('a', { href, target, title: [e.allDay ? null : formatTime(e.startDate), e.title, e.location].filter(Boolean).join(' · ') },
             e.allDay ? null : h('b', {}, formatTime(e.startDate), ' '), e.title));
       };
 
@@ -88,23 +100,20 @@
             h('div', { class: 'wo-cal-num' }, String(Number(key.slice(8)))),
             h('ul', {}, shown.map(item)),
             evs.length > shown.length || open ? h('button', { type: 'button', class: 'wo-cal-more', onclick: () => { open ? expanded.delete(key) : expanded.add(key); render(); } },
-              open ? param('lessText', 'Show less') : param('moreText', 'Show All')) : null));
+              open ? param('lessText', 'Show less') : param('moreText', `+${evs.length - shown.length} more`)) : null));
           start = addDays(start, 1);
         }
         grid.replaceChildren(...cells);
 
         const days = [...byDay.keys()].filter((k) => k.startsWith(month)).sort();
-        list.replaceChildren(...days.map((k) => h('section', { class: 'wo-day' },
-          h('div', { class: 'wo-day-head' }, formatDayHeader(new Date(`${k}T12:00:00Z`))),
-          h('ul', { class: 'wo-day-list' }, byDay.get(k).map((e) => {
-            const { href, target } = eventHref(e);
-            return h('li', { class: `wo-tt-item${k === today ? ' is-today' : ''}` }, h('a', { href, target },
-              h('span', { class: 'wo-tt-time' }, `${e.allDay ? 'All day' : formatTime(e.startDate)} –`), e.title,
-              e.location && flag('location', true) ? h('span', { class: 'wo-tt-loc' }, e.location) : null));
-          })))));
+        // In the current month the list starts at today, with a button for the earlier dates.
+        const hideEarlier = month === thisMonth && !showEarlier && days.some((k) => k < today) && days.filter((k) => k >= today).length >= 4;
+        const listed = hideEarlier ? days.filter((k) => k >= today) : days;
+        const earlier = h('button', { type: 'button', class: 'wo-btn wo-btn-ghost wo-btn-sm wo-cal-earlier', onclick: () => { showEarlier = true; render(); } }, param('earlierText', 'Show earlier dates'));
+        list.replaceChildren(...(hideEarlier ? [earlier] : []), ...listed.map((k) => renderAgendaDay(k, byDay.get(k), { today })));
         if (!days.length) list.replaceChildren(emptyState('No events this month.'));
       };
-      const go = (m) => { month = m; expanded.clear(); render(); };
+      const go = (m) => { month = m; expanded.clear(); showEarlier = false; render(); };
       document.getElementById('prev').addEventListener('click', () => go(shiftMonth(month, -1)));
       document.getElementById('next').addEventListener('click', () => go(shiftMonth(month, 1)));
       document.getElementById('today').addEventListener('click', () => go(thisMonth));

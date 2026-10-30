@@ -86,7 +86,7 @@ export function htmlToText(html) {
   return decodeEntities(html
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<\/(p|div|li|h\d|blockquote)>/gi, '\n')
-    .replace(/<li[^>]*>/gi, '• ')
+    .replace(/<li[^>]*>/gi, '\n• ')
     .replace(/<[^>]+>/g, ''))
     .replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
 }

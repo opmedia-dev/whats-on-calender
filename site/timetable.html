@@ -12,7 +12,7 @@
     <div id="detail" hidden></div>
   </main>
   <script type="module">
-    import { init, loadEvents, param, num, flag, h, dayKey, addDays, formatDayHeader, formatTime, eventHref, isUpcoming, routeDetails, showError, emptyState } from './assets/wo.js';
+    import { init, loadEvents, param, num, flag, h, icon, dayKey, addDays, isUpcoming, renderAgendaDay, routeDetails, showError, emptyState } from './assets/wo.js';
 
     await init();
     const list = document.getElementById('list');
@@ -32,17 +32,8 @@
         if (!days.has(key)) days.set(key, []);
         days.get(key).push(e);
       }
-      const showLocation = flag('location', true);
-      list.replaceChildren(...[...days].map(([key, evs]) => h('section', { class: 'wo-day' },
-        h('div', { class: 'wo-day-head' }, formatDayHeader(new Date(`${key}T12:00:00Z`))),
-        h('ul', { class: 'wo-day-list' }, evs.map((e) => {
-          const { href, target } = eventHref(e);
-          return h('li', { class: `wo-tt-item${key === today && flag('highlightToday', true) ? ' is-today' : ''}` },
-            h('a', { href, target },
-              h('span', { class: 'wo-tt-time' }, `${e.allDay ? 'All day' : formatTime(e.startDate)} –`),
-              e.title,
-              showLocation && e.location ? h('span', { class: 'wo-tt-loc' }, e.location) : null));
-        })))));
+      const highlight = flag('highlightToday', true) ? today : null;
+      list.replaceChildren(...[...days].map(([key, evs]) => renderAgendaDay(key, evs, { today: highlight })));
       if (!items.length) list.replaceChildren(emptyState(param('emptyText', 'Nothing on this week.')));
       if (num('maxHeight', 0) > 0) {
         list.classList.add('is-scroll');
@@ -50,7 +41,7 @@
       }
       const more = param('moreLink');
       if (more && /^https?:\/\//.test(more)) {
-        list.after(h('p', { class: 'wo-tt-more' }, h('a', { href: more, target: '_top' }, param('moreText', 'See our full calendar'))));
+        list.after(h('p', { class: 'wo-tt-more' }, h('a', { class: 'wo-btn', href: more, target: '_top' }, icon('calendar'), param('moreText', 'See our full calendar'))));
       }
       routeDetails({ main: document.getElementById('main'), detail: document.getElementById('detail'), events, backLabel: param('backText', 'Back to timetable') });
     } catch (e) {

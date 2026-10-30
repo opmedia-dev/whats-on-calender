@@ -11,13 +11,13 @@
     <div id="main">
       <h2 class="wo-heading" id="heading" hidden></h2>
       <div class="wo-banner" id="banner">
-        <div class="wo-banner-main"><div id="cards" class="wo-cards is-band"><p class="wo-loading">Loading…</p></div><div id="pager"></div></div>
+        <div class="wo-banner-main"><div id="cards" class="wo-cards is-band"><p class="wo-loading">Loading…</p></div><div class="wo-foot" id="foot"><div id="pager"></div></div></div>
       </div>
     </div>
     <div id="detail" hidden></div>
   </main>
   <script type="module">
-    import { init, loadEvents, params, param, num, flag, h, isUpcoming, nextPerSeries, renderCard, renderPager, routeDetails, showError, emptyState } from './assets/wo.js';
+    import { init, loadEvents, params, param, num, flag, h, icon, isUpcoming, nextPerSeries, renderCard, renderPager, routeDetails, showError, emptyState } from './assets/wo.js';
 
     await init();
     const cardsEl = document.getElementById('cards');
@@ -43,10 +43,16 @@
       const frame = h('iframe', { src: src.href, title: 'Latest magazine', allow: 'fullscreen; web-share; clipboard-write', allowfullscreen: true, loading: 'lazy' });
       banner.classList.add('has-side');
       if (num('flipbookWidth', 0) > 0) banner.style.setProperty('--wo-side', `${num('flipbookWidth', 300)}px`);
-      banner.append(h('aside', { class: 'wo-banner-side' }, frame));
+      const sideTitle = param('flipbookTitle', 'Latest magazine');
+      banner.append(h('aside', { class: 'wo-banner-side' }, sideTitle !== '0' ? h('p', { class: 'wo-side-title' }, sideTitle) : null, frame));
       window.addEventListener('message', (e) => {
         if (e.source === frame.contentWindow && e.data?.source === 'flipbook' && e.data.type === 'height') frame.style.height = `${e.data.height}px`;
       });
+    }
+
+    const allLink = param('moreLink', param('link'));
+    if (/^https?:\/\//.test(allLink) && param('moreText') !== '0') {
+      document.getElementById('foot').append(h('a', { class: 'wo-more-link', href: allLink, target: '_top' }, param('moreText', 'See all events'), icon('arrow')));
     }
 
     try {

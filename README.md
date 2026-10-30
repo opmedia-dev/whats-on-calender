@@ -8,7 +8,7 @@ Hosted for free on GitHub Pages, so there's no server to run.
 | `timetable.html` | Hero timetable: the next 7 days grouped by day, with today highlighted |
 | `banner.html` | "What's happening" banner: paged cards of events with pictures, with an optional flipbook column on the right |
 | `whats-on.html` | What's On page: regular (repeating) events, search, a card grid and full event details |
-| `calendar.html` | Monthly calendar with prev/next and "Show All"; switches to a list on phones |
+| `calendar.html` | Monthly calendar with Today/prev/next, a Month/List switch and "+N more" for busy days; switches to a list on phones |
 | `index.html` | Embed codes to copy into Duda, plus notes for editors |
 
 Every embed can open an event's **detail view**, which shows:
@@ -103,6 +103,7 @@ All embeds:
 | `radius` | `radius=0` | Corner radius (px) |
 | `clock` | `clock=12` | `24` → 19:30, `12` → 7.30pm. Default: 24 in the timetable/calendar, 12 on cards and details |
 | `link` | `link=https://site/events-calendar` | Open events on the What's On page instead of inside this embed |
+| `cardLocation` | `cardLocation=0` | Hide the location line on cards |
 | `only` / `exclude` | `exclude=rehearsal,booking` | Only show / hide events whose titles contain these words |
 | `colors` | `colors=3,10` | Only events with these Google Calendar colour IDs (`0` = default colour) |
 | `contacts` | `contacts=0` | Hide the Contact box in details |
@@ -119,20 +120,24 @@ under the list), `emptyText`.
 - `show=all` (include events without pictures), `days` (only the next N days)
 - `autoplay` (seconds per page)
 - `style=plain` (no colour band), `ratio=4:3`
-- `flipbook=1`, `flipbookUrl`, `flipbookLink` (archive page), `flipbookWidth` (300), `flipbookHeight` (360)
+- `moreLink` + `moreText` ("See all events" link beside the pager; defaults to `link`, `moreText=0` hides it)
+- `flipbook=1`, `flipbookUrl`, `flipbookLink` (archive page), `flipbookTitle` ("Latest magazine", `0` hides it), `flipbookWidth` (300), `flipbookHeight` (360)
 
 `whats-on.html`:
 
-- `regular=0` (hide the regular events row), `regularTitle`, `regularMax` (6), `moreText`
-- `upcomingTitle`
+- `regular=0` (hide the regular events row), `regularTitle` ("Regular events"), `regularMax` (6), `moreText` ("More info")
+- `upcomingTitle` ("Coming up"); `0` hides a title
+- `filters=0` (hide the Highlights / This week / This month / All events buttons), `filter=week` (start on another tab)
+- `summary=0` (no description excerpt on cards)
 - `search=0`, `searchText`
 - `perPage` (9), `cols` (3), `minCardWidth` (260)
 - `show=all`, `style=band`, `ratio`, `emptyText`
 
 Searching always covers every upcoming event.
 
-`calendar.html`: `view` (`auto`, `grid` or `list`), `month=2026-12`, `maxPerDay` (3),
-`cellHeight` (150), `dots=1` (show Google Calendar event colours), `moreText`/`lessText`.
+`calendar.html`: `view` (`auto` = Month/List switch and a list on phones, `grid` or `list`), `month=2026-12`,
+`maxPerDay` (3), `cellHeight` (128), `dots=1` (colour events with their Google Calendar colour),
+`moreText`/`lessText`, `earlierText`.
 
 ## How it works
 
