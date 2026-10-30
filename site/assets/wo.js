@@ -120,6 +120,13 @@ export async function loadEvents() {
   const res = await fetch(new URL('../events.json', import.meta.url), { cache: 'no-cache' });
   if (!res.ok) throw new Error(`Could not load events (${res.status})`);
   const data = await res.json();
+  if (data.preview && !document.querySelector('.wo-demo-notice')) {
+    const notice = document.createElement('div');
+    notice.className = 'wo-demo-notice';
+    notice.setAttribute('role', 'status');
+    notice.textContent = 'PREVIEW MODE — Sample events only. Not connected to Google Calendar.';
+    document.body.prepend(notice);
+  }
   tz = data.timeZone || tz;
   const base = new URL('../', import.meta.url);
   const resolve = (rel) => (rel && !/^https?:/i.test(rel) ? new URL(rel, base).href : rel);
