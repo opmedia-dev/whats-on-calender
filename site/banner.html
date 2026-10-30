@@ -35,7 +35,14 @@
 
     // Optional fixed flipbook column (the latest issue of the parish magazine).
     if (flag('flipbook', false)) {
-      const src = new URL(param('flipbookUrl', 'https://opmedia-dev.github.io/flipbook/preview.html'));
+      const defaultPreview = 'https://opmedia-dev.github.io/flipbook/preview.html';
+      let src;
+      try {
+        src = new URL(param('flipbookUrl', defaultPreview));
+        if (src.protocol !== 'https:') throw new Error('Only HTTPS flipbook previews are supported');
+      } catch {
+        src = new URL(defaultPreview);
+      }
       if (!src.searchParams.has('title')) src.searchParams.set('title', '0');
       if (!src.searchParams.has('maxHeight')) src.searchParams.set('maxHeight', String(num('flipbookHeight', 360)));
       if (param('flipbookLink')) src.searchParams.set('link', param('flipbookLink'));
@@ -46,7 +53,9 @@
       const sideTitle = param('flipbookTitle', 'Latest magazine');
       banner.append(h('aside', { class: 'wo-banner-side' }, sideTitle !== '0' ? h('p', { class: 'wo-side-title' }, sideTitle) : null, frame));
       window.addEventListener('message', (e) => {
-        if (e.source === frame.contentWindow && e.data?.source === 'flipbook' && e.data.type === 'height') frame.style.height = `${e.data.height}px`;
+        if (e.origin !== src.origin || e.source !== frame.contentWindow || e.data?.source !== 'flipbook' || e.data.type !== 'height') return;
+        const height = Number(e.data.height);
+        if (Number.isFinite(height) && height >= 200) frame.style.height = `${Math.min(height, 2000)}px`;
       });
     }
 
