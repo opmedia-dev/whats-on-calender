@@ -48,6 +48,10 @@
         preview = new URL(defaultPreview);
       }
       const fullPreview = new URL(preview.href);
+      // A pasted old compact-reader URL must still open the *full* experience.
+      fullPreview.searchParams.delete('tools');
+      fullPreview.searchParams.delete('maxHeight');
+      if (fullPreview.searchParams.get('title') === '0') fullPreview.searchParams.delete('title');
       if (param('flipbookLink')) fullPreview.searchParams.set('link', param('flipbookLink'));
       if (param('accent') && !fullPreview.searchParams.has('accent')) fullPreview.searchParams.set('accent', param('accent'));
 
