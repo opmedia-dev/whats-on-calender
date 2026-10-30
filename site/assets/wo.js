@@ -527,10 +527,15 @@ export function renderCard(e, { showRecurrence = false, clock, summary = false, 
       img
         ? h('img', { src: img.small || img.src, alt: '', loading: 'lazy', width: img.width, height: img.height })
         : h('div', { class: 'wo-card-placeholder', 'aria-hidden': 'true' }, icon('calendar')),
-      regular
-        ? h('span', { class: 'wo-tag' }, icon('repeat'), 'Regular')
-        : h('span', { class: 'wo-date-badge', 'aria-hidden': 'true' },
-          h('b', {}, fmt({ day: 'numeric' }).format(d)), h('span', {}, fmt({ month: 'short' }).format(d)))),
+      // A recurring card still represents a specific next occurrence.
+      // Show its date badge as well as the repeat pattern: otherwise the
+      // date-sorted cards have no visible explanation for their order.
+      h('span', regular
+        ? { class: 'wo-date-badge', 'aria-label': `Next date: ${formatLongDate(d)}` }
+        : { class: 'wo-date-badge', 'aria-hidden': 'true' },
+        h('b', {}, fmt({ day: 'numeric' }).format(d)),
+        h('span', {}, fmt({ month: 'short' }).format(d))),
+      regular ? h('span', { class: 'wo-tag wo-tag-regular' }, icon('repeat'), 'Regular') : null),
     h('div', { class: 'wo-card-body' },
       h('h3', { class: 'wo-card-title' }, e.title),
       h('p', { class: 'wo-card-meta' }, icon(regular ? 'repeat' : 'clock'), h('span', {}, when)),

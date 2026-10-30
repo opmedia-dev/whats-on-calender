@@ -69,11 +69,10 @@
         </div>
         <div><label for="bannerPerPage">Event cards per page (maximum)</label><input id="bannerPerPage" type="number" min="1" max="6" value="3"></div>
         <div><label for="bannerMax">Maximum events in carousel</label><input id="bannerMax" type="number" min="1" max="60" value="12"></div>
-        <div><label for="flipbookWidth">Magazine column width (pixels, minimum 340)</label><input id="flipbookWidth" type="number" min="340" max="500" value="350"></div>
         <div>
           <label for="flipbookUrl">Magazine preview URL (optional)</label>
           <input id="flipbookUrl" type="url" placeholder="https://opmedia-dev.github.io/flipbook/preview.html">
-          <p class="muted">Leave blank to show the latest issue. The banner shows a matching cover card; clicking it opens the complete page-turning flipbook. For a custom issue, use a <code>preview.html</code> URL, not the embed generator. Entering a URL enables the magazine.</p>
+          <p class="muted">Leave blank for the latest issue. The magazine card automatically matches the event cards' width and height. Clicking it opens the full flipbook. For a custom issue use a <code>preview.html</code> URL; entering one enables the magazine.</p>
         </div>
         <div>
           <label for="flipbookLink">Magazine archive URL (optional)</label>
@@ -197,7 +196,6 @@ if(d.type==='event'&&deep){var u=new URL(location.href);if(d.id)u.searchParams.s
         bn.set('flipbook', '1');
         if (val('flipbookLink')) bn.set('flipbookLink', val('flipbookLink'));
         if (val('flipbookUrl')) bn.set('flipbookUrl', val('flipbookUrl'));
-        setInt(bn, 'flipbookWidth', 'flipbookWidth', 340, 500);
       }
       const wn = new URLSearchParams(q);
       if (!document.getElementById('regular').checked) wn.set('regular', '0');
