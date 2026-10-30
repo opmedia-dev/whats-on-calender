@@ -18,6 +18,7 @@
   </main>
   <script type="module">
     import { init, loadEvents, params, param, num, flag, h, icon, isUpcoming, nextPerSeries, renderCard, renderPager, routeDetails, showError, emptyState } from './assets/wo.js';
+    import { loadMagazineIssue } from './assets/magazine.js';
 
     await init();
     const cardsEl = document.getElementById('cards');
@@ -33,44 +34,59 @@
     if (param('style') === 'plain') cardsEl.classList.remove('is-band');
     if (params.has('ratio')) cardsEl.style.setProperty('--wo-ratio', param('ratio').replace(':', ' / '));
 
-    // Optional fixed flipbook column (the latest issue of the parish magazine).
+    // Show the latest issue as a fourth card, matched to the event-card
+    // proportions. A full page-turning PDF reader cannot fit in a card-size
+    // column: its minimum book height plus controls exceeded the event row.
+    // Opening this card launches the complete interactive flipbook instead.
     if (flag('flipbook', false)) {
       const defaultPreview = 'https://opmedia-dev.github.io/flipbook/preview.html';
-      let src;
+      let preview;
       try {
-        src = new URL(param('flipbookUrl', defaultPreview));
-        if (src.protocol !== 'https:') throw new Error('Only HTTPS flipbook previews are supported');
+        preview = new URL(param('flipbookUrl', defaultPreview));
+        if (preview.protocol !== 'https:') throw new Error('HTTPS required');
       } catch {
-        src = new URL(defaultPreview);
+        preview = new URL(defaultPreview);
       }
-      // The full flipbook needs at least 260px for a page *inside* its own
-      // 32px wrapper and this banner's padding. A 300px sidebar clips pages.
-      // Keep the small column as a compact reader and offer a full-size link.
-      const fullPreview = new URL(src.href);
-      if (param('flipbookLink')) src.searchParams.set('link', param('flipbookLink'));
-      if (param('accent') && !src.searchParams.has('accent')) src.searchParams.set('accent', param('accent'));
-      if (!src.searchParams.has('title')) src.searchParams.set('title', '0');
-      if (!src.searchParams.has('maxHeight')) src.searchParams.set('maxHeight', String(num('flipbookHeight', 300)));
-      if (!src.searchParams.has('tools')) src.searchParams.set('tools', 'none');
-      const frame = h('iframe', {
-        src: src.href, title: 'Latest magazine — compact flipbook',
-        allow: 'fullscreen; web-share; clipboard-write', allowfullscreen: true,
-        loading: 'lazy',
-      });
+      const fullPreview = new URL(preview.href);
+      // A pasted old compact-reader URL must still open the *full* experience.
+      fullPreview.searchParams.delete('tools');
+      fullPreview.searchParams.delete('maxHeight');
+      if (fullPreview.searchParams.get('title') === '0') fullPreview.searchParams.delete('title');
+      if (param('flipbookLink')) fullPreview.searchParams.set('link', param('flipbookLink'));
+      if (param('accent') && !fullPreview.searchParams.has('accent')) fullPreview.searchParams.set('accent', param('accent'));
+
+      const side = h('aside', { class: 'wo-banner-side', 'aria-label': 'Latest parish magazine' });
+      const width = Math.max(260, Math.min(500, num('flipbookWidth', 350)));
       banner.classList.add('has-side');
-      const width = Math.max(340, Math.min(500, num('flipbookWidth', 350)));
       banner.style.setProperty('--wo-side', `${width}px`);
-      const sideTitle = param('flipbookTitle', 'Latest magazine');
-      banner.append(h('aside', { class: 'wo-banner-side' },
-        sideTitle !== '0' ? h('p', { class: 'wo-side-title' }, sideTitle) : null,
-        frame,
-        h('a', { class: 'wo-magazine-full', href: fullPreview.href,
-          target: '_blank', rel: 'noopener noreferrer' }, 'Open full magazine', icon('arrow'))));
-      window.addEventListener('message', (e) => {
-        if (e.origin !== src.origin || e.source !== frame.contentWindow || e.data?.source !== 'flipbook' || e.data.type !== 'height') return;
-        const height = Number(e.data.height);
-        if (Number.isFinite(height) && height >= 200) frame.style.height = `${Math.min(height, 2000)}px`;
-      });
+      banner.append(side);
+
+      const card = (issue) => {
+        const label = param('flipbookTitle', 'Latest magazine');
+        return h('a', {
+          class: 'wo-magazine-card',
+          href: fullPreview.href,
+          target: '_blank',
+          rel: 'noopener noreferrer',
+          'aria-label': `Open ${issue.title} in the full interactive magazine reader`,
+        },
+          h('div', { class: 'wo-magazine-cover' },
+            issue.cover
+              ? h('img', { src: issue.cover, alt: `Cover of ${issue.title}`, loading: 'lazy' })
+              : h('div', { class: 'wo-magazine-placeholder' }, icon('file'), 'Magazine')),
+          h('div', { class: 'wo-magazine-body' },
+            h('p', { class: 'wo-magazine-kicker' }, label !== '0' ? label : 'Magazine'),
+            h('h3', { class: 'wo-magazine-title' }, issue.title),
+            h('span', { class: 'wo-magazine-link' }, 'Read magazine', icon('arrow'))));
+      };
+
+      side.replaceChildren(card({ title: 'Latest parish magazine', cover: null }));
+      loadMagazineIssue(preview.href)
+        .then((issue) => side.replaceChildren(card(issue)))
+        .catch((error) => {
+          // A missing or inaccessible catalogue must not affect event cards.
+          console.warn('Magazine cover unavailable; keeping the reader link:', error);
+        });
     }
 
     const allLink = param('moreLink', param('link'));

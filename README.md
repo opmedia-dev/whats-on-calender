@@ -6,7 +6,7 @@ Hosted for free on GitHub Pages, so there's no server to run.
 | Page | Embed |
 | --- | --- |
 | `timetable.html` | Hero timetable: the next 7 days grouped by day, with today highlighted |
-| `banner.html` | "What's happening" banner: paged cards of events with pictures, with an optional flipbook column on the right |
+| `banner.html` | "What's happening" banner: paged cards of events with pictures, with a fourth card for the latest magazine issue |
 | `whats-on.html` | What's On page: regular (repeating) events, search, a card grid and full event details |
 | `calendar.html` | Monthly calendar with Today/prev/next, a Month/List switch and "+N more" for busy days; switches to a list on phones |
 | `index.html` | Embed codes to copy into Duda, plus notes for editors |
@@ -84,7 +84,9 @@ configure **each of the four embeds** independently before copying its HTML snip
 - **Shared:** brand colours, font families, corner radius, 12/24-hour clock and excluded titles.
 - **Hero timetable:** number of days and optional scrollable maximum height.
 - **Homepage banner:** heading, featured/all events, cards per page, maximum events, magazine
-  column width and preview height, and optional alternate HTTPS preview URL.
+  card width, and optional alternate HTTPS preview URL. The magazine uses the latest
+  cover from the flipbook's published `issues.json` and opens the complete
+  page-turning flipbook when clicked; this keeps all four cards comparable in height.
 - **What's On page:** regular events row, search, filters, default tab, grid columns and page size.
 - **Monthly calendar:** grid/list/automatic view, events per day and minimum cell height.
 
@@ -134,7 +136,7 @@ under the list), `emptyText`.
 - `autoplay` (seconds per page)
 - `style=plain` (no colour band), `ratio=4:3`
 - `moreLink` + `moreText` ("See all events" link beside the pager; defaults to `link`, `moreText=0` hides it)
-- `flipbook=1`, `flipbookUrl`, `flipbookLink` (archive page), `flipbookTitle` ("Latest magazine", `0` hides it), `flipbookWidth` (350; minimum 340px to avoid a clipped page), `flipbookHeight` (300). The banner shows a compact page-turning reader with an **Open full magazine** link for the complete toolbar.
+- `flipbook=1`, `flipbookUrl`, `flipbookLink` (archive page passed to the full reader), `flipbookTitle` ("Latest magazine", `0` hides the label), `flipbookWidth` (350). The banner shows a **cover card**, using the latest issue image/title from the flipbook's `issues.json`. Clicking it opens the full interactive page-turning reader in a separate tab. `flipbookHeight` is no longer used.
 
 `whats-on.html`:
 

@@ -64,17 +64,16 @@
         <div><label for="bannerTitle">Section heading</label><input id="bannerTitle" type="text" value="What's happening at St John's"></div>
         <div><label for="bannerShow">Events to show</label><select id="bannerShow"><option value="featured">Events with posters/images</option><option value="all">All events</option></select></div>
         <div>
-          <label class="inline" for="flipbook"><input id="flipbook" type="checkbox"> Show latest magazine beside event cards</label>
+          <label class="inline" for="flipbook"><input id="flipbook" type="checkbox"> Show latest magazine as a matching 4th card</label>
           <p class="muted" id="flipbookHelp" role="status" aria-live="polite">Magazine disabled. Tick this box or enter a preview URL below.</p>
         </div>
         <div><label for="bannerPerPage">Event cards per page (maximum)</label><input id="bannerPerPage" type="number" min="1" max="6" value="3"></div>
         <div><label for="bannerMax">Maximum events in carousel</label><input id="bannerMax" type="number" min="1" max="60" value="12"></div>
         <div><label for="flipbookWidth">Magazine column width (pixels, minimum 340)</label><input id="flipbookWidth" type="number" min="340" max="500" value="350"></div>
-        <div><label for="flipbookHeight">Magazine preview height (pixels)</label><input id="flipbookHeight" type="number" min="250" max="900" value="300"></div>
         <div>
           <label for="flipbookUrl">Magazine preview URL (optional)</label>
           <input id="flipbookUrl" type="url" placeholder="https://opmedia-dev.github.io/flipbook/preview.html">
-          <p class="muted">Leave blank for the latest issue. For a custom link, use a <code>preview.html</code> page, not the flipbook embed generator. Entering a URL automatically enables the magazine.</p>
+          <p class="muted">Leave blank to show the latest issue. The banner shows a matching cover card; clicking it opens the complete page-turning flipbook. For a custom issue, use a <code>preview.html</code> URL, not the embed generator. Entering a URL enables the magazine.</p>
         </div>
         <div>
           <label for="flipbookLink">Magazine archive URL (optional)</label>
@@ -199,7 +198,6 @@ if(d.type==='event'&&deep){var u=new URL(location.href);if(d.id)u.searchParams.s
         if (val('flipbookLink')) bn.set('flipbookLink', val('flipbookLink'));
         if (val('flipbookUrl')) bn.set('flipbookUrl', val('flipbookUrl'));
         setInt(bn, 'flipbookWidth', 'flipbookWidth', 340, 500);
-        setInt(bn, 'flipbookHeight', 'flipbookHeight', 250, 900);
       }
       const wn = new URLSearchParams(q);
       if (!document.getElementById('regular').checked) wn.set('regular', '0');
