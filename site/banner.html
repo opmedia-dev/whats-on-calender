@@ -20,7 +20,7 @@
     import { init, loadEvents, params, param, num, flag, h, icon, isUpcoming, nextPerSeries, renderCard, renderPager, routeDetails, showError, emptyState } from './assets/wo.js';
     import { loadMagazineIssue } from './assets/magazine.js';
     import { loadMailings, makeMailingCard } from './assets/mailings.js';
-    import { horizonDays, autoplaySeconds, mayAutoAdvance } from './assets/banner-config.js';
+    import { horizonDays, autoplaySeconds, mayAutoAdvance, eventSlots } from './assets/banner-config.js';
 
     await init();
     const cardsEl = document.getElementById('cards');
@@ -82,24 +82,28 @@
 
       side.replaceChildren(card({ title: 'Latest parish magazine', cover: null }));
       loadMagazineIssue(preview.href)
-        .then((issue) => { side.replaceChildren(card(issue)); syncMagazineHeight(); })
+        .then((issue) => { side.replaceChildren(card(issue)); syncFixedCardHeights(); })
         .catch((error) => {
           // A missing or inaccessible catalogue must not affect event cards.
           console.warn('Magazine cover unavailable; keeping the reader link:', error);
         });
     }
 
-    // Event card heights are determined by the tallest title/metadata in the
-    // three-card grid. Align the magazine precisely to that actual row height,
-    // rather than assuming both card bodies happen to have the same text height.
-    // The magazine stacks naturally below the event grid on narrower embeds.
-    const syncMagazineHeight = () => {
-      const card = banner.querySelector('.wo-magazine-card');
-      const heights = [...cardsEl.querySelectorAll('.wo-card')].map((e) => e.getBoundingClientRect().height);
-      if (!card) return;
-      card.style.height = heights.length && banner.clientWidth > 1120
-        ? `${Math.ceil(Math.max(...heights))}px`
-        : '';
+    // Publication cards remain fixed while events rotate. Match their height
+    // to the tallest natural card in the row, and let the event grid stretch
+    // when a publication has more text. Reset before measuring to prevent a
+    // taller previous slide artificially increasing later slides.
+    const syncFixedCardHeights = () => {
+      const fixed = [...banner.querySelectorAll('.wo-banner-mailing .wo-card, .wo-banner-side .wo-card')];
+      cardsEl.style.minHeight = '';
+      fixed.forEach((card) => { card.style.height = ''; });
+      if (banner.clientWidth <= 1120) return;
+      const heights = [...cardsEl.querySelectorAll('.wo-card'), ...fixed]
+        .map((card) => card.getBoundingClientRect().height);
+      if (!heights.length) return;
+      const height = `${Math.ceil(Math.max(...heights))}px`;
+      cardsEl.style.minHeight = height;
+      fixed.forEach((card) => { card.style.height = height; });
     };
 
     const allLink = param('moreLink', param('link'));
@@ -115,27 +119,34 @@
         isUpcoming(e, now) && (param('show', 'featured') === 'all' || e.featured)));
       upcoming = upcoming.filter((e) => e.startDate - now < days * 86400000);
       upcoming = upcoming.slice(0, Math.max(1, Math.min(60, num('max', 9))));
-      // The most recent sent weekly mailing is one carousel card alongside
-      // events, not a blog post and not an event on the calendar. The magazine
-      // remains fixed in column four and never rotates away.
-      const mailingData = await loadMailings().catch((error) => {
-        console.warn('Weekly mailings unavailable, continuing with events:', error);
-        return { preview: false, mailings: [] };
-      });
-      const latest = flag('mailing', true) ? mailingData.mailings[0] : null;
-      const items = [
-        ...(latest ? [{ type: 'mailing', mailing: latest, preview: mailingData.preview }] : []),
-        ...upcoming.map((event) => ({ type: 'event', event })),
-      ];
+      // The most recent sent weekly mailing is now a FIXED third-column card:
+      // the event carousel rotates only actual calendar events. The parish
+      // magazine is the other fixed publication, normally in column four.
+      // The separate mailing archive remains available at mailings.html; no
+      // redundant archive button is added below the carousel.
+      const mailingData = flag('mailing', true)
+        ? await loadMailings().catch((error) => {
+          console.warn('Weekly mailings unavailable, continuing with events:', error);
+          return { preview: false, mailings: [] };
+        })
+        : { preview: false, mailings: [] };
+      const latest = mailingData.mailings[0];
       if (latest) {
-        document.getElementById('foot').append(h('a', {
-          class: 'wo-more-link', href: new URL('mailings.html', location.href).href,
-          target: '_blank', rel: 'noopener noreferrer',
-        }, 'Past weekly mailings', icon('arrow')));
+        const fixedMailing = h('aside', {
+          class: 'wo-banner-mailing', 'aria-label': 'Latest parish weekly mailing',
+        }, makeMailingCard(latest, { preview: mailingData.preview, h, icon }));
+        // Insert before the fixed magazine, regardless of its enabled state.
+        banner.insertBefore(fixedMailing, banner.querySelector('.wo-banner-side'));
+        banner.classList.add('has-mailing');
       }
 
+      const items = upcoming;
       let page = 0;
-      const perPageMax = num('perPage', 3);
+      const perPageMax = eventSlots({
+        magazine: banner.classList.contains('has-side'),
+        mailing: Boolean(latest),
+        max: num('perPage', 3),
+      });
       const perPage = () => Math.max(1, Math.min(perPageMax, Math.floor(cardsEl.clientWidth / num('minCardWidth', 240)) || 1));
       let current = perPage();
       const render = () => {
@@ -144,17 +155,15 @@
         page = Math.min(page, Math.max(0, pages - 1));
         cardsEl.style.setProperty('--wo-cols', String(current));
         cardsEl.replaceChildren(...items.slice(page * current, page * current + current)
-          .map((item) => item.type === 'mailing'
-            ? makeMailingCard(item.mailing, { preview: item.preview, h, icon })
-            : renderCard(item.event, { showRecurrence: item.event.recurring })));
+          .map((event) => renderCard(event, { showRecurrence: event.recurring })));
         pagerEl.replaceChildren(renderPager(page, pages, (p) => { page = p; render(); }));
         if (!items.length) cardsEl.replaceChildren(emptyState(param('emptyText', 'More events coming soon.')));
       };
       render();
-      syncMagazineHeight();
+      syncFixedCardHeights();
       new ResizeObserver(() => {
         if (perPage() !== current) render();
-        syncMagazineHeight();
+        syncFixedCardHeights();
       }).observe(cardsEl);
       const seconds = autoplaySeconds(param('autoplay'));
       if (seconds > 0) {
@@ -171,7 +180,7 @@
           })) {
             page = (page + 1) % pages;
             render();
-            syncMagazineHeight();
+            syncFixedCardHeights();
           }
         }, seconds * 1000);
       }
