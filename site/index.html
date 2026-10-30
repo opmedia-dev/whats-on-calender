@@ -67,11 +67,11 @@
           <label class="inline" for="flipbook"><input id="flipbook" type="checkbox"> Show latest magazine as a matching 4th card</label>
           <p class="muted" id="flipbookHelp" role="status" aria-live="polite">Magazine disabled. Tick this box or enter a preview URL below.</p>
         </div>
-        <div><label for="bannerPerPage">Event cards per page (maximum)</label><input id="bannerPerPage" type="number" min="1" max="6" value="3"></div>
+        <div><label for="bannerPerPage">Event cards per page (maximum)</label><input id="bannerPerPage" type="number" min="1" max="6" value="3"><p class="muted">Automatically limited to two rotating event cards when both the mailing and magazine are fixed alongside them.</p></div>
         <div><label for="bannerMax">Maximum upcoming events in carousel</label><input id="bannerMax" type="number" min="1" max="60" value="9"></div>
         <div><label for="bannerDays">Look ahead (days)</label><input id="bannerDays" type="number" min="1" max="90" value="14"><p class="muted">Only upcoming events within this window appear in the banner; the full calendar is unaffected.</p></div>
         <div><label for="bannerAutoplay">Automatically change page every (seconds; 0 = off)</label><input id="bannerAutoplay" type="number" min="0" max="60" value="8"><p class="muted">Pauses when hovered, keyboard-focused, an event is open, or reduced motion is enabled.</p></div>
-        <div><label class="inline"><input id="bannerMailing" type="checkbox" checked> Include latest weekly Mailchimp mailing as a rotating card</label><p class="muted">Mailing appears among event cards. The magazine remains in its separate, fixed fourth column when enabled.</p></div>
+        <div><label class="inline"><input id="bannerMailing" type="checkbox" checked> Show latest weekly mailing as a fixed card</label><p class="muted">The latest sent mailing stays visible while events rotate. The magazine can also stay fixed beside it. Older mailings remain in the separate archive; no extra link is added beneath the carousel.</p></div>
         <div>
           <label for="flipbookUrl">Magazine preview URL (optional)</label>
           <input id="flipbookUrl" type="url" placeholder="https://opmedia-dev.github.io/flipbook/preview.html">
