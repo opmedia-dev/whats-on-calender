@@ -340,11 +340,13 @@ export function routeDetails({ main, detail, events, backLabel }) {
       scrollHostToTop();
       postToParent({ type: 'event', id: ev.id, title: ev.title });
     } else {
+      const returningFromDetail = !showingList;
       showingList = true;
       detail.hidden = true;
       detail.replaceChildren();
       main.hidden = false;
-      window.scrollTo(0, scrollY);
+      // A first render of an ordinary list must not reset the visitor's scroll.
+      if (returningFromDetail) window.scrollTo(0, scrollY);
       postToParent({ type: 'event', id: null });
     }
   };
