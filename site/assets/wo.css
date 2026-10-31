@@ -74,6 +74,9 @@ button { font: inherit; color: inherit; }
 .wo-hero-week {
   display: grid; grid-template-columns: minmax(0, 1fr);
   grid-template-rows: repeat(var(--wo-hero-rows, 7), minmax(0, 1fr));
+  /* Override the generic .wo-timetable grid gap: it was leaving white
+     gutters between dates and breaking the continuous left-hand rail. */
+  gap: 0;
   height: calc(var(--wo-hero-height, 434px) - 16px);
   min-width: 0; overflow: hidden;
   border: 1px solid #eee9e6; border-radius: 13px;
@@ -116,8 +119,8 @@ button { font: inherit; color: inherit; }
 }
 .wo-hero-event { min-width: 0; min-height: 0; }
 .wo-hero-event a {
-  display: grid; grid-template-columns: 48px 15px minmax(0, 1fr);
-  gap: 8px; align-items: center; min-width: 0; min-height: 17px;
+  display: grid; grid-template-columns: 48px 14px minmax(0, 1fr);
+  gap: 5px; align-items: center; min-width: 0; min-height: 17px;
   border-radius: 5px; text-decoration: none; color: var(--wo-text);
   font-size: 12.5px; line-height: 17px;
 }
@@ -137,7 +140,7 @@ button { font: inherit; color: inherit; }
 }
 .wo-hero-regular {
   grid-column: 2; display: inline-flex; align-items: center;
-  justify-content: center; width: 15px; height: 17px;
+  justify-content: center; width: 14px; height: 17px;
   color: var(--wo-accent);
 }
 .wo-hero-regular .wo-icon { width: 13px; height: 13px; stroke-width: 1.7; }
@@ -161,7 +164,7 @@ button { font: inherit; color: inherit; }
   .wo-hero-day-head { padding: 4px 10px; }
   .wo-hero-day.is-today .wo-hero-day-head { padding-left: 10px; }
   .wo-hero-events { padding: 3px 10px; }
-  .wo-hero-event a { gap: 7px; }
+  .wo-hero-event a { gap: 5px; }
 }
 /* Mobile: preserve all seven day rows and let long labels wrap naturally.
    Height is reported to Duda by the common iframe resizing helper. */
@@ -171,7 +174,7 @@ button { font: inherit; color: inherit; }
   .wo-hero-day-head { padding: 6px 10px; }
   .wo-hero-day.is-today .wo-hero-day-head { padding-left: 10px; }
   .wo-hero-events { padding: 6px 10px; gap: 3px; }
-  .wo-hero-event a { grid-template-columns: 44px 15px minmax(0, 1fr); gap: 6px; font-size: 12px; }
+  .wo-hero-event a { grid-template-columns: 44px 14px minmax(0, 1fr); gap: 5px; font-size: 12px; }
   .wo-hero-time { min-width: 42px; }
   .wo-hero-title {
     white-space: normal; overflow: visible; text-overflow: clip;
