@@ -97,6 +97,22 @@ test('ongoing earlier events appear once under Today', () => {
   assert.equal(find(panels[1], (n) => n.name === 'a').length, 0);
 });
 
+test('compact hero removes the legacy agenda grid class instead of relying solely on CSS', () => {
+  const html = fs.readFileSync(path.join(root, 'site/timetable.html'), 'utf8');
+  const css = fs.readFileSync(path.join(root, 'site/assets/wo.css'), 'utf8');
+  const compact = html.split("if (flag('compact', true)) {")[1]?.split('} else {')[0];
+  assert.ok(compact, 'compact hero branch must exist');
+  assert.match(compact, /list\.classList\.remove\('wo-timetable'\)/);
+  assert.match(compact, /list\.classList\.add\('wo-hero-week'\)/);
+  assert.match(compact, /list\.style\.gap\s*=\s*'0'/);
+  assert.ok(compact.indexOf("remove('wo-timetable')") < compact.indexOf("add('wo-hero-week')"));
+  assert.match(css, /\.wo-timetable, \.wo-cal-list \{[^}]*gap:\s*12px;/);
+  assert.match(css, /\.wo-hero-week\s*\{[^}]*gap:\s*0;/);
+  // A new stylesheet URL also invalidates GitHub Pages / Safari's older
+  // cached CSS for embed previews that were open before the deployment.
+  assert.match(html, /href="assets\/wo\.css\?v=hero-rail-20261031"/);
+});
+
 test('compact hero overrides the generic timetable gap to keep a continuous seven-day date rail', () => {
   const css = fs.readFileSync(path.join(root, 'site/assets/wo.css'), 'utf8');
   // The regular agenda intentionally has 12px gutters, but seven compact
