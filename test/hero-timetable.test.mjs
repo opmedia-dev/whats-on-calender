@@ -54,10 +54,10 @@ test('busy days keep explicit overflow count and accessible full agenda link', (
   const five = [8, 9, 10, 11, 12].map((hour) => event('2026-11-01', hour));
   const panels = render('2026-11-01', 7, five);
   const links = find(panels[0], (n) => n.name === 'a');
-  assert.equal(links.length, 4, 'three events plus a More link fit in the hero panel');
-  assert.match(txt(links.at(-1)), /\+2 more events/);
+  assert.equal(links.length, 3, 'two events plus a More link fit in the compact day row');
+  assert.match(txt(links.at(-1)), /\+3 more events/);
   assert.match(links.at(-1).attrs.href, /calendar\.html\?view=list/);
-  assert.match(links.at(-1).attrs.title, /Service e-2026-11-01-11/);
+  assert.match(links.at(-1).attrs.title, /Service e-2026-11-01-10/);
 });
 
 test('ongoing earlier events appear once under Today', () => {
@@ -76,9 +76,12 @@ test('generator uses 593 × 434 timetable without an internal scrollbar', () => 
   assert.match(html, /timetable: iframe\('timetable\.html', tt, Number\(val\('ttHeroHeight'\)\) \|\| 434/);
   assert.match(page, /flag\('compact', true\)/);
   assert.match(page, /heroWeek\(today/);
-  assert.match(page, /maxPerDay: 4/);
+  assert.match(page, /maxPerDay: 3/);
   assert.match(css, /\.wo-hero-compact\s*\{[^}]*max-width:\s*593px/);
-  assert.match(css, /\.wo-hero-week\s*\{[^}]*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/);
+  assert.match(css, /\.wo-hero-week\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/);
   assert.match(css, /height:\s*calc\(var\(--wo-hero-height,\s*434px\)\s*-\s*16px\)/);
   assert.match(css, /@media \(max-width: 520px\)\s*\{\s*\.wo-hero-week\s*\{\s*height:\s*auto/);
+  assert.match(css, /\.wo-hero-day\s*\{\s*display:\s*grid;\s*grid-template-columns:\s*99px/);
+  assert.match(css, /grid-template-rows:\s*repeat\(var\(--wo-hero-rows,\s*7\)/);
+  assert.doesNotMatch(css.match(/\/\* ---------- Seven-day hero:[\s\S]*?\/\* ---------- Cards/)[0], /\.wo-hero-day:last-child:nth-child\(odd\)/);
 });

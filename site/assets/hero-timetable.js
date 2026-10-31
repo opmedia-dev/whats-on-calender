@@ -1,17 +1,17 @@
-// Space-constrained 7-day hero schedule, separate from the full calendar agenda.
-// At the specified 593×434 desktop footprint, four rows of two day panels
-// show the whole week without images or an internal scroll bar.
+// Space-constrained seven-day hero schedule, separate from the full calendar
+// agenda. Seven narrow horizontal day rows fit the 593×434 desktop slot,
+// without thumbnail images, large empty cards or an internal scroll bar.
 const dayFormat = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', weekday: 'short' });
 const dateFormat = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', day: 'numeric', month: 'short' });
 const timeFormat = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', hour: '2-digit', minute: '2-digit', hour12: false });
 
-export function heroWeek(daysStart, count, events, { addDays, eventHref, h, maxPerDay = 4 } = {}) {
+export function heroWeek(daysStart, count, events, { addDays, eventHref, h, maxPerDay = 3 } = {}) {
   if (!Number.isInteger(count) || count < 1 || count > 60) throw new RangeError('days must be between 1 and 60');
   if (typeof h !== 'function' || typeof addDays !== 'function' || typeof eventHref !== 'function') {
     throw new Error('heroWeek requires rendering and navigation helpers');
   }
   const result = [];
-  const perDay = Math.max(1, Math.min(4, Number(maxPerDay) || 4));
+  const perDay = Math.max(1, Math.min(3, Number(maxPerDay) || 3));
   const sorted = [...events].sort((a, b) => a.startDate - b.startDate || a.title.localeCompare(b.title));
   for (let offset = 0; offset < count; offset++) {
     const key = addDays(daysStart, offset);
@@ -30,8 +30,8 @@ export function heroWeek(daysStart, count, events, { addDays, eventHref, h, maxP
           h('span', { class: 'wo-hero-title' }, ev.title)));
     });
     if (overflow) {
-      // Indicate genuine capacity limits rather than silently clipping a
-      // particularly busy day. The full agenda is always a click away.
+      // In a fixed-height seven-row agenda, exceptionally busy days need
+      // an explicit route to the full calendar instead of clipped entries.
       const u = new URL('calendar.html?view=list', location.href);
       const summary = onDay.slice(perDay - 1).map((ev) => ev.title).join('; ');
       entries.push(h('li', { class: 'wo-hero-event wo-hero-more' },

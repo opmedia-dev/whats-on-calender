@@ -5,7 +5,7 @@ Hosted for free on GitHub Pages, so there's no server to run.
 
 | Page | Embed |
 | --- | --- |
-| `timetable.html` | Compact seven-day hero timetable for a 593×434px desktop slot; no thumbnails or internal scrollbar; today highlighted |
+| `timetable.html` | Compact seven-row weekly agenda for a 593×434px desktop slot; no oversized day cards, thumbnails or internal scrollbar; today highlighted |
 | `banner.html` | "What's happening": rotating event cards plus a fixed weekly mailing and fixed latest parish magazine |
 | `whats-on.html` | What's On page: regular (repeating) events, search, a card grid and full event details |
 | `calendar.html` | Monthly calendar with Today/prev/next, a Month/List switch and "+N more" for busy days; switches to a list on phones |
@@ -101,7 +101,7 @@ configure **each embed** independently before copying its HTML snippet into a Du
 **HTML** widget. The visual embed generator provides these controls without hand-editing URLs:
 
 - **Shared:** brand colours, font families, corner radius, 12/24-hour clock and excluded titles.
-- **Hero timetable:** seven days in two columns / four rows at the 593×434px desktop size, time + event title only (no thumbnail images or locations). The iframe's default height is **434px**. The panels expand naturally on phones instead of using an inner scrollbar; exceptionally busy days display a counted link to the full agenda so events are never silently clipped.
+- **Hero timetable:** seven full-width horizontal day rows at the 593×434px desktop size, using a narrow date rail and compact time + event title lines (no thumbnail images or locations). The iframe defaults to **434px**. Empty days are a single subtle line instead of an oversized card. Rows expand naturally on phones; unusually busy days use a counted link to the full agenda rather than silently clipping events.
 - **Homepage banner:** heading, featured/all events, cards per page, maximum events,
   **14-day** lookahead (configurable), **8-second** automatic paging (configurable;
   pauses on hover, focus, event detail, hidden tabs and reduced motion), latest
