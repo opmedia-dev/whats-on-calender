@@ -81,7 +81,23 @@ export function reportHeight() {
       postToParent({ type: 'height', height: h });
     }
   };
-  new ResizeObserver(send).observe(content);
+  const observer = new ResizeObserver(send);
+  observer.observe(content);
+  // Preview-mode notices are inserted *above* <main>; their addition moves
+  // main's bottom without changing main's own height.
+  if (content !== document.body) observer.observe(document.body);
+  // A loaded view can coincidentally have the same height as its loading
+  // placeholder. Trigger the first measurement when that placeholder goes,
+  // even if ResizeObserver sees no change in the element dimensions.
+  if (document.querySelector('.wo-loading')) {
+    const ready = new MutationObserver(() => {
+      if (!document.querySelector('.wo-loading')) {
+        ready.disconnect();
+        send();
+      }
+    });
+    ready.observe(content, { childList: true, subtree: true });
+  }
   window.addEventListener('resize', send);
   window.addEventListener('load', send);
   send();
