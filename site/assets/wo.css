@@ -306,98 +306,104 @@ button { font: inherit; color: inherit; }
 }
 
 
-/* ---------- Standalone weekly mailing hero (593 × 434) ---------- */
-/* Separate from the fixed newsletter card in the homepage banner. This uses
-   the hero timetable's canvas dimensions without introducing nested scrolling. */
+/* ---------- Latest mailing hero content for existing Duda Mailing tab ---------- */
+/* The parent tab already has Mailing navigation/heading/subscription UI.
+   Inside this 593x434 canvas: actual campaign image and a quiet issue strip. */
 .wo-mailing-hero-wrap { width: 100%; max-width: 593px; margin: 0 auto; }
 .wo-mailing-hero-card {
-  display: flex; flex-direction: column; position: relative; isolation: isolate;
-  height: 418px; min-width: 0; overflow: hidden;
-  padding: 27px 30px 26px; border-radius: 15px;
-  border: 1px solid #eee9e6; box-shadow: 0 2px 12px rgba(43, 30, 28, .04);
-  background: linear-gradient(150deg, #fff 0%, #fff 54%, color-mix(in srgb, var(--wo-accent) 4%, #fff) 100%);
-  text-decoration: none; color: var(--wo-text);
+  display: grid; grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  width: 100%; height: 418px; min-width: 0; overflow: hidden;
+  border: 1px solid #e7e2df; border-radius: 5px;
+  background: #fff; color: var(--wo-text); text-decoration: none;
 }
-.wo-mailing-hero-card:focus-visible { outline-offset: -5px; }
-.wo-mailing-hero-top {
-  display: flex; align-items: flex-start; justify-content: space-between;
-  flex-wrap: wrap; gap: 10px 20px;
+.wo-mailing-hero-card.has-image {
+  grid-template-rows: minmax(0, 272px) minmax(0, 1fr);
 }
-.wo-mailing-hero-kicker {
-  display: inline-flex; align-items: center; gap: 9px;
-  color: var(--wo-accent); font-size: 12px; font-weight: 800;
-  text-transform: uppercase; letter-spacing: .08em;
+.wo-mailing-hero-card:focus-visible { outline-offset: 2px; }
+.wo-mailing-hero-picture {
+  min-width: 0; min-height: 0; overflow: hidden;
+  background: #f1efed;
 }
-.wo-mailing-hero-kicker .wo-icon { width: 18px; height: 18px; stroke-width: 1.8; }
-.wo-mailing-hero-date {
-  color: var(--wo-muted); font-size: 12px; font-weight: 650;
-  font-variant-numeric: tabular-nums; white-space: nowrap;
+.wo-mailing-hero-picture img {
+  display: block; width: 100%; height: 100%;
+  object-fit: cover; object-position: center;
 }
-.wo-mailing-hero-demo {
-  align-self: flex-start; margin-top: 10px;
-  padding: 4px 8px; background: #fff5dc; color: #734d16;
-  border-radius: 5px; font-size: 11px; font-weight: 750;
-}
-.wo-mailing-hero-content {
+.wo-mailing-hero-card.is-text-only .wo-mailing-hero-picture { display: none; }
+.wo-mailing-hero-copy {
   display: flex; flex-direction: column; justify-content: center;
-  flex: 1 1 auto; min-height: 0; padding: 20px 0;
+  min-width: 0; min-height: 0; padding: 25px 29px;
 }
-.wo-mailing-hero-eyebrow {
-  color: var(--wo-accent); font-weight: 700; font-size: 12px;
-  letter-spacing: .03em; margin-bottom: 10px;
+.wo-mailing-hero-card.has-image .wo-mailing-hero-copy {
+  padding: 13px 20px 15px;
 }
+.wo-mailing-hero-meta {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 7px 13px;
+  margin: 0 0 5px; font-size: 11.5px; font-weight: 600;
+  color: #736b69; font-variant-numeric: tabular-nums;
+}
+.wo-mailing-hero-preview { color: #856c4f; }
 .wo-mailing-hero-title {
-  margin: 0; max-width: 490px; font-family: var(--wo-heading-font);
-  font-size: clamp(23px, 4vw, 31px); font-weight: 800;
-  line-height: 1.16; letter-spacing: -.025em; color: var(--wo-accent);
-  overflow-wrap: anywhere; display: -webkit-box;
-  -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+  margin: 0; color: var(--wo-accent);
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 36px; font-weight: 400; line-height: 1.13;
+  letter-spacing: -.025em; overflow-wrap: anywhere;
+  display: -webkit-box; -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3; overflow: hidden;
+}
+.wo-mailing-hero-card.has-image .wo-mailing-hero-title {
+  font-family: var(--wo-font); font-size: 20px;
+  font-weight: 700; line-height: 1.22; letter-spacing: -.015em;
+  -webkit-line-clamp: 2;
 }
 .wo-mailing-hero-summary {
-  color: #5b5558; max-width: 490px; margin: 15px 0 0;
-  line-height: 1.55; font-size: 13.5px;
-  display: -webkit-box; -webkit-line-clamp: 4;
-  -webkit-box-orient: vertical; overflow: hidden;
-  overflow-wrap: anywhere;
+  color: #655f5c; font-size: 14px; line-height: 1.48;
+  margin: 15px 0 17px; max-width: 480px;
+  display: -webkit-box; -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3; overflow: hidden; overflow-wrap: anywhere;
 }
-.wo-mailing-hero-footer {
-  display: flex; align-items: center; justify-content: space-between;
-  gap: 12px; padding-top: 16px;
-  border-top: 1px solid #f0ebe7; flex: 0 0 auto;
+.wo-mailing-hero-card.has-image .wo-mailing-hero-summary { display: none; }
+.wo-mailing-hero-link {
+  display: inline-flex; align-items: center; align-self: flex-start;
+  gap: 8px; margin-top: 14px;
+  color: var(--wo-accent); font-size: 13px; font-weight: 700;
+  text-decoration: underline; text-underline-offset: 3px;
 }
-.wo-mailing-hero-cta {
-  display: inline-flex; gap: 9px; align-items: center;
-  padding: 10px 16px; background: var(--wo-accent);
-  border-radius: 9px; color: #fff; font-size: 13px;
-  font-weight: 750;
+.wo-mailing-hero-card.has-image .wo-mailing-hero-link {
+  margin-top: 5px; font-size: 12px;
 }
-.wo-mailing-hero-cta .wo-icon {
-  width: 15px; height: 15px; transition: transform .2s;
+.wo-mailing-hero-link span { font-size: 16px; transition: transform .16s ease; }
+.wo-mailing-hero-card:hover .wo-mailing-hero-link span {
+  transform: translateX(3px);
 }
-.wo-mailing-hero-card:hover .wo-mailing-hero-cta .wo-icon { transform: translateX(3px); }
-.wo-mailing-hero-footnote { color: var(--wo-muted); font-size: 11.5px; }
 .wo-mailing-hero-status {
   display: flex; flex-direction: column; justify-content: center;
-  height: 418px; padding: 32px;
-  border: 1px solid var(--wo-border); border-radius: 15px;
-  background: var(--wo-card);
+  height: 418px; padding: 28px;
+  border: 1px solid var(--wo-border); border-radius: 5px;
+  background: #fff;
 }
-.wo-mailing-hero-status h2 { color: var(--wo-accent); margin: 0 0 10px; }
-.wo-mailing-hero-status p { color: var(--wo-muted); margin: 0; }
+.wo-mailing-hero-status h2 { margin: 0 0 8px; color: var(--wo-accent); }
+.wo-mailing-hero-status p { margin: 0; color: var(--wo-muted); }
 @media (max-width: 520px) {
-  .wo-mailing-hero-card {
-    height: auto; min-height: 335px; padding: 22px 21px 20px;
+  .wo-mailing-hero-card, .wo-mailing-hero-card.has-image {
+    height: auto; min-height: 290px; grid-template-rows: auto;
   }
-  .wo-mailing-hero-content { padding: 23px 0; }
-  .wo-mailing-hero-title { font-size: clamp(21px, 6vw, 27px); }
-  .wo-mailing-hero-summary { font-size: 13px; -webkit-line-clamp: 5; }
-  .wo-mailing-hero-footer { flex-wrap: wrap; }
-  .wo-mailing-hero-status { height: auto; min-height: 335px; padding: 24px; }
+  .wo-mailing-hero-card.has-image .wo-mailing-hero-picture {
+    height: auto; aspect-ratio: 2.1 / 1;
+  }
+  .wo-mailing-hero-copy { padding: 25px 20px; }
+  .wo-mailing-hero-card.has-image .wo-mailing-hero-copy {
+    padding: 14px 18px 17px;
+  }
+  .wo-mailing-hero-title { font-size: clamp(26px, 7vw, 33px); }
+  .wo-mailing-hero-card.has-image .wo-mailing-hero-title { font-size: 19px; }
+  .wo-mailing-hero-summary { font-size: 13px; }
+  .wo-mailing-hero-status { height: auto; min-height: 290px; }
 }
 @media (max-width: 360px) {
-  .wo-mailing-hero-card { padding: 17px 16px; }
-  .wo-mailing-hero-cta { font-size: 12px; padding: 9px 12px; }
-  .wo-mailing-hero-footnote { font-size: 10.5px; }
+  .wo-mailing-hero-copy { padding: 22px 16px; }
+  .wo-mailing-hero-card.has-image .wo-mailing-hero-copy { padding: 12px 15px 15px; }
+  .wo-mailing-hero-card.has-image .wo-mailing-hero-title { font-size: 17px; }
 }
 
 /* ---------- Weekly mailing cards / archive ---------- */

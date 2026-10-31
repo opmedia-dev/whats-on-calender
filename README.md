@@ -6,7 +6,7 @@ Hosted for free on GitHub Pages, so there's no server to run.
 | Page | Embed |
 | --- | --- |
 | `timetable.html` | Compact seven-row weekly agenda for a 593×434px desktop slot; no oversized day cards, thumbnails or internal scrollbar; today highlighted |
-| `mailing-hero.html` | Standalone latest Weekly Mailing hero, also 593×434px; date, headline, excerpt and link to Mailchimp |
+| `mailing-hero.html` | Latest mailing image and issue strip within the existing Duda Mailing tab, 593×434px; text fallback when no suitable image is available |
 | `banner.html` | "What's happening": rotating event cards plus a fixed weekly mailing and fixed latest parish magazine |
 | `whats-on.html` | What's On page: regular (repeating) events, search, a card grid and full event details |
 | `calendar.html` | Monthly calendar with Today/prev/next, a Month/List switch and "+N more" for busy days; switches to a list on phones |
@@ -113,7 +113,7 @@ configure **each embed** independently before copying its HTML snippet into a Du
   and the fixed latest magazine as four equal-width columns. Both publications
   stay visible as the event pages change. The cards match height and typography. The cover comes
   from the flipbook's published `issues.json` and opens the complete flipbook.
-- **Weekly Mailing Hero:** one 593×434px card with the latest sent issue, date, excerpt and a link to the full original Mailchimp newsletter; mobile height adapts automatically. Demo data is visibly labelled within the card.
+- **Weekly Mailing Hero:** a 593×434px content-only preview intended for the existing **Duda Mailing hero tab**, which already provides its own section heading, tabs and subscription controls. A genuine image from the sent Mailchimp issue fills the top of the embed; the issue title, date and small Read mailing link sit below it. Without a suitable image, a clean text-led fallback shows the issue excerpt. No redundant masthead, additional heading, subscription button or decorative illustration is inserted. Mobile height adapts and preview content is labelled.
 - **Weekly Mailings:** searchable independent archive of sent Mailchimp campaigns.
 - **What's On page:** regular events row, search, filters, default tab, grid columns and page size.
 - **Monthly calendar:** grid/list/automatic view, events per day and minimum cell height.
@@ -167,7 +167,7 @@ All embeds:
 `highlightToday=0`, `featured=1` (only events with pictures), `moreLink` + `moreText` (link
 under the list), `emptyText`.
 
-`mailing-hero.html`: Shows the latest sent public Mailchimp mailing as a single hero card; no extra configuration is required beyond `MAILCHIMP_RSS_URL`. Desktop canvas **593×434px**, mobile content-sized. Click-through opens the full newsletter on Mailchimp. Demo mode is clearly labelled. It does not affect the rotating banner or the archive.
+`mailing-hero.html`: Shows **only the mailing preview content**, designed to replace the existing card inside the Duda Mailing hero tab (not the tab header or Subscribe action). It uses the first suitable HTTPS campaign image from Mailchimp RSS as a wide top image, followed by the latest issue's date, title and unobtrusive Read mailing link. If no image is available, it shows an excerpt instead of stock artwork. Desktop canvas **593×434px**, mobile content-sized. The original Mailchimp mailing opens on click. Requires no integration beyond `MAILCHIMP_RSS_URL`; does not change the banner or mailing archive.
 
 `banner.html`:
 

@@ -4,16 +4,16 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Latest Parish Weekly Mailing</title>
-  <link rel="stylesheet" href="assets/wo.css">
+  <link rel="stylesheet" href="assets/wo.css?v=mailing-tab-cover-20261031">
 </head>
 <body>
   <main class="wo-wrap wo-mailing-hero-wrap">
     <div id="mailingHero"><p class="wo-loading">Loading latest weekly mailing…</p></div>
   </main>
   <script type="module">
-    import { init, h, icon } from './assets/wo.js';
+    import { init, h } from './assets/wo.js';
     import { loadMailings } from './assets/mailings.js';
-    import { renderMailingHero } from './assets/mailing-hero.js';
+    import { renderMailingHero } from './assets/mailing-hero.js?v=mailing-tab-cover-20261031';
 
     await init();
     const host = document.getElementById('mailingHero');
@@ -21,7 +21,7 @@
       const { mailings, preview } = await loadMailings();
       const latest = mailings[0];
       if (latest) {
-        host.replaceChildren(renderMailingHero(latest, { h, icon, preview }));
+        host.replaceChildren(renderMailingHero(latest, { h, preview }));
       } else {
         host.replaceChildren(h('section', { class: 'wo-mailing-hero-status', role: 'status' },
           h('h2', {}, 'Parish Weekly Mailing'),
