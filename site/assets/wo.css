@@ -68,57 +68,81 @@ button { font: inherit; color: inherit; }
 .wo-tt-more { text-align: center; margin: 18px 0 4px; }
 @media (max-width: 420px) { .wo-tt-row { grid-template-columns: 4em minmax(0, 1fr) auto; gap: 10px; } .wo-tt-row > .wo-icon { display: none; } }
 
-/* ---------- Seven-day hero timetable (593 × 434 desktop area) ---------- */
-/* The full calendar agenda keeps its own roomy styling. This hero is designed
-   for seven days, two columns / four rows at the specified width and height. */
+/* ---------- Seven-day hero: compact weekly agenda (593 × 434) ---------- */
+/* Seven horizontal rows, not a grid of cards. Date rail remains scannable,
+   but no-events days no longer occupy an oversized empty panel. */
 .wo-hero-compact { width: 100%; max-width: 593px; margin: 0 auto; }
 .wo-hero-week {
-  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
-  grid-template-rows: repeat(var(--wo-hero-rows, 4), minmax(0, 1fr));
-  gap: 8px; height: calc(var(--wo-hero-height, 434px) - 16px);
-  overflow: visible;
+  display: grid; grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: repeat(var(--wo-hero-rows, 7), minmax(0, 1fr));
+  gap: 0; height: calc(var(--wo-hero-height, 434px) - 16px);
+  min-width: 0; overflow: hidden;
+  border: 1px solid var(--wo-border); border-radius: 12px;
+  background: var(--wo-card);
 }
 .wo-hero-day {
-  display: flex; flex-direction: column; min-width: 0; min-height: 0;
-  border: 1px solid var(--wo-border); border-radius: 9px;
-  background: var(--wo-card); overflow: hidden;
+  display: grid; grid-template-columns: 99px minmax(0, 1fr);
+  min-width: 0; min-height: 0;
+  border-bottom: 1px solid var(--wo-border);
 }
-.wo-hero-day:last-child:nth-child(odd) { grid-column: 1 / -1; }
+.wo-hero-day:last-child { border-bottom: 0; }
 .wo-hero-day-head {
-  display: flex; flex: 0 0 23px; justify-content: space-between;
-  align-items: center; gap: 8px; padding: 2px 9px; min-width: 0;
-  background: var(--wo-day-bg); border-bottom: 1px solid var(--wo-border);
-  color: var(--wo-text); font-size: 11.5px; line-height: 1.15;
+  display: flex; flex-direction: column; align-items: flex-start;
+  justify-content: center; gap: 1px; min-width: 0; min-height: 0;
+  padding: 2px 12px; border-right: 1px solid var(--wo-border);
+  background: var(--wo-day-bg); line-height: 1.2;
 }
-.wo-hero-day-head strong { color: var(--wo-accent); font-size: 12px; }
-.wo-hero-day-head span { color: var(--wo-muted); font-weight: 600; }
-.wo-hero-day.is-today .wo-hero-day-head { background: var(--wo-today); }
+.wo-hero-day-head strong {
+  color: var(--wo-accent); font-size: 13.5px; font-weight: 800;
+}
+.wo-hero-day-head span {
+  color: var(--wo-muted); font-size: 11.5px; font-weight: 600;
+}
+.wo-hero-day.is-today .wo-hero-day-head {
+  background: var(--wo-today); border-left: 3px solid var(--wo-accent);
+  padding-left: 9px;
+}
 .wo-hero-events {
-  display: grid; grid-auto-rows: minmax(0, 1fr); flex: 1 1 auto;
-  list-style: none; margin: 0; padding: 3px 7px 4px;
+  display: flex; flex-direction: column; justify-content: center;
+  gap: 1px; list-style: none; margin: 0; padding: 2px 11px;
   min-width: 0; min-height: 0;
 }
 .wo-hero-event { min-width: 0; min-height: 0; }
 .wo-hero-event a {
-  display: grid; grid-template-columns: 42px minmax(0, 1fr);
-  gap: 5px; align-items: center; height: 100%; min-height: 0;
-  padding: 0 2px; border-radius: 4px; text-decoration: none;
-  color: var(--wo-text); font-size: 11.5px; line-height: 1.15;
+  display: grid; grid-template-columns: 48px minmax(0, 1fr);
+  gap: 6px; align-items: center; min-width: 0; min-height: 17px;
+  border-radius: 4px; text-decoration: none; color: var(--wo-text);
+  font-size: 12.5px; line-height: 17px;
 }
-.wo-hero-event a:hover, .wo-hero-event a:focus-visible { background: var(--wo-accent-soft); }
-.wo-hero-time { color: var(--wo-time); font-weight: 750; font-variant-numeric: tabular-nums; white-space: nowrap; font-size: 11px; }
-.wo-hero-title { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600; }
-.wo-hero-none { align-self: center; color: var(--wo-muted); font-size: 11px; padding-left: 2px; font-style: italic; }
-.wo-hero-more a { display: block; color: var(--wo-accent); font-weight: 700; padding-left: 3px; line-height: 1.4; }
-/* Mobile embeds are content-sized rather than forcing seven days into a
-   434px box. No inner scrollbars or hidden event panels. */
+.wo-hero-event a:hover, .wo-hero-event a:focus-visible {
+  background: var(--wo-accent-soft);
+}
+.wo-hero-time {
+  color: var(--wo-time); font-weight: 750;
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+  font-size: 11.5px;
+}
+.wo-hero-title {
+  display: block; min-width: 0; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; font-weight: 600;
+}
+.wo-hero-none {
+  color: var(--wo-muted); font-size: 12px; font-style: italic;
+}
+.wo-hero-more a {
+  display: block; min-height: 17px; color: var(--wo-accent);
+  font-size: 11.5px; font-weight: 750; line-height: 17px;
+}
+/* On narrow screens, retain the seven-row layout but allow row height
+   and text wrapping to grow. The shared Duda iframe resizer follows it. */
 @media (max-width: 520px) {
-  .wo-hero-week { height: auto; grid-template-columns: minmax(0, 1fr); grid-template-rows: none; }
-  .wo-hero-day:last-child:nth-child(odd) { grid-column: auto; }
-  .wo-hero-day { min-height: 62px; }
-  .wo-hero-day-head { flex-basis: 25px; }
-  .wo-hero-events { padding: 4px 9px 6px; grid-auto-rows: minmax(18px, auto); }
-  .wo-hero-event a { font-size: 12px; }
+  .wo-hero-week { height: auto; grid-template-rows: none; }
+  .wo-hero-day { grid-template-columns: 78px minmax(0, 1fr); min-height: 52px; }
+  .wo-hero-day-head { padding: 6px 8px; }
+  .wo-hero-day.is-today .wo-hero-day-head { padding-left: 5px; }
+  .wo-hero-events { padding: 6px 8px; gap: 2px; }
+  .wo-hero-event a { grid-template-columns: 44px minmax(0, 1fr); font-size: 12px; }
+  .wo-hero-title { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; line-height: 1.25; }
 }
 
 /* ---------- Cards ---------- */
