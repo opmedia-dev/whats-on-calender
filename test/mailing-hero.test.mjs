@@ -34,7 +34,7 @@ test('single hero uses the latest public mailing metadata, not Google Calendar',
   assert.match(words(card), /latest parish news/);
   assert.match(words(card), /Read this week’s mailing/);
   assert.equal(nodes(card, (n) => n.tag === 'img').length, 0);
-  assert.equal(nodes(card, (n) => n.tag === 'time' && n.attrs.datetime === item.published).length, 1);
+  assert.equal(nodes(card, (n) => n.tag === 'time' && n.attrs.datetime === new Date(item.published).toISOString()).length, 1);
 });
 
 test('sample content is visibly and accessibly identified as demonstration', () => {
