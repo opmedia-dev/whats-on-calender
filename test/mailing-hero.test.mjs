@@ -95,7 +95,7 @@ test('desktop hero matches 593×434 timetable canvas without overflow; mobile gr
   const css = content('site/assets/wo.css');
   assert.match(css, /\.wo-mailing-hero-wrap\s*\{[^}]*max-width:\s*593px/);
   assert.match(css, /\.wo-mailing-hero-card\s*\{[^}]*height:\s*418px/);
-  assert.match(css, /@media \(max-width:\s*520px\)\s*\{[^]*?\.wo-mailing-hero-card\s*\{[^}]*height:\s*auto/);
+  assert.match(css, /@media \(max-width:\s*520px\)\s*\{[^]*?\.wo-mailing-hero-card,\s*\.wo-mailing-hero-card\.has-image\s*\{[^}]*height:\s*auto/);
   assert.match(css, /\.wo-mailing-hero-title\s*\{[^}]*-webkit-line-clamp:\s*3/);
   assert.match(css, /\.wo-mailing-hero-card\.has-image\s*\{[^}]*grid-template-columns:/);
   assert.match(css, /\.wo-mailing-hero-masthead\s*\{[^}]*border-bottom:\s*2px solid var\(--wo-accent\)/);
