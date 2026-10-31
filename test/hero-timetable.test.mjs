@@ -15,7 +15,9 @@ const addDays = (d, n) => {
 const h = (name, attrs, ...children) => ({ name, attrs, children: children.flat(Infinity) });
 const eventHref = (ev) => ({ href: '#event=' + ev.id, target: null });
 const render = (start, count, events, opts = {}) =>
-  heroWeek(start, count, events, { h, addDays, eventHref, ...opts });
+  heroWeek(start, count, events, {
+    h, addDays, eventHref, icon: (name) => h('svg', { class: 'wo-icon wo-icon-' + name }), ...opts,
+  });
 
 const find = (node, predicate) => [
   ...(predicate(node) ? [node] : []),
@@ -34,8 +36,9 @@ test('hero always shows seven dated day panels, including days without events', 
   assert.equal(panels.every((p) => p.name === 'section' && p.attrs.class.includes('wo-hero-day')), true);
   assert.equal(find(panels[0], (n) => n.attrs?.class === 'wo-hero-none').length, 1);
   assert.equal(find(panels[0], (n) => n.name === 'time' && n.attrs?.datetime === '2026-11-01').length, 1);
-  assert.equal(panels[0].attrs.class.includes('has-events'), false);
-  assert.equal(panels[1].attrs.class.includes('has-events'), true);
+  assert.equal(panels[0].attrs.class.includes('is-today'), true);
+  assert.equal(panels[1].attrs.class.includes('is-today'), false);
+  assert.equal(panels[1].attrs.class.includes('has-events'), false);
   assert.match(txt(panels[1]), /Service e-2026-11-02-10/);
   assert.match(txt(panels.at(-1)), /Sat.*7 Nov.*Nothing scheduled/);
 });
@@ -51,6 +54,22 @@ test('seven-day panel shows event times and names but no thumbnails or location'
   assert.equal(links[0].attrs.href, '#event=' + ev.id);
   assert.equal(find(panels[0], (n) => n.name === 'img').length, 0);
   assert.doesNotMatch(txt(panels[0]), /Church Hall/);
+});
+
+test('regular events show a compact repeat icon without obscuring title or changing navigation', () => {
+  const regular = { ...event('2026-11-01'), title: 'Weekly Choir Practice', recurring: true };
+  const oneOff = { ...event('2026-11-01', 12), title: 'One-off Concert', recurring: false };
+  const panels = render('2026-11-01', 7, [regular, oneOff]);
+  const links = find(panels[0], (n) => n.name === 'a');
+  assert.equal(links.length, 2);
+  const markers = find(links[0], (n) => n.attrs?.class === 'wo-hero-regular');
+  assert.equal(markers.length, 1);
+  assert.equal(markers[0].attrs['aria-hidden'], 'true');
+  assert.equal(find(markers[0], (n) => n.name === 'svg' && n.attrs.class === 'wo-icon wo-icon-repeat').length, 1);
+  assert.match(links[0].attrs['aria-label'], /Weekly Choir Practice \(Regular event\)/);
+  assert.equal(links[0].attrs.href, '#event=' + regular.id);
+  assert.equal(find(links[1], (n) => n.attrs?.class === 'wo-hero-regular').length, 0);
+  assert.doesNotMatch(links[1].attrs['aria-label'], /Regular event/);
 });
 
 test('busy days keep explicit overflow count and accessible full agenda link', () => {
@@ -84,7 +103,12 @@ test('generator uses 593 × 434 timetable without an internal scrollbar', () => 
   assert.match(css, /\.wo-hero-week\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/);
   assert.match(css, /height:\s*calc\(var\(--wo-hero-height,\s*434px\)\s*-\s*16px\)/);
   assert.match(css, /@media \(max-width: 520px\)\s*\{\s*\.wo-hero-week\s*\{\s*height:\s*auto/);
-  assert.match(css, /\.wo-hero-day\.has-events \.wo-hero-day-head::after/);
+  assert.doesNotMatch(css, /\.wo-hero-day\.has-events \.wo-hero-day-head::after/);
+  assert.doesNotMatch(css, /inset 3px 0 0 var\(--wo-accent\)/);
+  assert.match(css, /\.wo-hero-regular\s*\{[^}]*width:\s*19px/);
+  assert.match(css, /\.wo-hero-event a\s*\{[^}]*grid-template-columns:\s*48px\s+minmax\(0,\s*1fr\)\s+auto/);
+  assert.match(css, /@media \(min-width:\s*521px\) and \(max-width:\s*760px\)/);
+  assert.match(css, /@media \(max-width:\s*520px\)/);
   assert.match(css, /\.wo-hero-none::before/);
   assert.match(css, /\.wo-hero-time\s*\{[^}]*background:\s*color-mix\(in srgb,\s*var\(--wo-accent\)\s*8%,\s*#fff\)/);
   assert.match(css, /\.wo-hero-week\s*\{[^}]*box-shadow:/);
