@@ -105,13 +105,8 @@ button { font: inherit; color: inherit; }
   color: #6e6665; font-size: 11.5px; font-weight: 550;
   font-variant-numeric: tabular-nums;
 }
-.wo-hero-day.has-events .wo-hero-day-head::after {
-  content: ''; position: absolute; right: 11px; top: 17px;
-  width: 5px; height: 5px; border-radius: 50%;
-  background: var(--wo-accent); opacity: .65;
-}
 .wo-hero-day.is-today .wo-hero-day-head {
-  background: color-mix(in srgb, var(--wo-accent) 9%, #fff); box-shadow: inset 3px 0 0 var(--wo-accent);
+  background: color-mix(in srgb, var(--wo-accent) 9%, #fff);
   padding-left: 13px;
 }
 .wo-hero-events {
@@ -121,7 +116,7 @@ button { font: inherit; color: inherit; }
 }
 .wo-hero-event { min-width: 0; min-height: 0; }
 .wo-hero-event a {
-  display: grid; grid-template-columns: 48px minmax(0, 1fr);
+  display: grid; grid-template-columns: 48px minmax(0, 1fr) auto;
   gap: 10px; align-items: center; min-width: 0; min-height: 17px;
   border-radius: 5px; text-decoration: none; color: var(--wo-text);
   font-size: 12.5px; line-height: 17px;
@@ -140,6 +135,13 @@ button { font: inherit; color: inherit; }
   overflow: hidden; text-overflow: ellipsis;
   font-weight: 575; letter-spacing: -.01em;
 }
+.wo-hero-regular {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 19px; height: 18px; padding: 1px; flex: none;
+  border-radius: 5px; color: var(--wo-accent);
+  background: color-mix(in srgb, var(--wo-accent) 7%, #fff);
+}
+.wo-hero-regular .wo-icon { width: 13px; height: 13px; stroke-width: 1.8; }
 .wo-hero-none {
   display: flex; align-items: center; gap: 9px;
   color: #97908f; font-size: 11.8px; font-style: normal;
@@ -153,6 +155,15 @@ button { font: inherit; color: inherit; }
   font-size: 11.5px; font-weight: 700; line-height: 17px;
 }
 .wo-hero-more a:hover { text-decoration: underline; }
+/* Narrow tablet / landscape phone: keep all seven rows inside 434px but
+   reclaim horizontal room for longer event names and the repeat icon. */
+@media (min-width: 521px) and (max-width: 760px) {
+  .wo-hero-day { grid-template-columns: 86px minmax(0, 1fr); }
+  .wo-hero-day-head { padding: 4px 10px; }
+  .wo-hero-day.is-today .wo-hero-day-head { padding-left: 10px; }
+  .wo-hero-events { padding: 3px 10px; }
+  .wo-hero-event a { gap: 7px; }
+}
 /* Mobile: preserve all seven day rows and let long labels wrap naturally.
    Height is reported to Duda by the common iframe resizing helper. */
 @media (max-width: 520px) {
@@ -160,9 +171,8 @@ button { font: inherit; color: inherit; }
   .wo-hero-day { grid-template-columns: 82px minmax(0, 1fr); min-height: 52px; }
   .wo-hero-day-head { padding: 6px 10px; }
   .wo-hero-day.is-today .wo-hero-day-head { padding-left: 10px; }
-  .wo-hero-day.has-events .wo-hero-day-head::after { right: 9px; }
   .wo-hero-events { padding: 6px 10px; gap: 3px; }
-  .wo-hero-event a { grid-template-columns: 44px minmax(0, 1fr); gap: 7px; font-size: 12px; }
+  .wo-hero-event a { grid-template-columns: 44px minmax(0, 1fr) auto; gap: 7px; font-size: 12px; }
   .wo-hero-time { min-width: 42px; }
   .wo-hero-title {
     white-space: normal; overflow: visible; text-overflow: clip;

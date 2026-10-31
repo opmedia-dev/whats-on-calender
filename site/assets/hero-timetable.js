@@ -5,7 +5,7 @@ const dayFormat = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', 
 const dateFormat = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', day: 'numeric', month: 'short' });
 const timeFormat = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', hour: '2-digit', minute: '2-digit', hour12: false });
 
-export function heroWeek(daysStart, count, events, { addDays, eventHref, h, maxPerDay = 3 } = {}) {
+export function heroWeek(daysStart, count, events, { addDays, eventHref, h, icon, maxPerDay = 3 } = {}) {
   if (!Number.isInteger(count) || count < 1 || count > 60) throw new RangeError('days must be between 1 and 60');
   if (typeof h !== 'function' || typeof addDays !== 'function' || typeof eventHref !== 'function') {
     throw new Error('heroWeek requires rendering and navigation helpers');
@@ -24,10 +24,14 @@ export function heroWeek(daysStart, count, events, { addDays, eventHref, h, maxP
     const entries = shown.map((ev) => {
       const { href, target } = eventHref(ev);
       const time = ev.allDay ? 'All day' : timeFormat.format(ev.startDate);
+      const regular = Boolean(ev.recurring);
+      const description = `${time}: ${ev.title}${regular ? ' (Regular event)' : ''}`;
       return h('li', { class: 'wo-hero-event' },
-        h('a', { href, target, title: `${time} — ${ev.title}`, 'aria-label': `${time}: ${ev.title}` },
+        h('a', { href, target, title: description, 'aria-label': description },
           h('span', { class: 'wo-hero-time' }, time),
-          h('span', { class: 'wo-hero-title' }, ev.title)));
+          h('span', { class: 'wo-hero-title' }, ev.title),
+          ...(regular ? [h('span', { class: 'wo-hero-regular', 'aria-hidden': 'true' },
+            typeof icon === 'function' ? icon('repeat') : '↻')] : [])));
     });
     if (overflow) {
       // In a fixed-height seven-row agenda, exceptionally busy days need
@@ -40,7 +44,7 @@ export function heroWeek(daysStart, count, events, { addDays, eventHref, h, maxP
           `+${overflow + 1} more events`)));
     }
     result.push(h('section', {
-      class: `wo-hero-day${offset === 0 ? ' is-today' : ''}${onDay.length ? ' has-events' : ''}`,
+      class: `wo-hero-day${offset === 0 ? ' is-today' : ''}`,
       'aria-label': `${dayFormat.format(date)} ${dateFormat.format(date)}`,
     },
       h('header', { class: 'wo-hero-day-head' },
