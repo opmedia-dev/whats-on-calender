@@ -29,9 +29,9 @@ export function heroWeek(daysStart, count, events, { addDays, eventHref, h, icon
       return h('li', { class: 'wo-hero-event' },
         h('a', { href, target, title: description, 'aria-label': description },
           h('span', { class: 'wo-hero-time' }, time),
-          h('span', { class: 'wo-hero-title' }, ev.title),
           ...(regular ? [h('span', { class: 'wo-hero-regular', 'aria-hidden': 'true' },
-            typeof icon === 'function' ? icon('repeat') : '↻')] : [])));
+            typeof icon === 'function' ? icon('repeat') : '↻')] : []),
+          h('span', { class: 'wo-hero-title' }, ev.title)));
     });
     if (overflow) {
       // In a fixed-height seven-row agenda, exceptionally busy days need
