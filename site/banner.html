@@ -165,7 +165,14 @@
       };
       render();
       syncFixedCardHeights();
-      new ResizeObserver(() => {
+      // Observing card *height* while assigning min-height to that same
+      // element can create a ResizeObserver feedback loop. Only width changes
+      // affect column count and responsive height matching.
+      let measuredWidth = cardsEl.getBoundingClientRect().width;
+      new ResizeObserver((entries) => {
+        const width = entries[0]?.contentRect.width ?? cardsEl.getBoundingClientRect().width;
+        if (Math.abs(width - measuredWidth) < 1) return;
+        measuredWidth = width;
         if (perPage() !== current) render();
         syncFixedCardHeights();
       }).observe(cardsEl);
