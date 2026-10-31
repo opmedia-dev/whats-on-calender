@@ -102,7 +102,7 @@ test('desktop hero matches 593×434 timetable canvas without overflow; mobile gr
   assert.match(css, /\.wo-mailing-hero-picture img\s*\{[^}]*object-fit:\s*cover/);
   assert.doesNotMatch(css.match(/\/\* ---------- Parish Weekly Mailing hero[\s\S]*?\/\* ---------- Weekly mailing cards/)[0], /linear-gradient|wo-mailing-hero-cta/);
   assert.match(css, /\.wo-mailing-hero-summary\s*\{[^}]*-webkit-line-clamp:\s*3/);
-  assert.doesNotMatch(css.match(/\/\* ---------- Standalone weekly mailing hero[\s\S]*?\/\* ---------- Weekly mailing cards/)[0], /overflow-y:\s*auto/);
+  assert.doesNotMatch(css.match(/\/\* ---------- Parish Weekly Mailing hero[\s\S]*?\/\* ---------- Weekly mailing cards/)[0], /overflow-y:\s*auto/);
 });
 
 test('generator supplies a distinct 434px embed and preview, alongside existing embeds', () => {
