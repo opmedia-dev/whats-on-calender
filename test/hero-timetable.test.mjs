@@ -86,7 +86,7 @@ test('generator uses 593 × 434 timetable without an internal scrollbar', () => 
   assert.match(css, /@media \(max-width: 520px\)\s*\{\s*\.wo-hero-week\s*\{\s*height:\s*auto/);
   assert.match(css, /\.wo-hero-day\.has-events \.wo-hero-day-head::after/);
   assert.match(css, /\.wo-hero-none::before/);
-  assert.match(css, /\.wo-hero-time\s*\{[^}]*background:\s*#f8eced/);
+  assert.match(css, /\.wo-hero-time\s*\{[^}]*background:\s*color-mix\(in srgb,\s*var\(--wo-accent\)\s*8%,\s*#fff\)/);
   assert.match(css, /\.wo-hero-week\s*\{[^}]*box-shadow:/);
   assert.doesNotMatch(css.match(/\/\* ---------- Seven-day hero:[\s\S]*?\/\* ---------- Cards/)[0], /overflow:\s*auto/);
   assert.match(css, /\.wo-hero-day\s*\{\s*display:\s*grid;\s*grid-template-columns:\s*94px/);
