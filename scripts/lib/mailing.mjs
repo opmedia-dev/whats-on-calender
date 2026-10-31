@@ -16,6 +16,29 @@ const xmlTag = (block, name) => {
 const plain = (value) => decodeEntities(value.replace(/<\/?(?:style|script)\b[^>]*>[\s\S]*?<\/\s*(?:style|script)>/gi, '')
   .replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim());
 
+// Prefer a genuine image in the sent campaign to ornamental placeholders.
+// Skip known tracking pixels, tiny logo/icon files and non-HTTPS sources.
+// The URL is used as an <img> source; newsletter HTML is never injected.
+export function mailingImageFromHtml(html = '') {
+  for (const match of String(html).matchAll(/<img\b[^>]*>/gi)) {
+    const tag = match[0];
+    const src = tag.match(/\b(?:src|data-src)\s*=\s*(["'])(.*?)\1/i)?.[2];
+    if (!src) continue;
+    const width = Number(tag.match(/\bwidth\s*=\s*["']?(\d+)/i)?.[1] || 0);
+    const height = Number(tag.match(/\bheight\s*=\s*["']?(\d+)/i)?.[1] || 0);
+    if ((width && width < 140) || (height && height < 90)) continue;
+    const decoded = decodeEntities(src);
+    try {
+      const url = new URL(decoded);
+      if (url.protocol !== 'https:') continue;
+      if (/(?:\/track\/|\/open\/|pixel|spacer)(?:[/.?_-]|$)/i.test(url.pathname)) continue;
+      if (/\.svg(?:$|\?)/i.test(url.pathname)) continue;
+      return url.href;
+    } catch { /* Ignore invalid external image references. */ }
+  }
+  return '';
+}
+
 export function parseMailchimpRss(xml, { limit = 24 } = {}) {
   if (!/<(?:rss|rdf:RDF)\b/i.test(xml) || !/<item\b/i.test(xml)) {
     // A valid feed may have zero messages, but it must still look like RSS.
@@ -39,12 +62,14 @@ export function parseMailchimpRss(xml, { limit = 24 } = {}) {
     if (ids.has(guid)) continue;
     ids.add(guid);
     const html = xmlTag(block, 'description') || xmlTag(block, 'content:encoded');
+    const image = mailingImageFromHtml(xmlTag(block, 'content:encoded') || html);
     mailings.push({
       id: guid.slice(0, 500),
       title: title.slice(0, 180),
       url: valid.href,
       published: when.toISOString(),
       summary: plain(html).slice(0, 260),
+      ...(image ? { image } : {}),
     });
   }
   return mailings.sort((a, b) => b.published.localeCompare(a.published)).slice(0, limit);
