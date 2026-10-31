@@ -99,12 +99,12 @@ test('ongoing earlier events appear once under Today', () => {
 
 test('compact hero overrides the generic timetable gap to keep a continuous seven-day date rail', () => {
   const css = fs.readFileSync(path.join(root, 'site/assets/wo.css'), 'utf8');
-  // This is a regression: .wo-timetable and .wo-hero-week are both class
-  // selectors. Without an explicit gap override in the later hero rule,
-  // the inherited 12px gap creates 6 white strips between seven day rows.
-  assert.match(css, /\\.wo-timetable, \\.wo-cal-list \\{[^}]*gap:\\s*12px/);
-  assert.match(css, /\\.wo-hero-week\\s*\\{[^}]*gap:\\s*0;/);
-  assert.match(css, /\\.wo-hero-day\\s*\\{[^}]*border-bottom:\\s*1px solid #f4f1ef/);
+  // The regular agenda intentionally has 12px gutters, but seven compact
+  // hero rows must join seamlessly; its class is on the same DOM element.
+  assert.ok(css.includes('.wo-timetable, .wo-cal-list { display: grid; gap: 12px; }'));
+  const heroRule = css.split('.wo-hero-week {')[1]?.split('}')[0] || '';
+  assert.match(heroRule, /gap:\s*0;/);
+  assert.match(heroRule, /grid-template-rows:\s*repeat/);
 });
 
 test('generator uses 593 × 434 timetable without an internal scrollbar', () => {
@@ -127,7 +127,7 @@ test('generator uses 593 × 434 timetable without an internal scrollbar', () => 
   assert.match(css, /\.wo-hero-event a\s*\{[^}]*grid-template-columns:\s*48px\s+14px\s+minmax\(0,\s*1fr\)/);
   assert.match(css, /\.wo-hero-day\s*\{[^}]*border-bottom:\s*1px solid #f4f1ef/);
   assert.match(css, /\.wo-hero-week\s*\{[^}]*border:\s*1px solid #eee9e6/);
-  assert.match(css, /\.wo-hero-event a\s*\{[^}]*grid-template-columns:\s*48px\s+15px\s+minmax\(0,\s*1fr\)/);
+
   assert.match(css, /@media \(max-width:\s*520px\)[^]*?\.wo-hero-event a\s*\{[^}]*grid-template-columns:\s*44px\s+14px\s+minmax\(0,\s*1fr\)/);
   assert.match(css, /@media \(min-width:\s*521px\) and \(max-width:\s*760px\)/);
   assert.match(css, /@media \(max-width:\s*520px\)/);
