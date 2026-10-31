@@ -118,17 +118,28 @@ configure **each embed** independently before copying its HTML snippet into a Du
 The magazine column is a banner-only integration with the separate `flipbook` repository;
 it is not embedded into the standalone What's On page or monthly calendar.
 
-The detail view's Back button always returns to its own timetable, banner or events list (instead of stepping backwards through future dates in a repeating event).\n\nA timed event disappears from *upcoming* lists after its actual end time, while events in progress\nremain visible. The monthly calendar continues to display events on their scheduled dates.
+The detail view's Back button always returns to its own timetable, banner or events list (instead of stepping backwards through future dates in a repeating event).
+
+A timed event disappears from *upcoming* lists after its actual end time, while events in progress
+remain visible. The monthly calendar continues to display events on their scheduled dates.
 
 The snippet's script does three things:
 
-- sizes the iframe to its content
+- sizes **all five iframes** to the actual content height, both up and down:
+  mobile wrapping, the calendar's mobile agenda list, banner paging, mailing
+  archive searches, and opening/closing event details are all accommodated
 - scrolls the embed into view when an event opens
 - on the What's On page, keeps `?event=<id>` in the address bar, so shared links and clicks from
   the timetable, banner or calendar open that event
 
-Duda only runs widget scripts on the preview/published site, so widgets may look a fixed size in
-the editor.
+**Duda sizing:** use the complete generated HTML snippet for each embed (iframe
+**and** its message listener), and make the containing Duda row/section
+content-sized rather than fixed shorter than the widget. Duda only runs widget
+scripts on the **site preview and published site**, so the editor can still show
+a temporary fixed-height frame. Check desktop, tablet and mobile in site Preview
+before publishing. If you installed an earlier embed snippet, recopy it from
+the current GitHub Pages generator; an updated iframe alone cannot fix an
+outdated host message listener.
 
 ### URL options
 
