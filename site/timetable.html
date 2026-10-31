@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Weekly timetable</title>
-  <link rel="stylesheet" href="assets/wo.css">
+  <link rel="stylesheet" href="assets/wo.css?v=hero-rail-20261031">
 </head>
 <body>
   <main class="wo-wrap">
@@ -32,7 +32,13 @@
         // agenda rows use a shared date rail, without oversized empty cards.
         // Mobile widths use natural height instead of clipping the week.
         document.querySelector('main').classList.add('wo-hero-compact');
+        // The ordinary agenda's .wo-timetable class carries a 12px grid gap.
+        // Remove it entirely instead of relying on competing CSS rules.
+        // Also set the compact layout gap on the element so older cached
+        // stylesheets cannot reintroduce the white gutters between day rows.
+        list.classList.remove('wo-timetable');
         list.classList.add('wo-hero-week');
+        list.style.gap = '0';
         const height = Math.max(320, Math.min(900, num('heroHeight', 434)));
         list.style.setProperty('--wo-hero-height', `${height}px`);
         list.style.setProperty('--wo-hero-rows', String(Math.min(7, num('days', 7))));
