@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parseMailchimpRss, sampleMailings } from '../scripts/lib/mailing.mjs';
+import { parseMailchimpRss, sampleMailings, mailingImageFromHtml } from '../scripts/lib/mailing.mjs';
 import { horizonDays, autoplaySeconds, mayAutoAdvance } from '../site/assets/banner-config.js';
 
 const rss = [
@@ -30,6 +30,25 @@ test('RSS extracts only sent public links, deduplicates and sorts newest first',
   assert.equal(items[0].url, 'https://example.org/campaign/1');
   assert.equal(items[0].summary, 'Sunday service & notices');
   assert.equal(items[1].title, 'Last Week');
+});
+
+test('mailing feed can use actual campaign artwork but ignores tracking pixels and unsafe images', () => {
+  const html = '<img width="1" height="1" src="https://example.org/open/pixel.gif">' +
+    '<img width="300" src="https://mcusercontent.com/example/photos/parish.jpg?x=1&amp;y=2">';
+  assert.equal(mailingImageFromHtml(html),
+    'https://mcusercontent.com/example/photos/parish.jpg?x=1&y=2');
+  assert.equal(mailingImageFromHtml('<img width="250" src="javascript:alert(1)">'), '');
+  assert.equal(mailingImageFromHtml('<img width="500" src="http://example.org/photo.jpg">'), '');
+  assert.equal(mailingImageFromHtml('<img width="16" src="https://example.org/icon.png">'), '');
+  const xml = [
+    '<rss><channel><item><title>Parish letter</title>',
+    '<link>https://example.org/campaign/1</link>',
+    '<pubDate>Fri, 30 Oct 2026 09:00:00 GMT</pubDate>',
+    '<description><![CDATA[<p>Parish news</p><img width="480" height="320" src="https://mcusercontent.com/example/parish.jpg">]]></description>',
+    '</item></channel></rss>',
+  ].join('');
+  assert.equal(parseMailchimpRss(xml)[0].image, 'https://mcusercontent.com/example/parish.jpg');
+  assert.equal(parseMailchimpRss(xml)[0].summary, 'Parish news');
 });
 
 test('malformed RSS is rejected, valid empty RSS is accepted', () => {
