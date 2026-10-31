@@ -39,13 +39,15 @@ export function heroWeek(daysStart, count, events, { addDays, eventHref, h, maxP
           'aria-label': `View ${overflow + 1} additional events on ${dateFormat.format(date)}` },
           `+${overflow + 1} more events`)));
     }
-    result.push(h('section', { class: `wo-hero-day${offset === 0 ? ' is-today' : ''}`,
-      'aria-label': `${dayFormat.format(date)} ${dateFormat.format(date)}` },
+    result.push(h('section', {
+      class: `wo-hero-day${offset === 0 ? ' is-today' : ''}${onDay.length ? ' has-events' : ''}`,
+      'aria-label': `${dayFormat.format(date)} ${dateFormat.format(date)}`,
+    },
       h('header', { class: 'wo-hero-day-head' },
         h('strong', {}, dayFormat.format(date)),
-        h('span', {}, dateFormat.format(date))),
+        h('time', { class: 'wo-hero-date', datetime: key }, dateFormat.format(date))),
       h('ul', { class: 'wo-hero-events' },
-        ...(entries.length ? entries : [h('li', { class: 'wo-hero-none' }, 'No events')]))));
+        ...(entries.length ? entries : [h('li', { class: 'wo-hero-none' }, 'Nothing scheduled')]))));
   }
   return result;
 }
