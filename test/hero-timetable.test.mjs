@@ -33,8 +33,11 @@ test('hero always shows seven dated day panels, including days without events', 
   assert.equal(panels.length, 7);
   assert.equal(panels.every((p) => p.name === 'section' && p.attrs.class.includes('wo-hero-day')), true);
   assert.equal(find(panels[0], (n) => n.attrs?.class === 'wo-hero-none').length, 1);
+  assert.equal(find(panels[0], (n) => n.name === 'time' && n.attrs?.datetime === '2026-11-01').length, 1);
+  assert.equal(panels[0].attrs.class.includes('has-events'), false);
+  assert.equal(panels[1].attrs.class.includes('has-events'), true);
   assert.match(txt(panels[1]), /Service e-2026-11-02-10/);
-  assert.match(txt(panels.at(-1)), /Sat.*7 Nov.*No events/);
+  assert.match(txt(panels.at(-1)), /Sat.*7 Nov.*Nothing scheduled/);
 });
 
 test('seven-day panel shows event times and names but no thumbnails or location', () => {
@@ -81,7 +84,12 @@ test('generator uses 593 × 434 timetable without an internal scrollbar', () => 
   assert.match(css, /\.wo-hero-week\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/);
   assert.match(css, /height:\s*calc\(var\(--wo-hero-height,\s*434px\)\s*-\s*16px\)/);
   assert.match(css, /@media \(max-width: 520px\)\s*\{\s*\.wo-hero-week\s*\{\s*height:\s*auto/);
-  assert.match(css, /\.wo-hero-day\s*\{\s*display:\s*grid;\s*grid-template-columns:\s*99px/);
+  assert.match(css, /\.wo-hero-day\.has-events \.wo-hero-day-head::after/);
+  assert.match(css, /\.wo-hero-none::before/);
+  assert.match(css, /\.wo-hero-time\s*\{[^}]*background:\s*color-mix\(in srgb,\s*var\(--wo-accent\)\s*8%,\s*#fff\)/);
+  assert.match(css, /\.wo-hero-week\s*\{[^}]*box-shadow:/);
+  assert.doesNotMatch(css.match(/\/\* ---------- Seven-day hero:[\s\S]*?\/\* ---------- Cards/)[0], /overflow:\s*auto/);
+  assert.match(css, /\.wo-hero-day\s*\{\s*display:\s*grid;\s*grid-template-columns:\s*94px/);
   assert.match(css, /grid-template-rows:\s*repeat\(var\(--wo-hero-rows,\s*7\)/);
   assert.doesNotMatch(css.match(/\/\* ---------- Seven-day hero:[\s\S]*?\/\* ---------- Cards/)[0], /\.wo-hero-day:last-child:nth-child\(odd\)/);
 });
