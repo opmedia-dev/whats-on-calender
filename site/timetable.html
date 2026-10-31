@@ -37,7 +37,7 @@
         list.style.setProperty('--wo-hero-height', `${height}px`);
         list.style.setProperty('--wo-hero-rows', String(Math.min(7, num('days', 7))));
         list.replaceChildren(...heroWeek(today, Math.min(7, num('days', 7)), items, {
-          addDays, eventHref, h, maxPerDay: 3,
+          addDays, eventHref, h, icon, maxPerDay: 3,
         }));
       } else {
         // Legacy roomy agenda layout remains available explicitly.
