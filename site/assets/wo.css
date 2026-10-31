@@ -111,7 +111,7 @@ button { font: inherit; color: inherit; }
   background: var(--wo-accent); opacity: .65;
 }
 .wo-hero-day.is-today .wo-hero-day-head {
-  background: #f5e9eb; box-shadow: inset 3px 0 0 var(--wo-accent);
+  background: color-mix(in srgb, var(--wo-accent) 9%, #fff); box-shadow: inset 3px 0 0 var(--wo-accent);
   padding-left: 13px;
 }
 .wo-hero-events {
@@ -130,7 +130,7 @@ button { font: inherit; color: inherit; }
 .wo-hero-event a:focus-visible { background: var(--wo-accent-soft); }
 .wo-hero-time {
   display: inline-block; width: fit-content; min-width: 44px;
-  color: var(--wo-accent); background: #f8eced;
+  color: var(--wo-accent); background: color-mix(in srgb, var(--wo-accent) 8%, #fff);
   border-radius: 4px; padding: 0 4px;
   font-weight: 750; font-variant-numeric: tabular-nums;
   font-size: 11px; text-align: center;
