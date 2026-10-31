@@ -59,7 +59,14 @@
       <div class="row"><button class="wo-btn copy" data-target="code-timetable">Copy code</button> <a id="open-timetable" target="_blank">Open preview</a></div>
     </section>
     <section class="panel">
-      <h2>2. "What's happening" banner</h2>
+      <h2>2. Weekly Mailing Hero — 593 × 434</h2>
+      <p class="muted">One featured card showing the latest sent parish mailing, its date, a short excerpt and a link to the full Mailchimp issue. Matches the timetable hero's dimensions, with mobile height adjusting automatically. No Google Calendar events or magazine are included.</p>
+      <textarea id="code-mailingHero" readonly></textarea>
+      <div class="row"><button class="wo-btn copy" data-target="code-mailingHero">Copy code</button> <a id="open-mailingHero" target="_blank">Open hero mailing preview</a></div>
+    </section>
+
+    <section class="panel">
+      <h2>3. "What's happening" banner</h2>
       <div class="grid2">
         <div><label for="bannerTitle">Section heading</label><input id="bannerTitle" type="text" value="What's happening at St John's"></div>
         <div><label for="bannerShow">Events to show</label><select id="bannerShow"><option value="featured">Events with posters/images</option><option value="all">All events</option></select></div>
@@ -87,14 +94,14 @@
       <div class="row"><button class="wo-btn copy" data-target="code-banner">Copy code</button> <a id="open-banner" target="_blank">Open preview</a></div>
     </section>
     <section class="panel">
-      <h2>3. Weekly Mailing archive</h2>
+      <h2>4. Weekly Mailing archive</h2>
       <p class="muted">An independent, searchable list of sent weekly mailings. The full email opens in Mailchimp. Set the public RSS URL in GitHub Actions variable <code>MAILCHIMP_RSS_URL</code> to replace the sample mailing.</p>
       <textarea id="code-mailings" readonly></textarea>
       <div class="row"><button class="wo-btn copy" data-target="code-mailings">Copy code</button> <a id="open-mailings" target="_blank">Open mailing archive preview</a></div>
     </section>
 
     <section class="panel">
-      <h2>4. What's On page (regular events, search, all events, event details)</h2>
+      <h2>5. What's On page (regular events, search, all events, event details)</h2>
       <p class="muted">Put this on the page whose URL you entered above.</p>
       <div class="grid2">
         <div><label class="inline"><input id="regular" type="checkbox" checked> Show regular/repeating events row</label></div>
@@ -108,7 +115,7 @@
       <div class="row"><button class="wo-btn copy" data-target="code-whatson">Copy code</button> <a id="open-whatson" target="_blank">Open preview</a></div>
     </section>
     <section class="panel">
-      <h2>5. Monthly calendar</h2>
+      <h2>6. Monthly calendar</h2>
       <div class="grid2">
         <div><label for="calView">Calendar view</label><select id="calView"><option value="auto">Month / list toggle (list on mobiles)</option><option value="grid">Month grid</option><option value="list">Agenda list</option></select></div>
         <div><label for="calMaxPerDay">Visible events per day before +more</label><input id="calMaxPerDay" type="number" min="1" max="12" value="3"></div>
@@ -224,6 +231,7 @@ if(d.type==='event'&&deep){var u=new URL(location.href);if(d.id)u.searchParams.s
 
       const snippets = {
         timetable: iframe('timetable.html', tt, Number(val('ttHeroHeight')) || 434, 'Weekly timetable'),
+        mailingHero: iframe('mailing-hero.html', q, 434, 'Latest parish weekly mailing'),
         banner: iframe('banner.html', bn, 520, "What's happening"),
         mailings: iframe('mailings.html', q, 800, 'Parish weekly mailings'),
         whatson: iframe('whats-on.html', wn, 1600, "What's On", ' data-deeplink'),

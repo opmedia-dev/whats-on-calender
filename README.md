@@ -1,18 +1,19 @@
 # What's On
 
-Four What's On event embeds plus an independent weekly mailing archive for a Duda site (or any site), built from a public Google Calendar and a public Mailchimp RSS feed.
+Four What's On event embeds and two independent mailing embeds (latest mailing hero and archive) for a Duda site (or any site), built from a public Google Calendar and Mailchimp RSS feed.
 Hosted for free on GitHub Pages, so there's no server to run.
 
 | Page | Embed |
 | --- | --- |
 | `timetable.html` | Compact seven-row weekly agenda for a 593×434px desktop slot; no oversized day cards, thumbnails or internal scrollbar; today highlighted |
+| `mailing-hero.html` | Standalone latest Weekly Mailing hero, also 593×434px; date, headline, excerpt and link to Mailchimp |
 | `banner.html` | "What's happening": rotating event cards plus a fixed weekly mailing and fixed latest parish magazine |
 | `whats-on.html` | What's On page: regular (repeating) events, search, a card grid and full event details |
 | `calendar.html` | Monthly calendar with Today/prev/next, a Month/List switch and "+N more" for busy days; switches to a list on phones |
 | `mailings.html` | Independent, searchable Parish Weekly Mailings archive (links open on Mailchimp) |
 | `index.html` | Embed codes to copy into Duda, plus notes for editors |
 
-Every embed can open an event's **detail view**, which shows:
+The event embeds can open an event's **detail view**, which shows:
 
 - the header image or poster
 - the date and time, and the repeat pattern ("Second Monday of each month, 7.30pm")
@@ -28,10 +29,11 @@ Live site: https://opmedia-dev.github.io/whats-on-calender/
 ## Weekly Mailchimp mailing (independent of Duda)
 
 The latest **sent** campaign from the public Mailchimp RSS feed appears as a **fixed card**
-in `banner.html` (default `mailing=1`), while calendar events rotate. Past issues appear **only** in
-`mailings.html`. They are never inserted into `whats-on.html`, `calendar.html`,
-the hero timetable or the Google Calendar event feed. The monthly parish magazine remains a
-separate fixed card in the banner.
+in `banner.html` (default `mailing=1`) and as an **independent, single-card hero**
+in `mailing-hero.html`, using the same **593×434px** space as the timetable hero.
+Past issues appear only in `mailings.html`. Mailings are never inserted into `whats-on.html`,
+`calendar.html`, the hero **timetable** or Google Calendar event data. The monthly parish
+magazine remains a separate fixed card in the banner.
 
 Configure repository **Settings → Secrets and variables → Actions → Variables →
 New repository variable** with the name `MAILCHIMP_RSS_URL` and the exact public
@@ -41,7 +43,7 @@ up to 24 issues, deduplicates by campaign GUID and skips redeployment when uncha
 If the URL is absent, the preview uses an explicitly labelled **sample mailing**.
 The full email opens via the campaign URL supplied by Mailchimp; no Duda
 blog import, Mailchimp credentials or subscription/contact data are involved.
-The archive is a separate optional fifth embed.
+The mailing hero and archive are separate, optional embeds, both using the same synced `mailings.json` data.
 
 ## Managing events (in Google Calendar)
 
@@ -111,6 +113,7 @@ configure **each embed** independently before copying its HTML snippet into a Du
   and the fixed latest magazine as four equal-width columns. Both publications
   stay visible as the event pages change. The cards match height and typography. The cover comes
   from the flipbook's published `issues.json` and opens the complete flipbook.
+- **Weekly Mailing Hero:** one 593×434px card with the latest sent issue, date, excerpt and a link to the full original Mailchimp newsletter; mobile height adapts automatically. Demo data is visibly labelled within the card.
 - **Weekly Mailings:** searchable independent archive of sent Mailchimp campaigns.
 - **What's On page:** regular events row, search, filters, default tab, grid columns and page size.
 - **Monthly calendar:** grid/list/automatic view, events per day and minimum cell height.
@@ -125,7 +128,7 @@ remain visible. The monthly calendar continues to display events on their schedu
 
 The snippet's script does three things:
 
-- sizes **all five iframes** to the actual content height, both up and down:
+- sizes **all six iframes** to the actual content height, both up and down:
   mobile wrapping, the calendar's mobile agenda list, banner paging, mailing
   archive searches, and opening/closing event details are all accommodated
 - scrolls the embed into view when an event opens
@@ -163,6 +166,8 @@ All embeds:
 `timetable.html`: `days` (7; generator allows 1–7), `heroHeight` (434px), `compact=1` (default compact hero), `compact=0` (legacy roomy agenda), `maxHeight` (legacy agenda only), `location=0` (legacy agenda only),
 `highlightToday=0`, `featured=1` (only events with pictures), `moreLink` + `moreText` (link
 under the list), `emptyText`.
+
+`mailing-hero.html`: Shows the latest sent public Mailchimp mailing as a single hero card; no extra configuration is required beyond `MAILCHIMP_RSS_URL`. Desktop canvas **593×434px**, mobile content-sized. Click-through opens the full newsletter on Mailchimp. Demo mode is clearly labelled. It does not affect the rotating banner or the archive.
 
 `banner.html`:
 
@@ -223,8 +228,7 @@ not been configured. This is the intended first-rollout experience:
    **GitHub Actions** as the source.
 2. On a push to `main`, or by manually running **Build and deploy What's On**,
    the workflow generates example events from `scripts/preview-data.mjs`.
-3. Open the GitHub Pages homepage (embed generator) and each of the four
-   linked standalone preview pages. No Duda HTML widget or Google API key is
+3. Open the GitHub Pages homepage (embed generator) and the standalone preview pages. No Duda HTML widget or Google API key is
    needed to preview appearance, recurrence, posters, contacts and downloads.
 4. All sample views show a conspicuous **PREVIEW MODE** notice. Nothing in
    this demo feed is an actual event.

@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Latest Parish Weekly Mailing</title>
+  <link rel="stylesheet" href="assets/wo.css">
+</head>
+<body>
+  <main class="wo-wrap wo-mailing-hero-wrap">
+    <div id="mailingHero"><p class="wo-loading">Loading latest weekly mailing…</p></div>
+  </main>
+  <script type="module">
+    import { init, h, icon } from './assets/wo.js';
+    import { loadMailings } from './assets/mailings.js';
+    import { renderMailingHero } from './assets/mailing-hero.js';
+
+    await init();
+    const host = document.getElementById('mailingHero');
+    try {
+      const { mailings, preview } = await loadMailings();
+      const latest = mailings[0];
+      if (latest) {
+        host.replaceChildren(renderMailingHero(latest, { h, icon, preview }));
+      } else {
+        host.replaceChildren(h('section', { class: 'wo-mailing-hero-status', role: 'status' },
+          h('h2', {}, 'Parish Weekly Mailing'),
+          h('p', {}, 'No mailing is available yet.')));
+      }
+    } catch (error) {
+      console.error('Weekly mailing hero could not load:', error);
+      host.replaceChildren(h('section', { class: 'wo-mailing-hero-status', role: 'status' },
+        h('h2', {}, 'Parish Weekly Mailing'),
+        h('p', {}, 'The latest mailing could not be loaded.')));
+    }
+  </script>
+</body>
+</html>
