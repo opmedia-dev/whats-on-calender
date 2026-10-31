@@ -64,11 +64,18 @@ test('regular events show a compact repeat icon without obscuring title or chang
   assert.equal(links.length, 2);
   const markers = find(links[0], (n) => n.attrs?.class === 'wo-hero-regular');
   assert.equal(markers.length, 1);
+  const parts = links[0].children.filter((part) => part && typeof part === 'object');
+  assert.deepEqual(parts.map((part) => part.attrs?.class),
+    ['wo-hero-time', 'wo-hero-regular', 'wo-hero-title'],
+    'repeat icon must be between the time and title');
   assert.equal(markers[0].attrs['aria-hidden'], 'true');
   assert.equal(find(markers[0], (n) => n.name === 'svg' && n.attrs.class === 'wo-icon wo-icon-repeat').length, 1);
   assert.match(links[0].attrs['aria-label'], /Weekly Choir Practice \(Regular event\)/);
   assert.equal(links[0].attrs.href, '#event=' + regular.id);
   assert.equal(find(links[1], (n) => n.attrs?.class === 'wo-hero-regular').length, 0);
+  assert.deepEqual(links[1].children.map((part) => part.attrs?.class),
+    ['wo-hero-time', 'wo-hero-title'],
+    'one-off event keeps its title in the same reserved column');
   assert.doesNotMatch(links[1].attrs['aria-label'], /Regular event/);
 });
 
@@ -105,8 +112,13 @@ test('generator uses 593 × 434 timetable without an internal scrollbar', () => 
   assert.match(css, /@media \(max-width: 520px\)\s*\{\s*\.wo-hero-week\s*\{\s*height:\s*auto/);
   assert.doesNotMatch(css, /\.wo-hero-day\.has-events \.wo-hero-day-head::after/);
   assert.doesNotMatch(css, /inset 3px 0 0 var\(--wo-accent\)/);
-  assert.match(css, /\.wo-hero-regular\s*\{[^}]*width:\s*19px/);
-  assert.match(css, /\.wo-hero-event a\s*\{[^}]*grid-template-columns:\s*48px\s+minmax\(0,\s*1fr\)\s+auto/);
+  assert.match(css, /\.wo-hero-regular\s*\{[^}]*grid-column:\s*2;[^}]*width:\s*15px/);
+  assert.match(css, /\.wo-hero-title\s*\{[^}]*grid-column:\s*3/);
+  assert.match(css, /\.wo-hero-event a\s*\{[^}]*grid-template-columns:\s*48px\s+15px\s+minmax\(0,\s*1fr\)/);
+  assert.match(css, /\.wo-hero-day\s*\{[^}]*border-bottom:\s*1px solid #f4f1ef/);
+  assert.match(css, /\.wo-hero-week\s*\{[^}]*border:\s*1px solid #eee9e6/);
+  assert.match(css, /\.wo-hero-event a\s*\{[^}]*grid-template-columns:\s*48px\s+15px\s+minmax\(0,\s*1fr\)/);
+  assert.match(css, /@media \(max-width:\s*520px\)[^]*?\.wo-hero-event a\s*\{[^}]*grid-template-columns:\s*44px\s+15px\s+minmax\(0,\s*1fr\)/);
   assert.match(css, /@media \(min-width:\s*521px\) and \(max-width:\s*760px\)/);
   assert.match(css, /@media \(max-width:\s*520px\)/);
   assert.match(css, /\.wo-hero-none::before/);
