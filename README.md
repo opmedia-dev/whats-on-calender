@@ -5,7 +5,7 @@ Hosted for free on GitHub Pages, so there's no server to run.
 
 | Page | Embed |
 | --- | --- |
-| `timetable.html` | Compact seven-day hero timetable for a 593×434px desktop slot; no thumbnails or internal scrollbar; today highlighted |
+| `timetable.html` | Compact seven-row weekly agenda for a 593×434px desktop slot; no oversized day cards, thumbnails or internal scrollbar; today highlighted |
 | `banner.html` | "What's happening": rotating event cards plus a fixed weekly mailing and fixed latest parish magazine |
 | `whats-on.html` | What's On page: regular (repeating) events, search, a card grid and full event details |
 | `calendar.html` | Monthly calendar with Today/prev/next, a Month/List switch and "+N more" for busy days; switches to a list on phones |
