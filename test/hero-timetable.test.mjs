@@ -97,6 +97,16 @@ test('ongoing earlier events appear once under Today', () => {
   assert.equal(find(panels[1], (n) => n.name === 'a').length, 0);
 });
 
+test('compact hero overrides the generic timetable gap to keep a continuous seven-day date rail', () => {
+  const css = fs.readFileSync(path.join(root, 'site/assets/wo.css'), 'utf8');
+  // This is a regression: .wo-timetable and .wo-hero-week are both class
+  // selectors. Without an explicit gap override in the later hero rule,
+  // the inherited 12px gap creates 6 white strips between seven day rows.
+  assert.match(css, /\\.wo-timetable, \\.wo-cal-list \\{[^}]*gap:\\s*12px/);
+  assert.match(css, /\\.wo-hero-week\\s*\\{[^}]*gap:\\s*0;/);
+  assert.match(css, /\\.wo-hero-day\\s*\\{[^}]*border-bottom:\\s*1px solid #f4f1ef/);
+});
+
 test('generator uses 593 × 434 timetable without an internal scrollbar', () => {
   const html = fs.readFileSync(path.join(root, 'site/index.html'), 'utf8');
   const page = fs.readFileSync(path.join(root, 'site/timetable.html'), 'utf8');
@@ -112,13 +122,13 @@ test('generator uses 593 × 434 timetable without an internal scrollbar', () => 
   assert.match(css, /@media \(max-width: 520px\)\s*\{\s*\.wo-hero-week\s*\{\s*height:\s*auto/);
   assert.doesNotMatch(css, /\.wo-hero-day\.has-events \.wo-hero-day-head::after/);
   assert.doesNotMatch(css, /inset 3px 0 0 var\(--wo-accent\)/);
-  assert.match(css, /\.wo-hero-regular\s*\{[^}]*grid-column:\s*2;[^}]*width:\s*15px/);
+  assert.match(css, /\.wo-hero-regular\s*\{[^}]*grid-column:\s*2;[^}]*width:\s*14px/);
   assert.match(css, /\.wo-hero-title\s*\{[^}]*grid-column:\s*3/);
-  assert.match(css, /\.wo-hero-event a\s*\{[^}]*grid-template-columns:\s*48px\s+15px\s+minmax\(0,\s*1fr\)/);
+  assert.match(css, /\.wo-hero-event a\s*\{[^}]*grid-template-columns:\s*48px\s+14px\s+minmax\(0,\s*1fr\)/);
   assert.match(css, /\.wo-hero-day\s*\{[^}]*border-bottom:\s*1px solid #f4f1ef/);
   assert.match(css, /\.wo-hero-week\s*\{[^}]*border:\s*1px solid #eee9e6/);
   assert.match(css, /\.wo-hero-event a\s*\{[^}]*grid-template-columns:\s*48px\s+15px\s+minmax\(0,\s*1fr\)/);
-  assert.match(css, /@media \(max-width:\s*520px\)[^]*?\.wo-hero-event a\s*\{[^}]*grid-template-columns:\s*44px\s+15px\s+minmax\(0,\s*1fr\)/);
+  assert.match(css, /@media \(max-width:\s*520px\)[^]*?\.wo-hero-event a\s*\{[^}]*grid-template-columns:\s*44px\s+14px\s+minmax\(0,\s*1fr\)/);
   assert.match(css, /@media \(min-width:\s*521px\) and \(max-width:\s*760px\)/);
   assert.match(css, /@media \(max-width:\s*520px\)/);
   assert.match(css, /\.wo-hero-none::before/);
