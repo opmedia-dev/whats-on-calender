@@ -5,7 +5,7 @@ Hosted for free on GitHub Pages, so there's no server to run.
 
 | Page | Embed |
 | --- | --- |
-| `timetable.html` | Hero timetable: the next 7 days grouped by day, with today highlighted |
+| `timetable.html` | Compact seven-day hero timetable for a 593×434px desktop slot; no thumbnails or internal scrollbar; today highlighted |
 | `banner.html` | "What's happening": rotating event cards plus a fixed weekly mailing and fixed latest parish magazine |
 | `whats-on.html` | What's On page: regular (repeating) events, search, a card grid and full event details |
 | `calendar.html` | Monthly calendar with Today/prev/next, a Month/List switch and "+N more" for busy days; switches to a list on phones |
@@ -101,7 +101,7 @@ configure **each embed** independently before copying its HTML snippet into a Du
 **HTML** widget. The visual embed generator provides these controls without hand-editing URLs:
 
 - **Shared:** brand colours, font families, corner radius, 12/24-hour clock and excluded titles.
-- **Hero timetable:** number of days and optional scrollable maximum height.
+- **Hero timetable:** seven days in two columns / four rows at the 593×434px desktop size, time + event title only (no thumbnail images or locations). The iframe's default height is **434px**. The panels expand naturally on phones instead of using an inner scrollbar; exceptionally busy days display a counted link to the full agenda so events are never silently clipped.
 - **Homepage banner:** heading, featured/all events, cards per page, maximum events,
   **14-day** lookahead (configurable), **8-second** automatic paging (configurable;
   pauses on hover, focus, event detail, hidden tabs and reduced motion), latest
@@ -160,7 +160,7 @@ All embeds:
 | `contacts` | `contacts=0` | Hide the Contact box in details |
 | `backText` | `backText=Back` | Detail view's back button label |
 
-`timetable.html`: `days` (7), `max` (no limit), `maxHeight` (px, scrolls inside), `location=0`,
+`timetable.html`: `days` (7; generator allows 1–7), `heroHeight` (434px), `compact=1` (default compact hero), `compact=0` (legacy roomy agenda), `maxHeight` (legacy agenda only), `location=0` (legacy agenda only),
 `highlightToday=0`, `featured=1` (only events with pictures), `moreLink` + `moreText` (link
 under the list), `emptyText`.
 
