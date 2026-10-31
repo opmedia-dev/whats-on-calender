@@ -64,19 +64,41 @@ export function helloHost(timeout = 600) {
 export function reportHeight() {
   if (!embedded) return;
   document.documentElement.classList.add('wo-embedded');
+
+  // The html element's height can equal Duda's *existing iframe viewport*,
+  // rather than the content. Measuring the outer content element lets both
+  // long event details and short mobile lists resize in either direction.
+  // Its bottom position also includes the preview-mode notice above <main>.
+  const content = document.querySelector('main') || document.body;
   let last = 0;
-  let lastWidth = 0;
   const send = () => {
-    const h = Math.ceil(document.documentElement.getBoundingClientRect().height);
-    const w = window.innerWidth;
-    const narrowedShrink = h < last && w < lastWidth;
-    if (Math.abs(h - last) > 1 && !narrowedShrink) {
+    // Do not shrink a generated Duda iframe to its loading placeholder while
+    // the calendar, event data or mailing archive is being fetched.
+    if (document.querySelector('.wo-loading')) return;
+    const h = Math.max(80, Math.ceil(content.getBoundingClientRect().bottom + (window.scrollY || 0)));
+    if (Number.isFinite(h) && Math.abs(h - last) > 1) {
       last = h;
       postToParent({ type: 'height', height: h });
     }
-    lastWidth = w;
   };
-  new ResizeObserver(send).observe(document.documentElement);
+  const observer = new ResizeObserver(send);
+  observer.observe(content);
+  // Preview-mode notices are inserted *above* <main>; their addition moves
+  // main's bottom without changing main's own height.
+  if (content !== document.body) observer.observe(document.body);
+  // A loaded view can coincidentally have the same height as its loading
+  // placeholder. Trigger the first measurement when that placeholder goes,
+  // even if ResizeObserver sees no change in the element dimensions.
+  if (document.querySelector('.wo-loading')) {
+    const ready = new MutationObserver(() => {
+      if (!document.querySelector('.wo-loading')) {
+        ready.disconnect();
+        send();
+      }
+    });
+    ready.observe(content, { childList: true, subtree: true });
+  }
+  window.addEventListener('resize', send);
   window.addEventListener('load', send);
   send();
 }
