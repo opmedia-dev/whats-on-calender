@@ -8,7 +8,9 @@ const listeners = {};
 let bottom = 140;
 let loading = true;
 let observer;
+let readyObserver;
 const content = { getBoundingClientRect: () => ({ bottom }) };
+const body = { getBoundingClientRect: () => ({ bottom }) };
 
 globalThis.location = { search: '' };
 globalThis.window = {
@@ -17,7 +19,7 @@ globalThis.window = {
   addEventListener(type, callback) { (listeners[type] ||= []).push(callback); },
 };
 globalThis.document = {
-  body: content,
+  body,
   documentElement: { classList: { add() {} } },
   querySelector(selector) {
     if (selector === 'main') return content;
@@ -27,7 +29,15 @@ globalThis.document = {
 };
 globalThis.ResizeObserver = class {
   constructor(callback) { observer = callback; }
-  observe(node) { assert.equal(node, content); }
+  observe(node) { assert.ok(node === content || node === body); }
+};
+globalThis.MutationObserver = class {
+  constructor(callback) { readyObserver = callback; }
+  observe(node, opts) {
+    assert.equal(node, content);
+    assert.equal(opts.subtree, true);
+  }
+  disconnect() {}
 };
 const { reportHeight } = await import('../site/assets/wo.js');
 
@@ -36,9 +46,10 @@ test('all embedded views measure real content and send both growth and shrinkage
   assert.equal(messages.length, 0, 'do not shrink an iframe while initial loading is visible');
   loading = false;
 
-  // Weekly timetable: compact initial agenda
+  // Weekly timetable: if completed content happens to have the same box
+  // dimensions as the loading placeholder, mutation still starts reporting.
   bottom = 370;
-  observer();
+  readyObserver();
   assert.equal(messages.at(-1).height, 370);
   assert.equal(messages.at(-1).source, 'whatson');
 
@@ -83,6 +94,11 @@ test('staging notice above main is counted; iframe viewport height is irrelevant
   observer();
   assert.equal(messages.at(-1).height, 290, 'scrolling should not alter document content height');
   window.scrollY = 0;
+  // A preview warning inserted before main changes its bottom position
+  // without changing the dimensions of main itself; observing body catches it.
+  bottom = 335;
+  observer();
+  assert.equal(messages.at(-1).height, 335);
 });
 
 test('mobile breakpoints, all embeds and generated Duda resizing script remain present', () => {
