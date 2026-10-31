@@ -25,7 +25,7 @@
       let items = events.filter((e) => e.startKey <= last && e.endKey >= today && isUpcoming(e, now));
       if (flag('featured', false)) items = items.filter((e) => e.featured);
       const max = num('max', 0);
-      if (max > 0) items = items.slice(0, max);
+      if (!flag('compact', true) && max > 0) items = items.slice(0, max);
 
       if (flag('compact', true)) {
         // This hero has a fixed 593×434px desktop slot. Seven dated panels
@@ -56,7 +56,7 @@
         }
       }
       const more = param('moreLink');
-      if (more && /^https?:\/\//.test(more)) {
+      if (!flag('compact', true) && more && /^https?:\/\//.test(more)) {
         list.after(h('p', { class: 'wo-tt-more' }, h('a', { class: 'wo-btn', href: more, target: '_top' }, icon('calendar'), param('moreText', 'See our full calendar'))));
       }
       routeDetails({ main: document.getElementById('main'), detail: document.getElementById('detail'), events, backLabel: param('backText', 'Back to timetable') });
