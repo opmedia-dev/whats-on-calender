@@ -12,7 +12,8 @@
     <div id="detail" hidden></div>
   </main>
   <script type="module">
-    import { init, loadEvents, param, num, flag, h, icon, dayKey, addDays, isUpcoming, renderAgendaDay, routeDetails, showError, emptyState } from './assets/wo.js';
+    import { init, loadEvents, param, num, flag, h, icon, eventHref, dayKey, addDays, isUpcoming, renderAgendaDay, routeDetails, showError, emptyState } from './assets/wo.js';
+    import { heroWeek } from './assets/hero-timetable.js';
 
     await init();
     const list = document.getElementById('list');
@@ -24,23 +25,38 @@
       let items = events.filter((e) => e.startKey <= last && e.endKey >= today && isUpcoming(e, now));
       if (flag('featured', false)) items = items.filter((e) => e.featured);
       const max = num('max', 0);
-      if (max > 0) items = items.slice(0, max);
+      if (!flag('compact', true) && max > 0) items = items.slice(0, max);
 
-      const days = new Map();
-      for (const e of items) {
-        const key = e.startKey < today ? today : e.startKey;
-        if (!days.has(key)) days.set(key, []);
-        days.get(key).push(e);
-      }
-      const highlight = flag('highlightToday', true) ? today : null;
-      list.replaceChildren(...[...days].map(([key, evs]) => renderAgendaDay(key, evs, { today: highlight })));
-      if (!items.length) list.replaceChildren(emptyState(param('emptyText', 'Nothing on this week.')));
-      if (num('maxHeight', 0) > 0) {
-        list.classList.add('is-scroll');
-        list.style.maxHeight = `${num('maxHeight', 0)}px`;
+      if (flag('compact', true)) {
+        // This hero has a fixed 593×434px desktop slot. Seven dated panels
+        // fit as 4 rows × 2 columns, with no thumbnail or internal scrolling.
+        // Mobile widths use natural height instead of clipping the week.
+        document.querySelector('main').classList.add('wo-hero-compact');
+        list.classList.add('wo-hero-week');
+        const height = Math.max(320, Math.min(900, num('heroHeight', 434)));
+        list.style.setProperty('--wo-hero-height', `${height}px`);
+        list.style.setProperty('--wo-hero-rows', String(Math.ceil(Math.min(7, num('days', 7)) / 2)));
+        list.replaceChildren(...heroWeek(today, Math.min(7, num('days', 7)), items, {
+          addDays, eventHref, h, maxPerDay: 4,
+        }));
+      } else {
+        // Legacy roomy agenda layout remains available explicitly.
+        const days = new Map();
+        for (const e of items) {
+          const key = e.startKey < today ? today : e.startKey;
+          if (!days.has(key)) days.set(key, []);
+          days.get(key).push(e);
+        }
+        const highlight = flag('highlightToday', true) ? today : null;
+        list.replaceChildren(...[...days].map(([key, evs]) => renderAgendaDay(key, evs, { today: highlight })));
+        if (!items.length) list.replaceChildren(emptyState(param('emptyText', 'Nothing on this week.')));
+        if (num('maxHeight', 0) > 0) {
+          list.classList.add('is-scroll');
+          list.style.maxHeight = `${num('maxHeight', 0)}px`;
+        }
       }
       const more = param('moreLink');
-      if (more && /^https?:\/\//.test(more)) {
+      if (!flag('compact', true) && more && /^https?:\/\//.test(more)) {
         list.after(h('p', { class: 'wo-tt-more' }, h('a', { class: 'wo-btn', href: more, target: '_top' }, icon('calendar'), param('moreText', 'See our full calendar'))));
       }
       routeDetails({ main: document.getElementById('main'), detail: document.getElementById('detail'), events, backLabel: param('backText', 'Back to timetable') });

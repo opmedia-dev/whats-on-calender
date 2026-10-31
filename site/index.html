@@ -52,8 +52,8 @@
     <section class="panel">
       <h2>1. Hero timetable</h2>
       <div class="grid2">
-        <div><label for="ttDays">Days ahead</label><input id="ttDays" type="number" min="1" max="60" value="7"></div>
-        <div><label for="ttMaxHeight">Maximum list height in pixels (0 = grow naturally)</label><input id="ttMaxHeight" type="number" min="0" max="2400" value="0"></div>
+        <div><label for="ttDays">Days ahead</label><input id="ttDays" type="number" min="1" max="7" value="7"><p class="muted">Seven days are shown by default, including days with no events.</p></div>
+        <div><label for="ttHeroHeight">Hero height (pixels)</label><input id="ttHeroHeight" type="number" min="320" max="900" value="434"><p class="muted">Designed for a 593px-wide × 434px-high desktop hero slot; automatically grows on mobile. Events have no thumbnail images or internal scrolling.</p></div>
       </div>
       <textarea id="code-timetable" readonly></textarea>
       <div class="row"><button class="wo-btn copy" data-target="code-timetable">Copy code</button> <a id="open-timetable" target="_blank">Open preview</a></div>
@@ -190,8 +190,8 @@ if(d.type==='event'&&deep){var u=new URL(location.href);if(d.id)u.searchParams.s
 
       const tt = new URLSearchParams(withLink);
       if (val('calendarLink')) tt.set('moreLink', val('calendarLink'));
-      setInt(tt, 'days', 'ttDays', 1, 60);
-      setInt(tt, 'maxHeight', 'ttMaxHeight', 0, 2400);
+      setInt(tt, 'days', 'ttDays', 1, 7);
+      setInt(tt, 'heroHeight', 'ttHeroHeight', 320, 900);
       const bn = new URLSearchParams(withLink);
       bn.set('title', val('bannerTitle') || '0');
       bn.set('show', val('bannerShow'));
@@ -223,7 +223,7 @@ if(d.type==='event'&&deep){var u=new URL(location.href);if(d.id)u.searchParams.s
       setInt(cal, 'cellHeight', 'calCellHeight', 80, 400);
 
       const snippets = {
-        timetable: iframe('timetable.html', tt, 520, 'Weekly timetable'),
+        timetable: iframe('timetable.html', tt, Number(val('ttHeroHeight')) || 434, 'Weekly timetable'),
         banner: iframe('banner.html', bn, 520, "What's happening"),
         mailings: iframe('mailings.html', q, 800, 'Parish weekly mailings'),
         whatson: iframe('whats-on.html', wn, 1600, "What's On", ' data-deeplink'),
