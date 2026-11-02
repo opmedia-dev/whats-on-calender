@@ -616,6 +616,57 @@ function editorUploadFile(form) {
   } finally { lock.releaseLock(); }
 }
 
+// Remove a Calendar attachment reference only. Drive files are retained:
+ // they may be linked from another event or shared independently.
+function editorRemoveAttachment(id, scope, revision, attachmentKey) {
+  editorAccess_();
+  const editScope = String(scope || 'occurrence');
+  if (editScope === 'following') {
+    throw new Error('To remove an attachment from this and future events only, first save a separate future series, then remove the file from that new series.');
+  }
+  if (!['occurrence','series'].includes(editScope)) throw new Error('Select an editing scope first.');
+  const key = String(attachmentKey || '').trim();
+  if (!key) throw new Error('Choose an attachment to remove.');
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(15000)) throw new Error('Another calendar update is in progress. Try again.');
+  try {
+    const record = fetchTarget_(String(id || ''), editScope);
+    if (record.target.etag !== revision) {
+      throw new Error('This event changed in Google Calendar. Reload before removing an attachment.');
+    }
+    const original = record.target.attachments || [];
+    const attachment = original.find(a => (a.fileId || a.fileUrl) === key);
+    if (!attachment) {
+      const inherited = (record.master?.attachments || []).some(a => (a.fileId || a.fileUrl) === key);
+      if (inherited && editScope === 'occurrence') {
+        throw new Error('This attachment is inherited from the recurring series. Choose All events in the series to remove it.');
+      }
+      throw new Error('This file is not attached to the selected event. Reload the editor.');
+    }
+    const remaining = original.filter(a => (a.fileId || a.fileUrl) !== key);
+    const changes = { attachments: remaining.map(a => ({
+      fileUrl: a.fileUrl, title: a.title || 'Attached file', mimeType: a.mimeType || '',
+    })) };
+    const shared = record.target.extendedProperties?.shared || {};
+    const currentHeader = shared[HEADER_IMAGE_KEY] ||
+      record.master?.extendedProperties?.shared?.[HEADER_IMAGE_KEY] || '';
+    if (currentHeader === attachment.fileId ||
+        (!remaining.length && attachment.mimeType?.startsWith('image/') && currentHeader !== 'none')) {
+      const next = remaining.find(a => /^image\//i.test(a.mimeType || '') && a.fileId);
+      changes.extendedProperties = { shared: Object.assign({}, shared, {
+        [HEADER_IMAGE_KEY]: next ? next.fileId : 'none',
+      }) };
+    }
+    const updated = Calendar.Events.patch(changes, EDITOR_CALENDAR_ID, record.target.id,
+      { sendUpdates:'none', supportsAttachments:true });
+    return {
+      removed:true, eventId:updated.id, revision:updated.etag || '',
+      name:attachment.title || 'Attachment', remaining:remaining.length,
+      driveFileRetained:true,
+    };
+  } finally { lock.releaseLock(); }
+}
+
 function editorDeleteEvent(id, scope, revision) {
   editorAccess_();
   const lock = LockService.getScriptLock();
