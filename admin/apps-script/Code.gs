@@ -225,8 +225,22 @@ function fetchTarget_(id, scope) {
 function editorGetEvent(id, scope) {
   editorAccess_();
   const data = fetchTarget_(id, scope || 'occurrence');
-  return Object.assign(localEvent_(data.target, data.master), {
+  // When the user chooses "All events in the series", the Calendar API
+  // returns the master whose start can be years before the clicked occurrence.
+  // Show the clicked date as *context*, but retain the master's clock, pattern,
+  // revision and metadata. Never treat that selected date as a new series anchor.
+  const event = localEvent_(data.target, data.master);
+  const seriesMode = scope === 'series' && Boolean(data.selected.recurringEventId);
+  if (seriesMode) {
+    const selected = localEvent_(data.selected, data.master);
+    event.startDate = selected.startDate;
+    event.endDate = selected.endDate;
+    event.seriesStartDate = localEvent_(data.master).startDate;
+    event.selectedOccurrenceDate = selected.startDate;
+  }
+  return Object.assign(event, {
     selectedId: id, editScope: scope || 'occurrence',
+    attachmentScope: seriesMode ? 'series' : scope || 'occurrence',
   });
 }
 
@@ -476,6 +490,23 @@ function editorSaveEvent(form) {
     if (form.revision !== record.target.etag) {
       throw new Error('This event changed in Google Calendar. Reload it before saving to avoid overwriting another editor.');
     }
+    if (scope === 'series' && record.selected.recurringEventId) {
+      // Dates displayed in the editor refer to the selected occurrence, not
+      // the recurrence master. Keep that reference date read-only and rebase
+      // submitted clock/duration changes to the *original master dates*.
+      const selectedContext = localEvent_(record.selected, record.master);
+      if (String(form.startDate) !== selectedContext.startDate ||
+          String(form.endDate) !== selectedContext.endDate) {
+        throw new Error('The selected occurrence date is a reference only for All events in the series. Reload this event; use Google Calendar to move the series to another date.');
+      }
+      const anchor = localEvent_(record.master);
+      parsed.body.start = form.allDay
+        ? { date: anchor.startDate }
+        : { dateTime: anchor.startDate + 'T' + String(form.startTime) + ':00', timeZone: EDITOR_ZONE };
+      parsed.body.end = form.allDay
+        ? { date: addDay_(anchor.endDate, 1) }
+        : { dateTime: anchor.endDate + 'T' + String(form.endTime) + ':00', timeZone: EDITOR_ZONE };
+    }
     // A chosen header must be a real image already attached to THIS event.
     // Never let a discarded draft/another event supply a foreign file ID.
     const headerChoice = String(form.headerImageId || '').trim();
@@ -582,6 +613,58 @@ function editorUploadFile(form) {
     const updated = Calendar.Events.patch(changes,
       EDITOR_CALENDAR_ID, record.target.id, { sendUpdates: 'none', supportsAttachments: true });
     return { uploaded: true, name: attachment.title, eventId: updated.id, attachmentCount: existing.length + 1 };
+  } finally { lock.releaseLock(); }
+}
+
+// Remove a Calendar attachment reference only. Drive files are retained:
+ // they may be linked from another event or shared independently.
+function editorRemoveAttachment(id, scope, revision, attachmentKey) {
+  editorAccess_();
+  const editScope = String(scope || 'occurrence');
+  if (editScope === 'following') {
+    throw new Error('To remove an attachment from this and future events only, first save a separate future series, then remove the file from that new series.');
+  }
+  if (!['occurrence','series'].includes(editScope)) throw new Error('Select an editing scope first.');
+  const key = String(attachmentKey || '').trim();
+  if (!key) throw new Error('Choose an attachment to remove.');
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(15000)) throw new Error('Another calendar update is in progress. Try again.');
+  try {
+    const record = fetchTarget_(String(id || ''), editScope);
+    if (record.target.etag !== revision) {
+      throw new Error('This event changed in Google Calendar. Reload before removing an attachment.');
+    }
+    const original = record.target.attachments || [];
+    const attachment = original.find(a => (a.fileId || a.fileUrl) === key);
+    if (!attachment) {
+      const inherited = (record.master?.attachments || []).some(a => (a.fileId || a.fileUrl) === key);
+      if (inherited && editScope === 'occurrence') {
+        throw new Error('This attachment is inherited from the recurring series. Choose All events in the series to remove it.');
+      }
+      throw new Error('This file is not attached to the selected event. Reload the editor.');
+    }
+    const remaining = original.filter(a => (a.fileId || a.fileUrl) !== key);
+    const changes = { attachments: remaining.map(a => ({
+      fileUrl: a.fileUrl, title: a.title || 'Attached file', mimeType: a.mimeType || '',
+    })) };
+    const shared = record.target.extendedProperties?.shared || {};
+    const currentHeader = shared[HEADER_IMAGE_KEY] ||
+      record.master?.extendedProperties?.shared?.[HEADER_IMAGE_KEY] || '';
+    const inferredHeader = currentHeader === 'none' ? null :
+      currentHeader || original.find(a => /^image\//i.test(a.mimeType || '') && a.fileId)?.fileId;
+    if (attachment.fileId && inferredHeader === attachment.fileId) {
+      const next = remaining.find(a => /^image\//i.test(a.mimeType || '') && a.fileId);
+      changes.extendedProperties = { shared: Object.assign({}, shared, {
+        [HEADER_IMAGE_KEY]: next ? next.fileId : 'none',
+      }) };
+    }
+    const updated = Calendar.Events.patch(changes, EDITOR_CALENDAR_ID, record.target.id,
+      { sendUpdates:'none', supportsAttachments:true });
+    return {
+      removed:true, eventId:updated.id, revision:updated.etag || '',
+      name:attachment.title || 'Attachment', remaining:remaining.length,
+      driveFileRetained:true,
+    };
   } finally { lock.releaseLock(); }
 }
 

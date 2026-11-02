@@ -133,6 +133,47 @@ test('existing private recurring event retains privacy when editing one occurren
  assert.equal(updateMaster.body.visibility,'public');
 });
 
+test('all-series editing shows the clicked occurrence date but never moves the master date',()=>{
+ const {context,master,selected,form,calls}=fixture();
+ const data=context.editorGetEvent(selected.id,'series');
+ assert.equal(data.selectedId,selected.id);
+ assert.equal(data.id,master.id);
+ assert.equal(data.startDate,'2026-11-15');
+ assert.equal(data.endDate,'2026-11-15');
+ assert.equal(data.selectedOccurrenceDate,'2026-11-15');
+ assert.equal(data.seriesStartDate,'2026-11-01');
+ assert.equal(data.startTime,'10:00');
+ context.editorSaveEvent({...form,editScope:'series',revision:master.etag,startTime:'12:30',endTime:'13:30'});
+ const update=calls.find(c=>c.method==='patch');
+ assert.equal(update.id,master.id);
+ assert.equal(update.body.start.dateTime,'2026-11-01T12:30:00');
+ assert.equal(update.body.end.dateTime,'2026-11-01T13:30:00');
+ assert.equal(update.body.recurrence[0],'RRULE:FREQ=WEEKLY;BYDAY=SU');
+ assert.throws(()=>context.editorSaveEvent({...form,editScope:'series',revision:master.etag,
+  startDate:'2026-11-16',endDate:'2026-11-16'}),/reference only/);
+ assert.equal(calls.filter(c=>c.method==='patch').length,1,'reject date drift before mutation');
+});
+
+test('attachment removal only detaches the selected file and preserves the original Drive object',()=>{
+ const {context,master,selected,calls}=fixture();
+ master.attachments.push({fileId:'second-file',fileUrl:'https://drive.google.com/file/d/second-file/view',title:'Flyer',mimeType:'application/pdf'});
+ const removed=context.editorRemoveAttachment(selected.id,'series',master.etag,'poster-image');
+ assert.equal(removed.removed,true);
+ assert.equal(removed.driveFileRetained,true);
+ const patch=calls.find(c=>c.method==='patch');
+ assert.equal(patch.id,master.id);
+ assert.equal(patch.opts.supportsAttachments,true);
+ assert.equal(patch.body.attachments.length,1);
+ assert.equal(patch.body.attachments[0].title,'Flyer');
+ assert.equal(patch.body.extendedProperties.shared.woHeaderImageId,'none');
+ assert.equal(calls.some(c=>c.method==='remove'),false);
+});
+
+test('removing a file from future occurrences without first splitting is refused',()=>{
+ const {context,selected,calls}=fixture();
+ assert.throws(()=>context.editorRemoveAttachment(selected.id,'following',selected.etag,'poster-image'),/first save a separate future series/);
+ assert.equal(calls.filter(c=>c.method==='patch').length,0);
+});
 test('this-and-future splits series, retains media and previous history, and returns new series ID',()=>{
  const {context,form,calls}=fixture();
  const res=context.editorSaveEvent(form);
