@@ -411,7 +411,7 @@ function attachmentList(items){
   if(isImage&&item.fileId&&item!==selected){
    const button=create('button','','Use as header');button.type='button';
    button.addEventListener('click',function(){
-    state.headerImageId=item.fileId;state.dirty=true;attachmentList(state.attachments);preview();
+    state.headerImageId=item.fileId;state.imageFocus='50,50';state.dirty=true;attachmentList(state.attachments);preview();
     $('headerImageHint').textContent='Header change is unsaved. Press Save event to apply it.';
    });
    row.append(button);
@@ -726,6 +726,7 @@ $('uploadAttachment').addEventListener('change',function(){
  const file=this.files[0];
  if(file&&file.type.startsWith('image/'))state.draftImageUrl=URL.createObjectURL(file);
  if(file&&!file.type.startsWith('image/'))$('imageRole').value='gallery';
+ if(file&&file.type.startsWith('image/')&&$('imageRole').value==='header'){state.imageFocus='50,50';state.dirty=true}
  refreshImagePreview();
  $('uploadStatus').textContent=file
   ? (state.uploadConfigured?'Selected file will upload when you Save event.':'Upload unavailable until the parish Drive folder is configured.')
