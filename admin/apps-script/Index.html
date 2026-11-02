@@ -212,7 +212,7 @@ textarea{resize:vertical;min-height:100px;line-height:1.5}
      <select id="visibility">
       <option value="default">Normal (calendar default)</option>
       <option value="public">Public</option>
-      <option value="private">Private — hide from public website</option>
+      <option value="private">Private — hide from all public What’s On displays</option>
      </select>
      <small id="visibilityHint">Private events stay visible to calendar editors but are excluded from all public What's On displays after the next sync.</small>
     </div>
@@ -622,10 +622,10 @@ function put(e){
  var radio=document.querySelector('input[name=scope][value='+state.scope+']');if(radio)radio.checked=true;
  $('repeat').querySelector('[value=keep]').hidden=e.repeat!=='keep';$('repeat').value=e.repeat||'none';
  $('repeat').disabled=!!e.isRecurring && state.scope==='occurrence';
- $('visibility').disabled=!!e.isRecurring && state.scope==='occurrence';
- $('visibilityHint').textContent=$('visibility').disabled
-  ? 'Google applies privacy changes to an entire recurring series. Choose This event and future events or All events to change visibility.'
-  : 'Private events stay visible to authorised editors but are excluded from public pages after the next sync.';
+ $('visibility').disabled=false;
+ $('visibilityHint').textContent=e.isRecurring && state.scope==='occurrence'
+  ? 'For one occurrence, privacy hides it from all What’s On embeds without changing the entire Google Calendar series. Google Calendar subscribers may still see that date.'
+  : 'Private events stay visible to authorised editors but are excluded from all public What’s On displays after the next sync.';
  customPopulate(e.customRepeat);repeatPanel();
  $('repeatHint').textContent=e.repeat==='keep'?'Complex recurrence preserved unless deliberately changed.':'Weekly and monthly patterns supported.';
  $('categoryHint').textContent=e.categorySource==='suggested'?'Suggested from title; choose a category to save it.':'Category stored on event.';
