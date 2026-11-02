@@ -377,6 +377,11 @@ function editorUploadFile(form) {
   if (!name) throw new Error('Attachment needs a filename.');
   if (!ACCEPTED_UPLOAD_TYPES.includes(mimeType)) throw new Error('This file type is not supported for event attachments.');
   if (!bytes || bytes > MAX_EVENT_UPLOAD_BYTES) throw new Error('Attachments must be smaller than 8 MB.');
+  const role = String(form.imageRole || 'gallery');
+  if (!['header', 'gallery'].includes(role)) throw new Error('Invalid image placement.');
+  if (role === 'header' && !mimeType.startsWith('image/')) {
+    throw new Error('Only an image can be used as the header.');
+  }
 
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(15000)) throw new Error('Another calendar update is in progress. Try again.');
@@ -399,11 +404,6 @@ function editorUploadFile(form) {
       fileUrl: file.webViewLink || 'https://drive.google.com/file/d/' + encodeURIComponent(file.id) + '/view',
       title: file.name || name, mimeType: file.mimeType || mimeType,
     };
-    const role = String(form.imageRole || 'gallery');
-    if (!['header', 'gallery'].includes(role)) throw new Error('Invalid image placement.');
-    if (role === 'header' && !mimeType.startsWith('image/')) {
-      throw new Error('Only an image can be used as the header.');
-    }
     const shared = (record.target.extendedProperties && record.target.extendedProperties.shared) || {};
     const changes = { attachments: existing.concat([attachment]) };
     if (role === 'header') {
