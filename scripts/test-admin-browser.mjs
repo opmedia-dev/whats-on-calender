@@ -32,6 +32,31 @@ try {
   await page.locator('#newEvent').click();
   await assertModal('New event');
   assert.equal(await page.locator('#dialogTitle').textContent(), 'New event');
+  // Reproduce the reported bug: choose an image for an unsaved new event,
+  // discard it, then open another event. No image or file may cross over.
+  const tinyPng = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScL/nwAAAABJRU5ErkJggg==', 'base64');
+  await page.locator('#uploadAttachment').setInputFiles({
+    name: 'draft-header.png', mimeType: 'image/png', buffer: tinyPng,
+  });
+  assert.equal(await page.locator('#uploadAttachment').evaluate(el => el.files.length), 1);
+  assert.equal(await page.locator('#previewHeaderImage').isVisible(), true,
+    'unsaved image should preview in the current draft');
+  await page.locator('#imageRole').selectOption('gallery');
+  assert.equal(await page.locator('#previewGallery').isVisible(), true,
+    'gallery selection should not replace the header');
+  await page.locator('#closeEditor').click();
+  assert.equal(await page.locator('#editorDialog').evaluate(el => el.open), false);
+  await page.locator('.event-pill').first().click();
+  await assertModal('existing event after discarded draft image');
+  assert.equal(await page.locator('#uploadAttachment').evaluate(el => el.files.length), 0,
+    'discarded file input must never persist in a different event');
+  assert.equal(await page.locator('#previewHeaderImage').isVisible(), false,
+    'discarded header preview must never persist in another event');
+  assert.equal(await page.locator('#previewGallery').isVisible(), false,
+    'discarded gallery preview must never persist in another event');
+  await page.locator('#closeEditor').click();
+  await page.locator('#newEvent').click();
+  await assertModal('New event');
   await page.locator('#title').fill('Test Parish Event');
   assert.equal(await page.locator('#pvTitle').textContent(), 'Test Parish Event');
   await page.locator('#closeEditor').click();
