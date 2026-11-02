@@ -397,7 +397,8 @@ function showEditor(title){
  if(!$('editorDialog').open)$('editorDialog').showModal();
 }
 function closeEditor(){
- if(state.dirty && !confirm('Discard your unsaved event changes?'))return;
+ if((state.dirty || $('uploadAttachment').files.length) &&
+    !confirm('Discard your unsaved event changes and selected files?'))return;
  state.dirty=false;resetDraftImage();$('editorDialog').close();
 }
 function weekOf(date){
