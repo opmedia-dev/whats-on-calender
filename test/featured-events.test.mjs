@@ -37,7 +37,9 @@ test('public selection and search never bypass the featured flag', () => {
   assert.match(banner, /isUpcoming\(e, now\) && e\.featured === true/);
   assert.doesNotMatch(banner, /param\('show', 'featured'\)/);
   assert.match(page, /nextPerSeries\(upcoming\.filter\(\(e\) => e\.featured === true\)\)/);
-  assert.match(page, /featured,\s*week:/);
+  assert.match(page, /id="highlights-section"/);
+  assert.match(page, /highlighted\.map\(\(e\) => renderCard/);
+  assert.match(page, /const lists = \{ month: monthEvents\(\), week, all: series \}/);
   assert.match(page, /q \? lists\[filter\]\.filter/);
   assert.match(sync, /featured: eventFeatured\(e, master\)/);
 });
