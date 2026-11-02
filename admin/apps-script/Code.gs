@@ -101,15 +101,29 @@ function localEvent_(e) {
 
 function editorBootstrap() {
   const cal = editorAccess_();
-  const now = Date.now();
+  return {
+    calendarName: cal.summary || 'Parish calendar',
+    timeZone: EDITOR_ZONE, categories: CATEGORIES,
+    capabilities: { eventCrud: true, category: true, recurring: true, imageUpload: false },
+  };
+}
+
+function editorListEvents(from, through) {
+  editorAccess_();
+  const start = isoDate_(from, 'From');
+  const last = isoDate_(through, 'Through');
+  if (last < start) throw new Error('Calendar date range is invalid.');
+  if (Date.parse(last + 'T00:00:00Z') - Date.parse(start + 'T00:00:00Z') > 93 * 86400000) {
+    throw new Error('Calendar range must be within 93 days.');
+  }
   const items = [];
   let pageToken;
   do {
     const response = Calendar.Events.list(EDITOR_CALENDAR_ID, {
-      timeMin: new Date(now - 31 * 86400000).toISOString(),
-      timeMax: new Date(now + 240 * 86400000).toISOString(),
+      timeMin: start + 'T00:00:00Z',
+      timeMax: addDay_(last, 2) + 'T00:00:00Z',
       maxResults: 250, singleEvents: true, orderBy: 'startTime',
-      showDeleted: false, pageToken,
+      showDeleted: false, pageToken: pageToken,
     });
     for (const e of (response.items || [])) {
       if (!e.start || e.status === 'cancelled') continue;
@@ -119,18 +133,15 @@ function editorBootstrap() {
         isInstance: Boolean(e.recurringEventId), recurring: Boolean(e.recurringEventId),
         title: e.summary || 'Untitled event',
         start: e.start.dateTime || e.start.date,
+        end: (e.end && (e.end.dateTime || e.end.date)) || '',
+        allDay: Boolean(e.start.date),
         category: category.id, categorySource: category.source,
         visibility: e.visibility || 'default',
       });
     }
     pageToken = response.nextPageToken;
-  } while (pageToken && items.length < 1250);
-  return {
-    calendarName: cal.summary || 'Parish calendar',
-    timeZone: EDITOR_ZONE, categories: CATEGORIES, events: items,
-    // Images and richer description editing belong to the next milestone.
-    capabilities: { eventCrud: true, category: true, recurring: true, imageUpload: false },
-  };
+  } while (pageToken);
+  return items;
 }
 
 function fetchTarget_(id, scope) {
@@ -228,7 +239,7 @@ function editorSaveEvent(form) {
     throw new Error('This event changed in Google Calendar. Reload it before saving to avoid overwriting another editor.');
   }
   if (scope === 'occurrence' && record.recurring) {
-    // Exception editing must not change the recurrence of the parent series.
+    // Instance exceptions cannot alter recurring masters.
     delete parsed.body.recurrence;
   } else if (parsed.repeat === 'keep') {
     // Complex old recurrence rules are retained untouched by this initial UI.
