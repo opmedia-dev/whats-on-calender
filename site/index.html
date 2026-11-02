@@ -35,10 +35,10 @@
     <p>Copy these into a Duda <strong>HTML widget</strong>. Events published: <strong id="count">…</strong> <span class="muted" id="generated"></span></p>
 
     <section class="panel refresh-status" aria-labelledby="refresh-heading">
-      <h2 id="refresh-heading">Next scheduled refresh check</h2>
+      <h2 id="refresh-heading">Next external refresh check</h2>
       <p class="refresh-row"><strong id="refresh-countdown" class="refresh-clock" role="timer" aria-live="off">Calculating…</strong><span>until the next scheduled Calendar and Mailchimp check</span></p>
       <p>Next expected check: <strong id="refresh-time">—</strong> UK time</p>
-      <p class="muted">Scheduled every 15 minutes. GitHub Actions can start late, and the website is redeployed only when a change is detected.</p>
+      <p class="muted">cron-job.org triggers at :03, :18, :33 and :48 every hour (UK clock). GitHub may queue each run; the site publishes only when Calendar or Mailchimp content changes. GitHub's native schedule remains a fallback.</p>
       <p><a id="refresh-history" href="https://github.com/opmedia-dev/whats-on-calender/actions/workflows/deploy.yml" target="_blank" rel="noopener noreferrer">View refresh history or run a manual check</a></p>
     </section>
 

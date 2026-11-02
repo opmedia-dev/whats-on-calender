@@ -1,11 +1,12 @@
-// Expected schedule for .github/workflows/deploy.yml:
-// cron '*/15 * * * *' (GitHub Actions cron uses UTC).
-// Predicts a scheduled check, not a guaranteed workflow start or publication.
+// External cron-job.org triggers at UTC minutes 03, 18, 33 and 48.
+// GitHub Actions keeps its native quarter-hour schedule as a fallback.
+// This estimates the next external trigger, not workflow completion.
 const INTERVAL_MS = 15 * 60 * 1000;
+const OFFSET_MS = 3 * 60 * 1000;
 
 export function nextScheduledCheck(now = Date.now()) {
   if (!Number.isFinite(now)) throw new TypeError('Expected a finite timestamp');
-  return (Math.floor(now / INTERVAL_MS) + 1) * INTERVAL_MS;
+  return (Math.floor((now - OFFSET_MS) / INTERVAL_MS) + 1) * INTERVAL_MS + OFFSET_MS;
 }
 
 export function formatRemaining(now, next) {

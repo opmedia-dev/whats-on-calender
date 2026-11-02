@@ -221,7 +221,7 @@ input[aria-invalid=true],select[aria-invalid=true]{border-color:#ba4254!importan
  <span>Next scheduled website check in <strong id="refresh-countdown" role="timer" aria-live="off">calculating…</strong></span>
  <span>· Expected <strong id="refresh-time">—</strong> UK time</span>
  <span>· <a id="refresh-history" href="https://github.com/opmedia-dev/whats-on-calender/actions/workflows/deploy.yml" target="_blank" rel="noopener noreferrer">Refresh history / run now</a></span>
- <span class="refresh-note">Checks are scheduled every 15 minutes; GitHub Actions may start late. Publishing happens only when changes are detected.</span>
+ <span class="refresh-note">External cron-job.org checks occur at :03, :18, :33 and :48 every hour (UK clock). GitHub may queue each run; publishing happens only when content changes.</span>
 </p></div>
 <div class="tools"><button id="newEvent" class="btn" type="button">+ New event</button><button id="refresh" class="btn" type="button">Refresh</button></div></div>
 <section class="panel cal-panel">
@@ -429,9 +429,9 @@ var labels={general:'General',worship:'Worship & services',community:'Community'
 var fields=['title','category','repeat','startDate','endDate','startTime','endTime','location'];
 var linked=(typeof google!=='undefined' && google.script && google.script.run);
 function updateRefreshCountdown(){
- // GitHub cron */15 * * * * (UTC), independent of the editor's manual Refresh.
+ // External cron-job.org: UTC minutes 03,18,33,48; native GitHub cron remains a fallback.
  const now=Date.now();
- const next=(Math.floor(now/(15*60000))+1)*15*60000;
+ const next=(Math.floor((now-3*60000)/(15*60000))+1)*15*60000+3*60000;
  const remaining=Math.max(0,Math.ceil((next-now)/1000));
  $('refresh-countdown').textContent=Math.floor(remaining/60)+'m '+String(remaining%60).padStart(2,'0')+'s';
  $('refresh-time').textContent=new Intl.DateTimeFormat('en-GB',{
