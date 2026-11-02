@@ -101,9 +101,9 @@
       const previous = document.getElementById('month-prev');
       const next = document.getElementById('month-next');
       const todayButton = document.getElementById('month-today');
-      previous.addEventListener('click', () => { if (selectedMonth > minMonth) { selectedMonth = shiftMonth(selectedMonth, -1); page = 0; render(true); } });
-      next.addEventListener('click', () => { if (selectedMonth < maxMonth) { selectedMonth = shiftMonth(selectedMonth, 1); page = 0; render(true); } });
-      todayButton.addEventListener('click', () => { selectedMonth = currentMonth; page = 0; render(true); });
+      previous.addEventListener('click', () => { if (selectedMonth > minMonth) { selectedMonth = shiftMonth(selectedMonth, -1); page = 0; render(); } });
+      next.addEventListener('click', () => { if (selectedMonth < maxMonth) { selectedMonth = shiftMonth(selectedMonth, 1); page = 0; render(); } });
+      todayButton.addEventListener('click', () => { selectedMonth = currentMonth; page = 0; render(); });
 
       const perPageMax = num('perPage', 9);
       let page = 0;
