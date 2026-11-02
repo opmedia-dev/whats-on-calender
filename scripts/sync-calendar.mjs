@@ -240,7 +240,8 @@ for (const e of events) {
   const shared = e.extendedProperties?.shared || master?.extendedProperties?.shared || {};
   const headerFileId = shared.woHeaderImageId || '';
   const imageCandidates = attachments.filter((a) => IMAGE_TYPES.test(a.mimeType) && a.local);
-  const imageSource = imageCandidates.find((a) => a.fileId === headerFileId) ||
+  const imageSource = headerFileId === 'none' ? null :
+    imageCandidates.find((a) => a.fileId === headerFileId) ||
     imageCandidates[0] ||
     attachments.find((a) => a.mimeType === 'application/pdf' && a.local);
   const image = imageSource ? await makeImage(imageSource) : null;
