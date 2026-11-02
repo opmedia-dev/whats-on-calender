@@ -298,7 +298,7 @@ async function range(){
  calendar();listEvents();$('eventCount').textContent=state.events.length+' shown';
 }
 async function shift(direction){
- var d=new Date(state.date);
+ var d=state.mode==='month'?fromDate(key(state.date).slice(0,7)+'-01'):new Date(state.date);
  if(state.mode==='month')d.setUTCMonth(d.getUTCMonth()+direction);else d.setUTCDate(d.getUTCDate()+7*direction);
  state.date=d;try{await range()}catch(e){status(e.message||String(e),true)}
 }
