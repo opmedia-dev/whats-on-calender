@@ -210,6 +210,13 @@ try {
       document.getElementById('visibility').value==='private';
   });
   assert.match(await linkedPage.locator('#visibilityHint').textContent(), /every event in the series/);
+  await linkedPage.locator('#title').fill('');
+  await linkedPage.locator('#save').click();
+  assert.equal(await linkedPage.locator('#appNotice').isVisible(),true,'required-field errors appear within editor');
+  assert.match(await linkedPage.locator('#appNoticeText').textContent(),/Enter an event title/);
+  assert.equal(await linkedPage.locator('#title').getAttribute('aria-invalid'),'true');
+  await linkedPage.locator('#title').fill('Private weekly meeting');
+  await linkedPage.locator('#appNoticeClose').click();
   await linkedPage.locator('#uploadAttachment').setInputFiles({
     name:'testing.png',mimeType:'image/png',buffer:tinyPng,
   });
