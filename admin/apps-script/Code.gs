@@ -108,7 +108,7 @@ function localEvent_(e, master) {
   const allDay = Boolean(e.start.date);
   const startDate = allDay ? e.start.date : localDate_(e.start.dateTime);
   const endDate = allDay ? addDay_(e.end.date, -1) : localDate_(e.end.dateTime);
-  const recurrence = e.recurrence || [];
+  const recurrence = e.recurrence?.length ? e.recurrence : (master?.recurrence || []);
   const rawRule = recurrence.find(r => /^RRULE:/i.test(r)) || '';
   const rule = {};
   rawRule.replace(/^RRULE:/i, '').split(';').forEach(part => {
@@ -147,7 +147,7 @@ function localEvent_(e, master) {
     endTime: allDay ? '10:00' : localClock_(e.end.dateTime),
     allDay, category: category.id, categorySource: category.source,
     repeat, customRepeat, isRecurring: Boolean(e.recurringEventId || recurrence.length),
-    revision: e.etag || '', visibility: e.visibility || 'default',
+    revision: e.etag || '', visibility: e.visibility || master?.visibility || 'default',
     hasFormattedDescription: /<\/?(?:p|div|span|strong|b|a|br|ul|ol|li)\b/i.test(e.description || ''),
     descriptionOriginal: e.description || '',
     attachments: attachmentsFor_(e),
@@ -209,26 +209,23 @@ function fetchTarget_(id, scope) {
   const selected = Calendar.Events.get(EDITOR_CALENDAR_ID, String(id));
   if (!selected || selected.status === 'cancelled') throw new Error('Event not found.');
   const recurring = Boolean(selected.recurringEventId || (selected.recurrence && selected.recurrence.length));
-  if (recurring && scope !== 'series' && scope !== 'occurrence') {
-    throw new Error('Choose whether to edit one occurrence or the entire series.');
+  if (recurring && !['series','occurrence','following'].includes(scope)) {
+    throw new Error('Choose this occurrence, this and future, or the entire series.');
   }
   const seriesId = selected.recurringEventId || selected.id;
   const target = scope === 'series' && selected.recurringEventId
     ? Calendar.Events.get(EDITOR_CALENDAR_ID, seriesId)
     : selected;
-  return { target, recurring, seriesId };
+  const master = recurring && selected.recurringEventId
+    ? (target.id === seriesId ? target : Calendar.Events.get(EDITOR_CALENDAR_ID, seriesId))
+    : (recurring ? selected : null);
+  return { target, selected, master, recurring, seriesId };
 }
 
 function editorGetEvent(id, scope) {
   editorAccess_();
   const data = fetchTarget_(id, scope || 'occurrence');
-  // Fetch the master only when an individual occurrence has no explicit flag.
-  const shared = data.target.extendedProperties?.shared || {};
-  const master = data.target.recurringEventId &&
-    (!Object.prototype.hasOwnProperty.call(shared, FEATURED_KEY) ||
-      !Object.prototype.hasOwnProperty.call(shared, IMAGE_FOCUS_KEY))
-    ? Calendar.Events.get(EDITOR_CALENDAR_ID, data.seriesId) : null;
-  return Object.assign(localEvent_(data.target, master), {
+  return Object.assign(localEvent_(data.target, data.master), {
     selectedId: id, editScope: scope || 'occurrence',
   });
 }
@@ -318,8 +315,10 @@ function normalise_(form) {
   const end = allDay
     ? { date: addDay_(endDate, 1) }
     : { dateTime: endDate + 'T' + endTime + ':00', timeZone: EDITOR_ZONE };
+  const visibility = String(form.visibility || 'default');
+  if (!['default','public','private'].includes(visibility)) throw new Error('Select a valid visibility.');
   const body = {
-    summary: title, location, start, end,
+    summary: title, location, start, end, visibility,
     extendedProperties: { shared: {
       [CATEGORY_KEY]: category_(form.category),
       [FEATURED_KEY]: form.featured === true ? 'true' : 'false',
