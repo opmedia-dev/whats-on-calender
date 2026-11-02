@@ -25,29 +25,6 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm ci
-      - name: Inspect first campaign images in the public RSS feed
-        if: github.event_name == 'push'
-        env:
-          MAILCHIMP_RSS_URL: ${{ vars.MAILCHIMP_RSS_URL }}
-        run: |
-          node --input-type=module <<'JS'
-          const url = process.env.MAILCHIMP_RSS_URL;
-          if (!url) { console.log('RSS variable unavailable in branch validation'); process.exit(0); }
-          try {
-            const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
-            if (!res.ok) throw Error('Feed HTTP '+res.status);
-            const xml = await res.text();
-            const items = [...xml.matchAll(/<item\b[^>]*>([\s\S]*?)<\/item>/gi)].slice(0,12);
-            for (const [i,item] of items.entries()) {
-              const encoded = item[1].match(/<content:encoded(?:\s[^>]*)?>([\s\S]*?)<\/content:encoded>/i)?.[1] || item[1].match(/<description(?:\s[^>]*)?>([\s\S]*?)<\/description>/i)?.[1] || '';
-              const html = encoded.replace(/^<!\[CDATA\[([\s\S]*?)\]\]>$/, '$1').replace(/&lt;/g,'<').replace(/&gt;/g,'>');
-              const images = [...html.matchAll(/<img\b[^>]*>/gi)].slice(0,3).map(m=>{
-                const t=m[0];return {url:t.match(/\bsrc="([^"]+)"/)?.[1],width:t.match(/\bwidth="([^"]+)"/)?.[1],height:t.match(/\bheight="([^"]+)"/)?.[1]};
-              });
-              console.log('RSS item '+i+' first images: '+JSON.stringify(images));
-            }
-          } catch(e) { console.log('Could not inspect RSS:',e.message); }
-          JS
       - name: Test event parsing and presentation
         run: npm test
       - name: Install headless Chromium for editor interaction smoke test
