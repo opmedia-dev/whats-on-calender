@@ -346,13 +346,6 @@ function calendar(){
   container.append(week);
  }
 }
-function listEvents(){
- var host=$('eventList'),q=$('eventSearch').value.trim().toLowerCase();
- host.replaceChildren();var items=state.events.filter(function(e){return e.title.toLowerCase().includes(q)}).slice(0,50);
- if(!items.length){host.append(create('div','muted','No matching events'));return}
- items.forEach(function(e){var r=create('button','list-choice');r.type='button';if(e.id===state.id)r.classList.add('active');
-  r.append(create('span','',e.title),create('small','',eventDay(e)));r.addEventListener('click',function(){openEvent(e.id)});host.append(r)});
-}
 function put(e){
  state.id=e.selectedId||e.id;state.revision=e.revision;state.scope=e.editScope||'occurrence';state.active=e;state.changed=false;
  fields.forEach(function(id){if(e[id]!==undefined)$(id).value=e[id]});
@@ -360,11 +353,12 @@ function put(e){
  $('scopeBox').hidden=!e.isRecurring;
  var radio=document.querySelector('input[name=scope][value='+state.scope+']');if(radio)radio.checked=true;
  $('repeat').querySelector('[value=keep]').hidden=e.repeat!=='keep';$('repeat').value=e.repeat||'none';
- $('repeat').disabled=!!e.isInstance && state.scope==='occurrence';
+ $('repeat').disabled=!!e.isRecurring && state.scope==='occurrence';
+ customPopulate(e.customRepeat);repeatPanel();
  $('repeatHint').textContent=e.repeat==='keep'?'Complex recurrence preserved unless deliberately changed.':'Weekly and monthly patterns supported.';
  $('categoryHint').textContent=e.categorySource==='suggested'?'Suggested from title; choose a category to save it.':'Category stored on event.';
  $('descriptionWarning').hidden=!e.hasFormattedDescription;
- adjustAllDay();preview();listEvents();pending(false);status('Loaded from calendar — not yet changed.');
+ adjustAllDay();preview();pending(false);state.dirty=false;showEditor('Edit event');status('Loaded from calendar — not yet changed.');
 }
 function plain(s){if(!/<[a-z][^>]*>/i.test(s))return s;var d=new DOMParser().parseFromString(s,'text/html');
  d.querySelectorAll('script,style,iframe').forEach(function(el){el.remove()});return d.body.textContent||''}
@@ -372,7 +366,7 @@ async function openEvent(id,scope){
  if(state.busy)return;pending(true);status('Opening event…');
  try{
   if(linked){put(await call('editorGetEvent',id,scope||'occurrence'))}
-  else{var e=state.events.find(function(v){return v.id===id});var d=eventDay(e);
+  else{var e=state.events.find(function(v){return v.id===id});if(!e)throw Error('Event not found');var d=eventDay(e);
    put({id:e.id,selectedId:e.id,title:e.title,category:e.category,categorySource:'suggested',
     startDate:d,endDate:d,startTime:'10:00',endTime:'11:00',repeat:'none',revision:'demo',
     description:'Demonstration event. This editor is not connected to Google Calendar.',
@@ -381,7 +375,7 @@ async function openEvent(id,scope){
 }
 async function load(){
  pending(true);$('connection').textContent=linked?'Connecting to Google…':'Preview · no Google connection';
- try{if(linked)await call('editorBootstrap');await range();newEntry(today());
+ try{if(linked)await call('editorBootstrap');await range();pending(false);
   $('connection').textContent=linked?'Google Calendar · editor':'Demonstration · read-only';
  }catch(err){status(err.message||String(err),true);pending(false);$('connection').textContent='Calendar access unavailable'}
 }
@@ -390,7 +384,7 @@ async function range(){
  var begin=startWeek(first),end=state.mode==='month'?add(begin,41):add(begin,6);
  $('calendar').textContent='Loading calendar…';
  state.events=linked?await call('editorListEvents',begin,end):sample();
- calendar();listEvents();$('eventCount').textContent=state.events.length+' shown';
+ calendar();
 }
 async function shift(direction){
  var d=state.mode==='month'?fromDate(key(state.date).slice(0,7)+'-01'):new Date(state.date);
@@ -403,7 +397,7 @@ async function save(ev){
  if(state.active&&state.active.isRecurring&&state.scope==='series'
   && !confirm('Change the ENTIRE recurring series? This can affect future dates.'))return;
  pending(true);status('Saving to Google Calendar…');
- try{await call('editorSaveEvent',v);await range();newEntry(v.startDate);
+ try{await call('editorSaveEvent',v);await range();state.dirty=false;$('editorDialog').close();
   status('Saved. Public embeds update on their next sync.')}
  catch(e){status(e.message||String(e),true);pending(false)}
 }
@@ -412,7 +406,7 @@ async function remove(){
  var target=state.active&&state.active.isRecurring?(state.scope==='series'?'entire series':'one occurrence'):'event';
  if(!confirm('Delete this '+target+' permanently from Google Calendar?'))return;
  pending(true);status('Deleting…');
- try{await call('editorDeleteEvent',state.id,state.scope,state.revision);await range();newEntry(today());status('Deleted from calendar.')}
+ try{await call('editorDeleteEvent',state.id,state.scope,state.revision);await range();state.dirty=false;$('editorDialog').close();status('Deleted from calendar.')}
  catch(e){status(e.message||String(e),true);pending(false)}
 }
 $('prev').addEventListener('click',function(){shift(-1)});
@@ -422,13 +416,20 @@ $('month').addEventListener('click',function(){setMode('month')});
 $('week').addEventListener('click',function(){setMode('week')});
 $('newEvent').addEventListener('click',function(){newEntry(today())});
 $('refresh').addEventListener('click',load);
-$('eventSearch').addEventListener('input',listEvents);
+
 $('eventForm').addEventListener('submit',save);
 $('delete').addEventListener('click',remove);
-$('reset').addEventListener('click',function(){state.id?openEvent(state.id,state.scope):newEntry(today())});
+$('resetChanges').addEventListener('click',function(){if(state.id){state.dirty=false;openEvent(state.id,state.scope)}else newEntry($('startDate').value||today())});
 document.querySelectorAll('input[name=scope]').forEach(function(el){el.addEventListener('change',function(){if(el.checked&&state.id)openEvent(state.id,el.value)})});
-fields.forEach(function(id){$(id).addEventListener('input',function(){if(id==='description')state.changed=true;preview()})});
-$('allDay').addEventListener('change',function(){adjustAllDay();preview()});
+fields.forEach(function(id){$(id).addEventListener('input',function(){if(id==='description')state.changed=true;state.dirty=true;if(id==='repeat')repeatPanel();preview()})});
+$('allDay').addEventListener('change',function(){state.dirty=true;adjustAllDay();preview()});
+['repeatInterval','repeatUnit','repeatEnds','repeatUntil','repeatCount'].forEach(function(id){
+ $(id).addEventListener('input',function(){state.dirty=true;repeatPanel();preview()})
+});
+document.querySelectorAll('[name=repeatDay]').forEach(function(el){el.addEventListener('change',function(){state.dirty=true;preview()})});
+$('closeEditor').addEventListener('click',closeEditor);
+$('editorDialog').addEventListener('cancel',function(event){if(state.dirty){event.preventDefault();closeEditor()}});
+$('editorDialog').addEventListener('click',function(event){if(event.target===$('editorDialog'))closeEditor()});
 load();
 })();
 </script></body></html>
