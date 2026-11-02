@@ -103,6 +103,9 @@ jobs:
 
       - name: Build site
         if: steps.decide.outputs.changed == 'true'
+        env:
+          # Fail if a configured live RSS feed was erased before publication.
+          MAILCHIMP_RSS_URL: ${{ vars.MAILCHIMP_RSS_URL }}
         run: node scripts/build.mjs
 
       - uses: actions/upload-pages-artifact@v3
