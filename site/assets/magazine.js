@@ -25,3 +25,24 @@ export async function loadMagazineIssue(previewUrl, fetcher = fetch) {
     preview: preview.href,
   };
 }
+
+// The supplied parish website archive is the navigation destination, not merely
+// a query parameter on the hosted GitHub Pages flipbook. Keep the hosted reader
+// as fallback when the user has not supplied a valid HTTPS archive URL.
+export function magazineDestination(previewUrl, archiveUrl = '', accent = '') {
+  const reader = new URL(previewUrl);
+  reader.searchParams.delete('tools');
+  reader.searchParams.delete('maxHeight');
+  if (reader.searchParams.get('title') === '0') reader.searchParams.delete('title');
+  if (accent && !reader.searchParams.has('accent')) reader.searchParams.set('accent', accent);
+  const raw = String(archiveUrl || '').trim();
+  if (raw) {
+    try {
+      const page = new URL(raw);
+      if (page.protocol === 'https:' && page.hostname) {
+        return { href: page.href, usesArchive: true };
+      }
+    } catch { /* use the hosted reader */ }
+  }
+  return { href: reader.href, usesArchive: false };
+}
