@@ -237,8 +237,8 @@ for (const e of events) {
   const attachments = (await Promise.all((e.attachments || []).map(publishAttachment))).filter(Boolean);
   // Explicit editor selection takes priority; legacy events keep the existing
   // first-image (then first-PDF) fallback. No separate featured checkbox.
-  const shared = e.extendedProperties?.shared || master?.extendedProperties?.shared || {};
-  const headerFileId = shared.woHeaderImageId || '';
+  const headerFileId = e.extendedProperties?.shared?.woHeaderImageId ||
+    master?.extendedProperties?.shared?.woHeaderImageId || '';
   const imageCandidates = attachments.filter((a) => IMAGE_TYPES.test(a.mimeType) && a.local);
   const imageSource = headerFileId === 'none' ? null :
     imageCandidates.find((a) => a.fileId === headerFileId) ||
