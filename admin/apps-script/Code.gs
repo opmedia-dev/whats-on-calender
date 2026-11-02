@@ -14,7 +14,6 @@ const CATEGORY_KEY = 'woCategory';
 const HEADER_IMAGE_KEY = 'woHeaderImageId';
 const IMAGE_FOCUS_KEY = 'woImageFocus';
 const FEATURED_KEY = 'woFeatured';
-const PRIVATE_KEY = 'woPrivate';
 const CATEGORIES = ['general', 'worship', 'community', 'music', 'families', 'heritage', 'fundraising'];
 const WRITE_ROLES = ['writer', 'owner'];
 // Set to a dedicated parish-controlled Google Drive folder before enabling uploads.
@@ -92,15 +91,6 @@ function addDay_(dateString, n) {
   return Utilities.formatDate(d, 'UTC', 'yyyy-MM-dd');
 }
 // An occurrence may inherit the series flag, or explicitly override it.
-// Publication privacy is separate from Google Calendar's native visibility:
-// Google propagates native instance privacy changes to the whole series.
-function privateOf_(event, master) {
-  if (master?.visibility === 'private' || master?.visibility === 'confidential') return true;
-  if (event?.visibility === 'private' || event?.visibility === 'confidential') return true;
-  const value = event?.extendedProperties?.shared?.[PRIVATE_KEY];
-  if (value === 'true' || value === 'false') return value === 'true';
-  return master?.extendedProperties?.shared?.[PRIVATE_KEY] === 'true';
-}
 function featuredOf_(event, master) {
   const value = event?.extendedProperties?.shared?.[FEATURED_KEY];
   if (value === 'true' || value === 'false') return value === 'true';
@@ -157,12 +147,12 @@ function localEvent_(e, master) {
     endTime: allDay ? '10:00' : localClock_(e.end.dateTime),
     allDay, category: category.id, categorySource: category.source,
     repeat, customRepeat, isRecurring: Boolean(e.recurringEventId || recurrence.length),
-    revision: e.etag || '', visibility: privateOf_(e, master) ? 'private' : 'public',
+    revision: e.etag || '', visibility: e.visibility || master?.visibility || 'default',
     hasFormattedDescription: /<\/?(?:p|div|span|strong|b|a|br|ul|ol|li)\b/i.test(e.description || ''),
     descriptionOriginal: e.description || '',
     attachments: attachmentsFor_(e),
     headerImageId: e.extendedProperties?.shared?.[HEADER_IMAGE_KEY] || master?.extendedProperties?.shared?.[HEADER_IMAGE_KEY] || '',
-    featured: !privateOf_(e, master) && featuredOf_(e, master),
+    featured: featuredOf_(e, master),
     imageFocus: imageFocus_(e.extendedProperties?.shared?.[IMAGE_FOCUS_KEY] ||
       master?.extendedProperties?.shared?.[IMAGE_FOCUS_KEY]),
   };
@@ -206,7 +196,7 @@ function editorListEvents(from, through) {
         end: (e.end && (e.end.dateTime || e.end.date)) || '',
         allDay: Boolean(e.start.date),
         category: category.id, categorySource: category.source,
-        visibility: privateOf_(e) ? 'private' : 'public',
+        visibility: e.visibility || 'default',
       });
     }
     pageToken = response.nextPageToken;
@@ -332,7 +322,6 @@ function normalise_(form) {
     extendedProperties: { shared: {
       [CATEGORY_KEY]: category_(form.category),
       [FEATURED_KEY]: form.visibility === 'private' ? 'false' : (form.featured === true ? 'true' : 'false'),
-      [PRIVATE_KEY]: form.visibility === 'private' ? 'true' : 'false',
       [IMAGE_FOCUS_KEY]: imageFocus_(form.imageFocus),
     } },
   };
@@ -500,15 +489,14 @@ function editorSaveEvent(form) {
     parsed.body.extendedProperties.shared = Object.assign({}, existingShared, {
       [CATEGORY_KEY]: category_(form.category), [HEADER_IMAGE_KEY]: headerChoice,
       [FEATURED_KEY]: form.visibility === 'private' ? 'false' : (form.featured === true ? 'true' : 'false'),
-      [PRIVATE_KEY]: form.visibility === 'private' ? 'true' : 'false',
       [IMAGE_FOCUS_KEY]: imageFocus_(form.imageFocus),
     });
     if (scope === 'occurrence' && record.recurring) {
-      // One occurrence is hidden/published with shared woPrivate metadata.
-      // Never PATCH native visibility: Google applies that to the entire series.
-      if (record.master && ['private','confidential'].includes(record.master.visibility) &&
-          form.visibility !== 'private') {
-        throw new Error('The whole series is marked Private in Google Calendar. A single occurrence cannot be made public until the series privacy is changed.');
+      // Native Google Calendar visibility is a series-level property.
+      // Reject a narrower privacy change rather than silently affect the whole series.
+      const previousVisibility = record.master?.visibility || record.target.visibility || 'default';
+      if (parsed.body.visibility !== previousVisibility) {
+        throw new Error('Privacy cannot be changed for just one recurring occurrence. Choose This event and future events or All events in the series.');
       }
       delete parsed.body.visibility;
       // Instance exceptions cannot alter recurring masters.
