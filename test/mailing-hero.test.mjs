@@ -102,7 +102,7 @@ test('desktop canvas stays 593×434; actual campaign image occupies the upper po
   assert.match(section, /\.wo-mailing-hero-wrap\s*\{[^}]*max-width:\s*593px/);
   assert.match(section, /\.wo-mailing-hero-card\s*\{[^}]*height:\s*418px/);
   assert.match(section, /\.wo-mailing-hero-card\.has-image\s*\{[^}]*grid-template-rows:\s*minmax\(0,\s*272px\)/);
-  assert.match(section, /\.wo-mailing-hero-picture img\s*\{[^}]*object-fit:\s*cover/);
+  assert.match(section, /\.wo-mailing-hero-picture img\s*\{[^}]*object-fit:\s*contain/);
   assert.match(section, /\.wo-mailing-hero-card\.has-image \.wo-mailing-hero-summary\s*\{\s*display:\s*none/);
   assert.doesNotMatch(section, /wo-mailing-hero-masthead|wo-mailing-hero-kicker|wo-mailing-hero-cta|linear-gradient/);
   assert.doesNotMatch(section, /overflow-y:\s*auto/);
