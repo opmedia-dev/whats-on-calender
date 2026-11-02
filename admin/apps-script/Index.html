@@ -401,7 +401,12 @@ function startWeek(s){var d=fromDate(s);return add(s,-((d.getUTCDay()+6)%7))}
 let noticeTimer=null;
 function notify(message,kind){
  if(noticeTimer)clearTimeout(noticeTimer);
- const toast=$('appNotice');toast.hidden=false;
+ const toast=$('appNotice');
+ // Native modal dialogs occupy the top layer and block clicks to fixed
+ // notices outside them. Put active-editor notices inside the modal itself.
+ const host=$('editorDialog').open?$('editorDialog'):document.body;
+ if(toast.parentElement!==host)host.appendChild(toast);
+ toast.hidden=false;
  toast.dataset.kind=kind||'success';
  $('appNoticeIcon').textContent=kind==='error'?'!':kind==='warning'?'!':'✓';
  $('appNoticeText').textContent=String(message||'');
