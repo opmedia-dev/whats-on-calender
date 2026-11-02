@@ -40,7 +40,7 @@
     <div id="detail" hidden></div>
   </main>
   <script type="module">
-    import { init, loadEvents, params, param, num, flag, h, isUpcoming, nextPerSeries, renderCard, renderPager, routeDetails, scrollHostToTop, showError, emptyState } from './assets/wo.js';
+    import { init, loadEvents, params, param, num, flag, h, dayKey, isUpcoming, nextPerSeries, renderCard, renderPager, routeDetails, scrollHostToTop, showError, emptyState } from './assets/wo.js?v=monthly-highlights-20261102';
 
     await init();
     const cardsEl = document.getElementById('cards');
@@ -85,7 +85,7 @@
       }
       setTitle('upcoming-title', param('upcomingTitle', 'Events'));
 
-      const ym = (date) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London', year: 'numeric', month: '2-digit' }).format(date).slice(0, 7);
+      const ym = (date) => dayKey(date).slice(0, 7);
       const currentMonth = ym(now);
       const shiftMonth = (value, n) => {
         const d = new Date(value + '-15T12:00:00Z');
