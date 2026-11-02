@@ -78,7 +78,7 @@
         const { href, target } = eventHref(e);
         return h('li', { class: `wo-cal-ev${e.featured ? ' is-featured' : ''}`, style: dots && COLORS[e.colorId] ? `--wo-ev:${COLORS[e.colorId]}` : null },
           h('a', { href, target, title: [e.allDay ? null : formatTime(e.startDate), e.title, e.location].filter(Boolean).join(' · ') },
-            e.allDay ? null : h('b', {}, formatTime(e.startDate), ' '), e.title));
+            e.allDay ? null : h('b', {}, formatTime(e.startDate), ' '), e.recurring ? h('span', { class: 'wo-cal-repeat', title: e.recurrence || 'Repeating event', 'aria-label': e.recurrence || 'Repeating event' }, '↻ ') : null, e.title));
       };
 
       const render = () => {
@@ -95,11 +95,11 @@
           if (cells.length % 7 === 0 && cells.length >= 28 && key.slice(0, 7) >= nextMonth) break;
           const evs = byDay.get(key) || [];
           const open = expanded.has(key);
-          const shown = open || evs.length <= maxPerDay + 1 ? evs : evs.slice(0, maxPerDay);
-          cells.push(h('div', { class: `wo-cal-day${key.slice(0, 7) !== month ? ' is-other' : ''}${key === today ? ' is-today' : ''}` },
+          const shown = open || evs.length <= maxPerDay ? evs : evs.slice(0, maxPerDay);
+          cells.push(h('div', { 'data-date': key, class: `wo-cal-day${key.slice(0, 7) !== month ? ' is-other' : ''}${key === today ? ' is-today' : ''}` },
             h('div', { class: 'wo-cal-num' }, String(Number(key.slice(8)))),
             h('ul', {}, shown.map(item)),
-            evs.length > shown.length || open ? h('button', { type: 'button', class: 'wo-cal-more', onclick: () => { open ? expanded.delete(key) : expanded.add(key); render(); } },
+            evs.length > shown.length || open ? h('button', { type: 'button', class: 'wo-cal-more', 'aria-expanded': String(open), 'aria-label': open ? 'Show fewer events on '+key : 'Show all '+evs.length+' events on '+key, onclick: () => { open ? expanded.delete(key) : expanded.add(key); render(); const button=[...grid.querySelectorAll('.wo-cal-day')].find(cell=>cell.dataset.date===key)?.querySelector('.wo-cal-more');button?.focus(); } },
               open ? param('lessText', 'Show less') : param('moreText', `+${evs.length - shown.length} more`)) : null));
           start = addDays(start, 1);
         }
