@@ -41,6 +41,7 @@
   </main>
   <script type="module">
     import { init, loadEvents, params, param, num, flag, h, dayKey, isUpcoming, nextPerSeries, renderCard, renderPager, routeDetails, scrollHostToTop, showError, emptyState } from './assets/wo.js?v=monthly-highlights-20261102';
+    import { shiftMonth, isValidMonth, clampMonth, eventsInMonth } from './assets/month-selection.js';
 
     await init();
     const cardsEl = document.getElementById('cards');
@@ -87,17 +88,9 @@
 
       const ym = (date) => dayKey(date).slice(0, 7);
       const currentMonth = ym(now);
-      const shiftMonth = (value, n) => {
-        const d = new Date(value + '-15T12:00:00Z');
-        d.setUTCMonth(d.getUTCMonth() + n);
-        return d.toISOString().slice(0, 7);
-      };
       const minMonth = range?.from ? ym(new Date(range.from)) : currentMonth;
       const maxMonth = range?.to ? ym(new Date(range.to)) : shiftMonth(currentMonth, 12);
-      const validMonth = (value) => /^\d{4}-(0[1-9]|1[0-2])$/.test(value);
-      let selectedMonth = validMonth(param('month')) ? param('month') : currentMonth;
-      if (selectedMonth < minMonth) selectedMonth = minMonth;
-      if (selectedMonth > maxMonth) selectedMonth = maxMonth;
+      let selectedMonth = clampMonth(isValidMonth(param('month')) ? param('month') : currentMonth, minMonth, maxMonth);
 
       const week = upcoming.filter((e) => e.startDate - now < 7 * 86400000);
       const labels = { month: 'Month', week: 'This week', all: 'All events' };
@@ -117,13 +110,7 @@
       let cols = 3;
       const columns = () => Math.max(1, Math.min(num('cols', 3), Math.floor(cardsEl.clientWidth / num('minCardWidth', 260)) || 1));
       const matches = (e, q) => [e.title, e.location, e.info?.summary || '', e.recurrence || ''].join(' ').toLowerCase().includes(q);
-      const monthEvents = () => {
-        const start = selectedMonth + '-01';
-        const end = shiftMonth(selectedMonth, 1) + '-01';
-        // Month is a genuine calendar month, not a rolling 31-day period.
-        // Keep every occurrence of recurring events in this view.
-        return events.filter((e) => e.startKey < end && e.endKey >= start);
-      };
+      const monthEvents = () => eventsInMonth(events, selectedMonth);
       const renderFilters = () => filtersEl.replaceChildren(...filterKeys.map((k) => h('button', {
         type: 'button', class: 'wo-chip', 'aria-pressed': String(k === filter),
         onclick: () => { filter = k; page = 0; renderFilters(); render(); },
