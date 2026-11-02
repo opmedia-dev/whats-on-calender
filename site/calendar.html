@@ -30,7 +30,7 @@
 
     // Google Calendar's event colours, by colorId.
     const COLORS = { 1: '#7986cb', 2: '#33b679', 3: '#8e24aa', 4: '#e67c73', 5: '#f6bf26', 6: '#f4511e', 7: '#039be5', 8: '#616161', 9: '#3f51b5', 10: '#0b8043', 11: '#d50000' };
-    await init();
+    const initialisation = init(); // Start the host handshake while event data loads.
     const main = document.getElementById('main');
     const grid = document.getElementById('grid');
     const list = document.getElementById('list');
@@ -54,7 +54,7 @@
     document.getElementById('weekdays').replaceChildren(...short.map((d) => h('div', {}, d)));
 
     try {
-      const { events, range } = await loadEvents();
+      const [, { events, range }] = await Promise.all([initialisation, loadEvents()]);
       const byDay = new Map();
       for (const e of events) {
         for (let k = e.startKey, n = 0; k <= e.endKey && n < 60; k = addDays(k, 1), n++) {
