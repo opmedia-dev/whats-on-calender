@@ -327,7 +327,8 @@ button { font: inherit; color: inherit; }
 }
 .wo-mailing-hero-picture img {
   display: block; width: 100%; height: 100%;
-  object-fit: cover; object-position: center;
+  /* Logos should remain complete rather than being cropped as photographs. */
+  object-fit: contain; object-position: center; background: #fff;
 }
 .wo-mailing-hero-card.is-text-only .wo-mailing-hero-picture { display: none; }
 .wo-mailing-hero-copy {
@@ -408,6 +409,15 @@ button { font: inherit; color: inherit; }
 
 /* ---------- Weekly mailing cards / archive ---------- */
 .wo-mailing-media { background: linear-gradient(135deg, #770e23, #aa3141 75%, #d5a457); }
+.wo-mailing-media.has-image { background: #fff; }
+.wo-mailing-media.has-image .wo-mailing-art { display: none; }
+.wo-mailing-media .wo-mailing-cover {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  /* Keep the parish logo readable, not zoomed/cropped like an event photo. */
+  object-fit: contain; object-position: center; background: #fff;
+}
+.wo-mailing-card:hover .wo-mailing-cover { transform: none; }
+
 .wo-mailing-art { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; color: #fff3cf; letter-spacing: .14em; font-weight: 800; font-size: .85rem; text-align: center; padding: 16px; }
 .wo-mailing-art .wo-icon { width: 64px; height: 64px; stroke-width: 1.25; }
 .wo-cards.is-band .wo-mailing-body .wo-card-title, .wo-mailing-body .wo-card-title { color: #fff; }
