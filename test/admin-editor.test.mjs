@@ -204,7 +204,11 @@ test('public sync separates header photo, additional gallery pictures and downlo
   assert.match(shared, /wo-detail-gallery/);
   assert.match(frontend, /id="imageRole"/);
   assert.match(frontend, /Use as header/);
-  assert.match(frontend, /Listing images only/);
+  assert.match(frontend, /No header image \(use category placeholder\)/);
+  assert.match(frontend, /attachment-thumb/);
+  assert.match(frontend, /headerMediaSelection/);
+  assert.match(frontend, /frame\.setPointerCapture\(event\.pointerId\)/);
+  assert.match(frontend, /img\.addEventListener\('dragstart'/);
   assert.match(frontend, /function resetDraftImage\(\)/);
   assert.match(frontend, /state\.draftImageUrl/);
   assert.match(frontend, /resetDraftImage\(\);attachmentList\(e\.attachments\|\|\[\]\)/);
