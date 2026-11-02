@@ -389,7 +389,7 @@ function showEditor(title){
 }
 function closeEditor(){
  if(state.dirty && !confirm('Discard your unsaved event changes?'))return;
- state.dirty=false;$('editorDialog').close();
+ state.dirty=false;resetDraftImage();$('editorDialog').close();
 }
 function weekOf(date){
  var d=fromDate(date||today());
@@ -425,7 +425,7 @@ function repeatPanel(){
 function newEntry(date){
  state.id='';state.revision='';state.active=null;state.scope='occurrence';state.changed=false;state.dirty=false;
  HTMLFormElement.prototype.reset.call($('eventForm'));
- $('description').replaceChildren();attachmentList([]);$('uploadAttachment').value='';$('uploadStatus').textContent='Save this event before uploading a file.';
+ $('description').replaceChildren();state.headerImageId='';resetDraftImage();attachmentList([]);
  $('title').value='';$('category').value='general';$('repeat').value='none';
  $('startDate').value=$('endDate').value=date||today();$('startTime').value='10:00';$('endTime').value='11:00';
  $('scopeBox').hidden=true;$('repeat').disabled=false;
@@ -438,7 +438,7 @@ function newEntry(date){
 function adjustAllDay(){var off=$('allDay').checked;$('timeFields').hidden=off;$('startTime').disabled=off;$('endTime').disabled=off}
 function values(){var v={};fields.forEach(function(id){v[id]=$(id).value});v.allDay=$('allDay').checked;v.id=state.id;
  v.editScope=state.id?state.scope:'';v.revision=state.revision;v.descriptionChanged=state.changed;
- v.description=richHTML();
+ v.description=richHTML();v.headerImageId=state.headerImageId;
  v.customRepeat={unit:$('repeatUnit').value,interval:Number($('repeatInterval').value),
   days:Array.from(document.querySelectorAll('[name=repeatDay]:checked')).map(function(el){return el.value}),
   ends:$('repeatEnds').value,count:Number($('repeatCount').value),until:$('repeatUntil').value};
@@ -454,6 +454,7 @@ function preview(){
  else if(v.repeat==='weekly'||v.repeat==='monthly')$('pvDate').textContent+=' · '+v.repeat;
  $('pvLocation').textContent=v.location;$('pvLocation').hidden=!v.location.trim();
  $('previewDescription').innerHTML=v.description.trim()||'Your event description will appear here.';
+ refreshImagePreview();
 }
 function eventButton(e,cls){var b=create('button',cls,(eventTime(e)?eventTime(e)+'  ':'')+e.title);
  b.type='button';b.title=e.title;b.dataset.category=e.category||'general';
@@ -502,8 +503,8 @@ function put(e){
  state.id=e.selectedId||e.id;state.revision=e.revision;state.scope=e.editScope||'occurrence';state.active=e;state.changed=false;
  fields.forEach(function(id){if(e[id]!==undefined)$(id).value=e[id]});
  $('description').innerHTML=safeRich(e.description||'');$('allDay').checked=!!e.allDay;
- attachmentList(e.attachments||[]);$('uploadEventId').value=state.id;$('uploadEditScope').value=state.scope;
- $('uploadStatus').textContent='Choose a file below. Save any event changes before uploading.';
+ state.headerImageId=e.headerImageId||'';
+ resetDraftImage();attachmentList(e.attachments||[]);
  $('scopeBox').hidden=!e.isRecurring;
  var radio=document.querySelector('input[name=scope][value='+state.scope+']');if(radio)radio.checked=true;
  $('repeat').querySelector('[value=keep]').hidden=e.repeat!=='keep';$('repeat').value=e.repeat||'none';
@@ -549,7 +550,7 @@ async function save(ev){
  if(state.active&&state.active.isRecurring&&state.scope==='series'
   && !confirm('Change the ENTIRE recurring series? This can affect future dates.'))return;
  pending(true);status('Saving to Google Calendar…');
- try{await call('editorSaveEvent',v);await range();state.dirty=false;$('editorDialog').close();
+ try{await call('editorSaveEvent',v);await range();state.dirty=false;resetDraftImage();$('editorDialog').close();
   status('Saved. Public embeds update on their next sync.')}
  catch(e){status(e.message||String(e),true);pending(false)}
 }
@@ -558,7 +559,7 @@ async function remove(){
  var target=state.active&&state.active.isRecurring?(state.scope==='series'?'entire series':'one occurrence'):'event';
  if(!confirm('Delete this '+target+' permanently from Google Calendar?'))return;
  pending(true);status('Deleting…');
- try{await call('editorDeleteEvent',state.id,state.scope,state.revision);await range();state.dirty=false;$('editorDialog').close();status('Deleted from calendar.')}
+ try{await call('editorDeleteEvent',state.id,state.scope,state.revision);await range();state.dirty=false;resetDraftImage();$('editorDialog').close();status('Deleted from calendar.')}
  catch(e){status(e.message||String(e),true);pending(false)}
 }
 $('prev').addEventListener('click',function(){shift(-1)});
@@ -610,6 +611,18 @@ $('uploadForm').addEventListener('submit',async function(ev){
   put(loaded);$('uploadStatus').textContent='File uploaded and attached to this event.';
  }catch(err){$('uploadStatus').textContent=err.message||String(err);pending(false)}
 });
+$('uploadAttachment').addEventListener('change',function(){
+ if(state.draftImageUrl)URL.revokeObjectURL(state.draftImageUrl);
+ state.draftImageUrl='';
+ const file=this.files[0];
+ if(file&&file.type.startsWith('image/'))state.draftImageUrl=URL.createObjectURL(file);
+ if(file&&!file.type.startsWith('image/'))$('imageRole').value='gallery';
+ refreshImagePreview();
+ $('uploadStatus').textContent=file
+  ? (state.id?'Selected file only. Click Upload attachment to attach it.':'Draft selection only. Save the event first to upload.')
+  : 'No file selected.';
+});
+$('imageRole').addEventListener('change',refreshImagePreview);
 $('allDay').addEventListener('change',function(){state.dirty=true;adjustAllDay();preview()});
 ['repeatInterval','repeatUnit','repeatEnds','repeatUntil','repeatCount'].forEach(function(id){
  $(id).addEventListener('input',function(){state.dirty=true;repeatPanel();preview()})
