@@ -33,6 +33,8 @@ jobs:
           npx playwright install --with-deps chromium
       - name: 'Browser test: calendar clicks open editor'
         run: node scripts/test-admin-browser.mjs
+      - name: 'Browser test: month arrows and single Highlight inside iframe'
+        run: node scripts/test-whats-on-browser.mjs
       - name: Create realistic API-free preview data
         run: node scripts/preview-data.mjs
       - name: Create sample weekly mailing for standalone preview
