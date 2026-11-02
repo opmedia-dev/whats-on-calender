@@ -54,13 +54,13 @@ export function makePreviewData(now = new Date()) {
       contacts: { emails: [], phones: [] }, image: null, attachments: [],
     },
   };
-  const push = ({ id, series = id, title, date, hour = 10, minute = 0, duration = 60, allDay = false, recurring = false, recurrence = null, detail = 'normal', location = 'Example venue, Old Malden', colorId = '3' }) => {
+  const push = ({ id, series = id, title, date, hour = 10, minute = 0, duration = 60, allDay = false, recurring = false, recurrence = null, detail = 'normal', featured = false, location = 'Example venue, Old Malden', colorId = '3' }) => {
     const start = allDay ? date : `${date}T${pad(hour)}:${pad(minute)}:00Z`;
     const endDate = allDay ? dateAt(new Date(`${date}T12:00:00Z`), 1) : new Date(new Date(start).getTime() + duration * 60000).toISOString();
-    events.push({ id, series, title, start, end: endDate, allDay, location, colorId, recurring, recurrence, featured: Boolean(details[detail].image), detail });
+    events.push({ id, series, title, start, end: endDate, allDay, location, colorId, recurring, recurrence, featured, detail });
   };
   const regular = [
-    { title: 'Community Coffee Morning (sample)', weekday: 1, hour: 10, detail: 'regular', colorId: '2' },
+    { title: 'Community Coffee Morning (sample)', weekday: 1, hour: 10, detail: 'regular', colorId: '2', featured: true },
     { title: 'Community Music Group (sample)', weekday: 3, hour: 19, detail: 'music', colorId: '3' },
     { title: 'Weekly Social Gathering (sample)', weekday: 5, hour: 14, detail: 'regular', colorId: '5' },
   ];
@@ -75,7 +75,7 @@ export function makePreviewData(now = new Date()) {
         series: `demo-series-${seriesIndex}`,
         title: series.title, date: day, hour: series.hour, duration: 90,
         recurring: true, recurrence: `Every ${['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][series.weekday]}`,
-        detail: series.detail, colorId: series.colorId,
+        detail: series.detail, colorId: series.colorId, featured: Boolean(series.featured),
       });
     }
   }
@@ -91,7 +91,7 @@ export function makePreviewData(now = new Date()) {
   ];
   singles.forEach(([title, offset, hour, detail, colorId], i) => push({
     id: `demo-event-${i}`, title, date: dateAt(base, offset), hour,
-    detail, colorId, duration: 120,
+    detail, colorId, duration: 120, featured: [0, 3, 5].includes(i),
   }));
   push({ id: 'demo-all-day', title: 'All-day Community Event (sample)', date: dateAt(base, 12), allDay: true, detail: 'poster', colorId: '7' });
   events.sort((a, b) => a.start.localeCompare(b.start));
