@@ -45,6 +45,29 @@ The full email opens via the campaign URL supplied by Mailchimp; no Duda
 blog import, Mailchimp credentials or subscription/contact data are involved.
 The mailing hero and archive are separate, optional embeds, both using the same synced `mailings.json` data.
 
+## Private calendar editor (foundation)
+
+A **private What's On Event Manager** is being developed to replace routine
+Google Calendar editing. The interface has a **month/week calendar**, click-to-create
+and click-to-edit events, and a **side-by-side event form and live category-placeholder
+preview** on desktop (stacked on phones). There is **no featured-event checkbox**;
+existing public banner selection remains unchanged.
+
+- [Read-only editor demonstration](https://opmedia-dev.github.io/whats-on-calender/admin-demo.html)
+  — built by GitHub Pages, populated with example events. It cannot edit Google Calendar.
+- The real editor runs as a **Google Apps Script web app**, not as a static GitHub
+  Pages page. Google OAuth and parish calendar writer permissions are required.
+- GitHub Actions can publish the editor after its **initial Apps Script project,
+  OAuth consent and web-app deployment** have been configured; deployment
+  credentials live in encrypted Actions secrets, never in the browser.
+- Full setup, security notes and rollout tests: [admin/README.md](admin/README.md).
+
+Existing `GOOGLE_API_KEY` only reads the public calendar for the embeds; it does
+**not** authorise event editing. The editor writes the selected category into
+Google Calendar shared event metadata; no description tags are needed. The public
+sync now exports category metadata, but actual category placeholders in public
+event cards remain a separate release.
+
 ## Managing events (in Google Calendar)
 
 - **Any event** in the calendar appears in the timetable and the monthly calendar within about
