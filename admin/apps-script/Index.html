@@ -210,7 +210,7 @@ var $=function(id){return document.getElementById(id)};
 var labels={general:'General',worship:'Worship & services',community:'Community',music:'Music',families:'Children & families',heritage:'Heritage & talks',fundraising:'Fundraising'};
 var fields=['title','category','repeat','startDate','endDate','startTime','endTime','location','description'];
 var linked=(typeof google!=='undefined' && google.script && google.script.run);
-var state={events:[],date:new Date(),mode:'month',busy:false,id:'',revision:'',scope:'occurrence',active:null,changed:false};
+var state={events:[],date:new Date(),mode:'month',busy:false,id:'',revision:'',scope:'occurrence',active:null,changed:false,dirty:false};
 function key(d){return d.toISOString().slice(0,10)}
 function fromDate(s){return new Date(s+'T12:00:00Z')}
 function add(s,n){var d=fromDate(s);d.setUTCDate(d.getUTCDate()+n);return key(d)}
@@ -233,19 +233,64 @@ function create(tag,cls,text){var el=document.createElement(tag);if(cls)el.class
 function eventDay(e){var s=e.start.slice(0,10);return s}
 function eventsAt(day){return state.events.filter(function(e){return eventDay(e)===day})}
 function eventTime(e){return e.allDay?'All day':(e.start.slice(11,16)||'')}
+function showEditor(title){
+ $('dialogTitle').textContent=title;
+ if(!$('editorDialog').open)$('editorDialog').showModal();
+}
+function closeEditor(){
+ if(state.dirty && !confirm('Discard your unsaved event changes?'))return;
+ state.dirty=false;$('editorDialog').close();
+}
+function weekOf(date){
+ var d=fromDate(date||today());
+ return ['SU','MO','TU','WE','TH','FR','SA'][d.getUTCDay()];
+}
+function customDefaults(){
+ $('repeatInterval').value='1';$('repeatUnit').value='WEEKLY';$('repeatEnds').value='never';
+ $('repeatCount').value='10';$('repeatUntil').value='';
+ document.querySelectorAll('[name=repeatDay]').forEach(function(el){el.checked=el.value===weekOf($('startDate').value)});
+}
+function customPopulate(spec){
+ customDefaults();
+ if(!spec)return;
+ $('repeatInterval').value=spec.interval||1;
+ $('repeatUnit').value=spec.unit||'WEEKLY';
+ $('repeatEnds').value=spec.ends||'never';
+ $('repeatCount').value=spec.count||10;
+ $('repeatUntil').value=spec.until||'';
+ document.querySelectorAll('[name=repeatDay]').forEach(function(el){
+  el.checked=(spec.days||[]).includes(el.value)
+ });
+ if(spec.unit==='WEEKLY' && !(spec.days||[]).length){
+  document.querySelectorAll('[name=repeatDay]').forEach(function(el){el.checked=el.value===weekOf($('startDate').value)});
+ }
+}
+function repeatPanel(){
+ var isCustom=$('repeat').value==='custom'&&!$('repeat').disabled;
+ $('customRepeat').hidden=!isCustom;
+ $('repeatWeekdays').hidden=$('repeatUnit').value!=='WEEKLY';
+ $('repeatUntilField').hidden=$('repeatEnds').value!=='until';
+ $('repeatCountField').hidden=$('repeatEnds').value!=='count';
+}
 function newEntry(date){
- state.id='';state.revision='';state.active=null;state.scope='occurrence';state.changed=false;
- $('eventForm').reset();$('title').value='';$('category').value='general';$('repeat').value='none';
+ state.id='';state.revision='';state.active=null;state.scope='occurrence';state.changed=false;state.dirty=false;
+ HTMLFormElement.prototype.reset.call($('eventForm'));
+ $('title').value='';$('category').value='general';$('repeat').value='none';
  $('startDate').value=$('endDate').value=date||today();$('startTime').value='10:00';$('endTime').value='11:00';
  $('scopeBox').hidden=true;$('descriptionWarning').hidden=true;$('repeat').disabled=false;
  $('repeat').querySelector('[value=keep]').hidden=true;
  $('categoryHint').textContent='Choose an event type; no special calendar tags required.';
- adjustAllDay();preview();listEvents();pending(false);
- status(linked?'New event — not saved.':'Demonstration mode — Save and Delete disabled.');
+ customDefaults();repeatPanel();adjustAllDay();preview();pending(false);
+ status(linked?'New event — not saved.':'Demonstration only — Save and Delete are disabled.');
+ showEditor('New event');
 }
 function adjustAllDay(){var off=$('allDay').checked;$('timeFields').hidden=off;$('startTime').disabled=off;$('endTime').disabled=off}
 function values(){var v={};fields.forEach(function(id){v[id]=$(id).value});v.allDay=$('allDay').checked;v.id=state.id;
- v.editScope=state.id?state.scope:'';v.revision=state.revision;v.descriptionChanged=state.changed;return v}
+ v.editScope=state.id?state.scope:'';v.revision=state.revision;v.descriptionChanged=state.changed;
+ v.customRepeat={unit:$('repeatUnit').value,interval:Number($('repeatInterval').value),
+  days:Array.from(document.querySelectorAll('[name=repeatDay]:checked')).map(function(el){return el.value}),
+  ends:$('repeatEnds').value,count:Number($('repeatCount').value),until:$('repeatUntil').value};
+ return v}
 function preview(){
  var v=values(),name=v.title.trim()||'Your event title';
  var when=v.startDate?pretty(v.startDate,{timeZone:'UTC',day:'numeric',month:'short',year:'numeric'}):'Choose date';
@@ -253,6 +298,8 @@ function preview(){
  $('art').dataset.type=v.category;$('artCategory').textContent=labels[v.category]||'General';
  $('artTitle').textContent=name;$('artDate').textContent=when;
  $('pvTitle').textContent=name;$('pvDate').textContent=when+' · '+time;
+ if(v.repeat==='custom')$('pvDate').textContent+=' · Every '+v.customRepeat.interval+' '+v.customRepeat.unit.toLowerCase();
+ else if(v.repeat==='weekly'||v.repeat==='monthly')$('pvDate').textContent+=' · '+v.repeat;
  $('pvLocation').textContent=v.location;$('pvLocation').hidden=!v.location.trim();
  $('previewDescription').textContent=v.description.trim()||'Your event description will appear here.';
 }
