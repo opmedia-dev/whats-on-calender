@@ -348,6 +348,23 @@ textarea{resize:vertical;min-height:100px;line-height:1.5}
  </aside>
 </div>
 </dialog>
+<dialog id="appConfirmDialog" class="app-confirm-dialog" aria-labelledby="appConfirmTitle" aria-describedby="appConfirmMessage">
+ <form id="appConfirmForm" method="dialog">
+  <div class="app-confirm-head"><h2 id="appConfirmTitle">Confirm action</h2><button type="button" id="appConfirmClose" class="app-confirm-x" aria-label="Close dialog">×</button></div>
+  <p id="appConfirmMessage"></p>
+  <div class="field" id="appConfirmInputRow" hidden>
+   <label for="appConfirmInput">Web address</label>
+   <input id="appConfirmInput" type="text" placeholder="https://example.com" autocomplete="url">
+   <small id="appConfirmInputError" role="alert"></small>
+  </div>
+  <div class="app-confirm-actions"><button type="button" id="appConfirmCancel" class="btn">Cancel</button><button type="submit" id="appConfirmYes" class="btn primary">Continue</button></div>
+ </form>
+</dialog>
+<div id="appNotice" class="app-notice" role="status" aria-live="polite" aria-atomic="true" hidden>
+ <span id="appNoticeIcon" class="app-notice-icon" aria-hidden="true">✓</span>
+ <p id="appNoticeText"></p>
+ <button id="appNoticeClose" type="button" aria-label="Dismiss notification">×</button>
+</div>
 <script>
 (function(){
 'use strict';
@@ -362,7 +379,70 @@ function add(s,n){var d=fromDate(s);d.setUTCDate(d.getUTCDate()+n);return key(d)
 function today(){return new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/London',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())}
 function pretty(s,opts){return new Intl.DateTimeFormat('en-GB',opts).format(fromDate(s))}
 function startWeek(s){var d=fromDate(s);return add(s,-((d.getUTCDay()+6)%7))}
-function status(t,bad){$('status').textContent=t;$('status').classList.toggle('error',!!bad)}
+let noticeTimer=null;
+function notify(message,kind){
+ if(noticeTimer)clearTimeout(noticeTimer);
+ const toast=$('appNotice');toast.hidden=false;
+ toast.dataset.kind=kind||'success';
+ $('appNoticeIcon').textContent=kind==='error'?'!':kind==='warning'?'!':'✓';
+ $('appNoticeText').textContent=String(message||'');
+ if(kind==='success')noticeTimer=setTimeout(function(){toast.hidden=true},6500);
+}
+$('appNoticeClose').addEventListener('click',function(){$('appNotice').hidden=true;if(noticeTimer)clearTimeout(noticeTimer)});
+function status(t,bad){
+ $('status').textContent=t;$('status').classList.toggle('error',!!bad);
+ if(bad)notify(t,'error');
+ else if(/^(?:Event .+saved\.|Deleted from calendar\.|File uploaded and attached)/i.test(t))notify(t,'success');
+}
+function askAction(options){
+ const dialog=$('appConfirmDialog'),form=$('appConfirmForm');
+ const opts=options||{};
+ $('appConfirmTitle').textContent=opts.title||'Confirm action';
+ $('appConfirmMessage').textContent=opts.message||'Continue?';
+ $('appConfirmInputRow').hidden=!opts.input;
+ $('appConfirmInputError').textContent='';
+ $('appConfirmInput').value=opts.value||'';
+ $('appConfirmYes').textContent=opts.confirmText||'Continue';
+ $('appConfirmYes').classList.toggle('danger',!!opts.danger);
+ $('appConfirmYes').classList.toggle('primary',!opts.danger);
+ return new Promise(function(resolve){
+  let resolved=false;
+  function done(value){
+   if(resolved)return;
+   resolved=true;
+   form.removeEventListener('submit',submit);
+   $('appConfirmCancel').removeEventListener('click',cancel);
+   $('appConfirmClose').removeEventListener('click',cancel);
+   dialog.removeEventListener('cancel',escape);
+   dialog.removeEventListener('close',closed);
+   if(dialog.open)dialog.close();
+   resolve(value);
+  }
+  function cancel(){done(null)}
+  function escape(e){e.preventDefault();done(null)}
+  function closed(){done(null)}
+  function submit(e){
+   e.preventDefault();
+   if(opts.input){
+    const value=$('appConfirmInput').value.trim();
+    if(!/^(?:https:\/\/|mailto:)/i.test(value)){
+     $('appConfirmInputError').textContent='Enter a valid https:// address or mailto: link.';
+     $('appConfirmInput').focus();return;
+    }
+    done(value);
+   }else done(true);
+  }
+  form.addEventListener('submit',submit);
+  $('appConfirmCancel').addEventListener('click',cancel);
+  $('appConfirmClose').addEventListener('click',cancel);
+  dialog.addEventListener('cancel',escape);
+  dialog.addEventListener('close',closed);
+  dialog.showModal();
+  if(opts.input)$('appConfirmInput').focus();
+  else $('appConfirmCancel').focus();
+ });
+}
+
 function pending(v){state.busy=v;$('save').disabled=v||!linked;$('delete').disabled=v||!linked||!state.id;$('newEvent').disabled=v;$('refresh').disabled=v;updateUploadUI()}
 function call(fn){var args=Array.prototype.slice.call(arguments,1);return new Promise(function(resolve,reject){
  if(!linked){reject(new Error('This is a demonstration, not connected to Google Calendar.'));return}
