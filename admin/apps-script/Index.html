@@ -363,7 +363,7 @@ function today(){return new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/London
 function pretty(s,opts){return new Intl.DateTimeFormat('en-GB',opts).format(fromDate(s))}
 function startWeek(s){var d=fromDate(s);return add(s,-((d.getUTCDay()+6)%7))}
 function status(t,bad){$('status').textContent=t;$('status').classList.toggle('error',!!bad)}
-function pending(v){state.busy=v;$('save').disabled=v||!linked;$('delete').disabled=v||!linked||!state.id;$('newEvent').disabled=v;$('refresh').disabled=v;$('uploadButton').disabled=v||!linked||!state.id||!state.uploadConfigured}
+function pending(v){state.busy=v;$('save').disabled=v||!linked;$('delete').disabled=v||!linked||!state.id;$('newEvent').disabled=v;$('refresh').disabled=v;updateUploadUI()}
 function call(fn){var args=Array.prototype.slice.call(arguments,1);return new Promise(function(resolve,reject){
  if(!linked){reject(new Error('This is a demonstration, not connected to Google Calendar.'));return}
  // A missing callback must not leave the editor controls disabled indefinitely.
@@ -409,16 +409,28 @@ function safeRich(html){
  return host.innerHTML;
 }
 function richHTML(){return safeRich($('description').innerHTML)}
+function updateUploadUI(){
+ const file=$('uploadAttachment').files[0];
+ $('uploadDropzone').classList.toggle('has-file',!!file);
+ $('uploadSelected').hidden=!file;
+ if(file){
+  $('uploadSelectedName').textContent=file.name;
+  $('uploadSelectedMeta').textContent=(file.size<1024*1024?Math.max(1,Math.round(file.size/1024))+' KB':(file.size/1024/1024).toFixed(1)+' MB')+' · '+(file.type.split('/').pop()||'File').toUpperCase();
+ }
+ $('uploadButton').hidden=!file||!state.id;
+ $('uploadButton').disabled=state.busy||!linked||!state.uploadConfigured||!state.id||!file||state.dirty;
+}
 function resetDraftImage(){
  if(state.draftImageUrl)URL.revokeObjectURL(state.draftImageUrl);
  state.draftImageUrl='';
+ state.focusBeforeDraft=null;
  $('uploadForm').reset();
  $('uploadEventId').value=state.id||'';
  $('uploadEditScope').value=state.scope||'occurrence';
  $('imageRole').value='header';
  $('uploadStatus').textContent=linked&&!state.uploadConfigured
-  ? 'Image uploads are unavailable until EDITOR_UPLOAD_FOLDER_ID is configured and deployed.'
-  : 'Select a file and press Save event to save and upload together.';
+  ? 'Image uploads are unavailable until EDITOR_UPLOAD_FOLDER_ID is configured and deployed.' : '';
+ updateUploadUI();
 }
 // Reduce bytes sent through Apps Script, preserving the original local file.
 async function optimiseUpload(){
@@ -443,7 +455,7 @@ async function optimiseUpload(){
   input.files=transfer.files;
   if(state.draftImageUrl)URL.revokeObjectURL(state.draftImageUrl);
   state.draftImageUrl=URL.createObjectURL(input.files[0]);
-  refreshImagePreview();
+  refreshImagePreview();updateUploadUI();
   const kb=n=>Math.max(1,Math.round(n/1024))+' KB';
   $('uploadStatus').textContent='Optimised '+kb(file.size)+' → '+kb(output.size)+'. Uploading the smaller copy…';
  }catch(error){
@@ -466,13 +478,14 @@ function setImageFocus(x,y){
  const clamp=function(n){return Math.max(0,Math.min(100,Math.round(n)))};
  state.imageFocus=clamp(x)+','+clamp(y);
  state.dirty=true;
- renderImageFocus();
+ renderImageFocus();updateUploadUI();
 }
 function renderImageFocus(){
  const xy=focusNumbers();
- $('imageFocusX').value=xy[0];$('imageFocusY').value=xy[1];
- $('imageFocusXValue').textContent=xy[0]+'%';$('imageFocusYValue').textContent=xy[1]+'%';
  $('previewHeaderImage').style.objectPosition=xy[0]+'% '+xy[1]+'%';
+ document.querySelectorAll('.crop-pad button[data-focus]').forEach(function(button){
+  button.setAttribute('aria-pressed',String(button.dataset.focus===state.imageFocus));
+ });
 }
 function refreshImagePreview(){
  const images=state.attachments.filter(a=>/^image\//i.test(a.mimeType||''));
