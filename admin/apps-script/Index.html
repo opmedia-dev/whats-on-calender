@@ -350,7 +350,7 @@ function newEntry(date){
  $('description').replaceChildren();attachmentList([]);$('uploadAttachment').value='';$('uploadStatus').textContent='Save this event before uploading a file.';
  $('title').value='';$('category').value='general';$('repeat').value='none';
  $('startDate').value=$('endDate').value=date||today();$('startTime').value='10:00';$('endTime').value='11:00';
- $('scopeBox').hidden=true;$('descriptionWarning').hidden=true;$('repeat').disabled=false;
+ $('scopeBox').hidden=true;$('repeat').disabled=false;
  $('repeat').querySelector('[value=keep]').hidden=true;
  $('categoryHint').textContent='Choose an event type; no special calendar tags required.';
  customDefaults();repeatPanel();adjustAllDay();preview();pending(false);
@@ -433,7 +433,7 @@ function put(e){
  customPopulate(e.customRepeat);repeatPanel();
  $('repeatHint').textContent=e.repeat==='keep'?'Complex recurrence preserved unless deliberately changed.':'Weekly and monthly patterns supported.';
  $('categoryHint').textContent=e.categorySource==='suggested'?'Suggested from title; choose a category to save it.':'Category stored on event.';
- $('descriptionWarning').hidden=!e.hasFormattedDescription;
+ 
  adjustAllDay();preview();pending(false);state.dirty=false;showEditor('Edit event');status('Loaded from calendar — not yet changed.');
 }
 async function openEvent(id,scope){
