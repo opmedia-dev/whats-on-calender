@@ -282,7 +282,7 @@ var $=function(id){return document.getElementById(id)};
 var labels={general:'General',worship:'Worship & services',community:'Community',music:'Music',families:'Children & families',heritage:'Heritage & talks',fundraising:'Fundraising'};
 var fields=['title','category','repeat','startDate','endDate','startTime','endTime','location'];
 var linked=(typeof google!=='undefined' && google.script && google.script.run);
-var state={events:[],date:new Date(),mode:'month',busy:false,id:'',revision:'',scope:'occurrence',active:null,changed:false,dirty:false,attachments:[],headerImageId:'',draftImageUrl:'',imageFocus:'50,50',uploadConfigured:false};
+var state={events:[],date:new Date(),mode:'month',busy:false,id:'',revision:'',scope:'occurrence',active:null,changed:false,dirty:false,attachments:[],headerImageId:'',draftImageUrl:'',imageFocus:'50,50',uploadConfigured:false,expandedDays:new Set()};
 function key(d){return d.toISOString().slice(0,10)}
 function fromDate(s){return new Date(s+'T12:00:00Z')}
 function add(s,n){var d=fromDate(s);d.setUTCDate(d.getUTCDate()+n);return key(d)}
@@ -535,8 +535,20 @@ function calendar(){
    var label=create('button','date-btn',String(Number(date.slice(8))));label.type='button';label.title='Create event on '+date;
    (function(d){label.addEventListener('click',function(){newEntry(d)})})(date);day.append(label);
    var entries=eventsAt(date);
-   entries.slice(0,3).forEach(function(e){day.append(eventButton(e,'event-pill'))});
-   if(entries.length>3)day.append(create('div','more','+'+(entries.length-3)+' more'));
+   var expanded=state.expandedDays.has(date);
+   (expanded?entries:entries.slice(0,3)).forEach(function(e){day.append(eventButton(e,'event-pill'))});
+   if(entries.length>3){
+    var more=create('button','more',expanded?'Show less':'+'+(entries.length-3)+' more');
+    more.type='button';more.dataset.date=date;more.setAttribute('aria-expanded',String(expanded));
+    more.setAttribute('aria-label',expanded?'Show fewer events on '+date:'Show all '+entries.length+' events on '+date);
+    (function(d){more.addEventListener('click',function(){
+     if(state.expandedDays.has(d))state.expandedDays.delete(d);else state.expandedDays.add(d);
+     calendar();
+     var buttons=document.querySelectorAll('.cal-day .more');
+     for(var k=0;k<buttons.length;k++)if(buttons[k].dataset.date===d){buttons[k].focus();break}
+    })})(date);
+    day.append(more);
+   }
    grid.append(day);
   }
   container.append(grid);
@@ -598,7 +610,7 @@ async function range(){
 async function shift(direction){
  var d=state.mode==='month'?fromDate(key(state.date).slice(0,7)+'-01'):new Date(state.date);
  if(state.mode==='month')d.setUTCMonth(d.getUTCMonth()+direction);else d.setUTCDate(d.getUTCDate()+7*direction);
- state.date=d;try{await range()}catch(e){status(e.message||String(e),true)}
+ state.date=d;state.expandedDays.clear();try{await range()}catch(e){status(e.message||String(e),true)}
 }
 async function setMode(m){state.mode=m;try{await range()}catch(e){status(e.message||String(e),true)}}
 async function save(ev){
