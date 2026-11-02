@@ -17,12 +17,12 @@
   <script type="module">
     import { init, h, icon, showError } from './assets/wo.js';
     import { loadMailings } from './assets/mailings.js';
-    await init();
+    const initialisation = init(); // Start the host handshake while event data loads.
     const list = document.getElementById('mailings');
     const search = document.getElementById('mailingSearch');
     const count = document.getElementById('mailingCount');
     try {
-      const { preview, mailings } = await loadMailings();
+      const [, { preview, mailings }] = await Promise.all([initialisation, loadMailings()]);
       if (preview) {
         const notice = h('div', { class: 'wo-demo-notice', role: 'status' },
           'MAILING PREVIEW — Sample weekly mailing. Not connected to Mailchimp.');

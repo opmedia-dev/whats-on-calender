@@ -90,7 +90,8 @@ test('hero remains an independent mailing embed using the shared loader', () => 
   const page = content('site/mailing-hero.html');
   assert.match(page, /import \{ loadMailings \} from '\.\/assets\/mailings\.js'/);
   assert.match(page, /renderMailingHero\(latest, \{ h, preview \}\)/);
-  assert.match(page, /await init\(\)/);
+  assert.match(page, /const initialisation = init\(\)/);
+  assert.match(page, /Promise\.all\(\[initialisation, loadMailings\(\)\]\)/);
   assert.doesNotMatch(page, /loadEvents|events\.json|createFlipbook/);
   assert.match(page, /No mailing is available yet/);
 });

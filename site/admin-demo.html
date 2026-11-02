@@ -152,9 +152,10 @@ textarea{resize:vertical;min-height:100px;line-height:1.5}
   <div class="panel-body">
    <form id="eventForm">
     <fieldset id="scopeBox" hidden><legend>Recurring event: editing scope</legend>
-     <label><input type="radio" name="scope" value="occurrence" checked> This date only</label>
-     <label><input type="radio" name="scope" value="series"> Entire series</label>
-     <p class="muted">Changing an entire series may affect many future dates.</p>
+     <label><input type="radio" name="scope" value="occurrence" checked> This event only</label>
+     <label><input type="radio" name="scope" value="following"> This event and future events</label>
+     <label><input type="radio" name="scope" value="series"> All events in the series</label>
+     <p class="muted">This event and future events splits the repeat at this date. Earlier dates remain unchanged. Advanced patterns or existing exceptions may require Google Calendar.</p>
     </fieldset>
     <div class="field"><label for="title">Event title</label><input id="title" required maxlength="180" placeholder="e.g. Community Coffee Morning"></div>
     <div class="two">
@@ -207,6 +208,14 @@ textarea{resize:vertical;min-height:100px;line-height:1.5}
      <div class="field"><label for="endTime">End time</label><input id="endTime" type="time" required></div>
     </div>
     <div class="field"><label for="location">Location</label><input id="location" maxlength="1000" placeholder="Church, hall or another venue"></div>
+    <div class="field"><label for="visibility">Event visibility</label>
+     <select id="visibility">
+      <option value="default">Normal (calendar default)</option>
+      <option value="public">Public</option>
+      <option value="private">Private — hide from all public What’s On displays</option>
+     </select>
+     <small id="visibilityHint">Private events stay visible to authorised editors but are excluded from all public What's On displays after the next sync.</small>
+    </div>
      <div class="featured-setting"><label class="check" for="featured"><input id="featured" type="checkbox"> <strong>Feature this event</strong></label>
       <p class="help">Show this event in the homepage banner and What's On Highlights. Other events remain in the calendar and full listings. For recurring events, choose whether this applies to one date or the whole series.</p>
      </div>
@@ -515,7 +524,8 @@ function newEntry(date){
  $('description').replaceChildren();state.headerImageId='';state.imageFocus='50,50';resetDraftImage();attachmentList([]);
  $('title').value='';$('category').value='general';$('repeat').value='none';
  $('startDate').value=$('endDate').value=date||today();$('startTime').value='10:00';$('endTime').value='11:00';
- $('scopeBox').hidden=true;$('repeat').disabled=false;
+ $('scopeBox').hidden=true;$('repeat').disabled=false;$('visibility').disabled=false;
+ $('visibilityHint').textContent='Private events are excluded from the public site after the next sync.';
  $('repeat').querySelector('[value=keep]').hidden=true;
  $('categoryHint').textContent='Choose an event type; no special calendar tags required.';
  customDefaults();repeatPanel();adjustAllDay();preview();pending(false);
@@ -525,7 +535,7 @@ function newEntry(date){
 function adjustAllDay(){var off=$('allDay').checked;$('timeFields').hidden=off;$('startTime').disabled=off;$('endTime').disabled=off}
 function values(){var v={};fields.forEach(function(id){v[id]=$(id).value});v.allDay=$('allDay').checked;v.id=state.id;
  v.editScope=state.id?state.scope:'';v.revision=state.revision;v.descriptionChanged=state.changed;
- v.description=richHTML();v.headerImageId=state.headerImageId;v.featured=$('featured').checked;v.imageFocus=state.imageFocus;
+ v.description=richHTML();v.headerImageId=state.headerImageId;v.featured=$('featured').checked;v.imageFocus=state.imageFocus;v.visibility=$('visibility').value;
  v.customRepeat={unit:$('repeatUnit').value,interval:Number($('repeatInterval').value),
   days:Array.from(document.querySelectorAll('[name=repeatDay]:checked')).map(function(el){return el.value}),
   ends:$('repeatEnds').value,count:Number($('repeatCount').value),until:$('repeatUntil').value};
@@ -602,6 +612,7 @@ function calendar(){
 function put(e){
  state.id=e.selectedId||e.id;state.revision=e.revision;state.scope=e.editScope||'occurrence';state.active=e;state.changed=false;
  fields.forEach(function(id){if(e[id]!==undefined)$(id).value=e[id]});
+ $('visibility').value=e.visibility||'default';
  $('description').innerHTML=safeRich(e.description||'');$('allDay').checked=!!e.allDay;
  $('featured').checked=e.featured===true;
  state.headerImageId=e.headerImageId||'';state.imageFocus=e.imageFocus||'50,50';
@@ -610,6 +621,10 @@ function put(e){
  var radio=document.querySelector('input[name=scope][value='+state.scope+']');if(radio)radio.checked=true;
  $('repeat').querySelector('[value=keep]').hidden=e.repeat!=='keep';$('repeat').value=e.repeat||'none';
  $('repeat').disabled=!!e.isRecurring && state.scope==='occurrence';
+ $('visibility').disabled=!!e.isRecurring && state.scope==='occurrence';
+ $('visibilityHint').textContent=$('visibility').disabled
+  ? 'Privacy applies to a recurring series. To change privacy, select This event and future events or All events in the series. Other details can still be changed for this event only.'
+  : 'Private events remain available to authorised editors but are excluded from all public What’s On displays after the next sync.';
  customPopulate(e.customRepeat);repeatPanel();
  $('repeatHint').textContent=e.repeat==='keep'?'Complex recurrence preserved unless deliberately changed.':'Weekly and monthly patterns supported.';
  $('categoryHint').textContent=e.categorySource==='suggested'?'Suggested from title; choose a category to save it.':'Category stored on event.';
@@ -657,7 +672,9 @@ async function save(ev){
   if(!confirm('Save this event and upload "'+file.name+'" to the public parish Drive folder?'))return;
  }
  if(state.active&&state.active.isRecurring&&state.scope==='series'
-   && !confirm('Change the ENTIRE recurring series? This can affect future dates.'))return;
+   && !confirm('Change ALL events in this recurring series, including earlier dates?'))return;
+ if(state.active&&state.active.isRecurring&&state.scope==='following'
+   && !confirm('Change THIS event and all FUTURE occurrences? Earlier dates remain unchanged. This splits the recurrence into two calendar series.'))return;
  var saved=null,uploaded=false;
  pending(true);status('Saving event to Google Calendar…');
  try{
@@ -669,7 +686,7 @@ async function save(ev){
   }
   saved=await call('editorSaveEvent',v);
   if(!saved||!saved.id)throw new Error('Calendar did not return a saved event ID. Check Calendar before retrying.');
-  state.id=saved.id;state.revision=saved.revision||state.revision;
+  state.id=saved.id;state.scope=saved.scope||state.scope;state.revision=saved.revision||state.revision;
   state.dirty=false;state.changed=false;
   if(file){
    $('uploadEventId').value=state.id;$('uploadEditScope').value=state.scope;
@@ -692,7 +709,7 @@ async function save(ev){
 }
 async function remove(){
  if(!linked||!state.id)return;
- var target=state.active&&state.active.isRecurring?(state.scope==='series'?'entire series':'one occurrence'):'event';
+ var target=state.active&&state.active.isRecurring?(state.scope==='series'?'entire series':state.scope==='following'?'this event and every future occurrence':'one occurrence'):'event';
  if(!confirm('Delete this '+target+' permanently from Google Calendar?'))return;
  pending(true);status('Deleting…');
  try{await call('editorDeleteEvent',state.id,state.scope,state.revision);await range();state.dirty=false;resetDraftImage();$('editorDialog').close();status('Deleted from calendar.')}
@@ -709,7 +726,13 @@ $('refresh').addEventListener('click',load);
 $('eventForm').addEventListener('submit',save);
 $('delete').addEventListener('click',remove);
 $('resetChanges').addEventListener('click',function(){if(state.id){state.dirty=false;openEvent(state.id,state.scope)}else newEntry($('startDate').value||today())});
-document.querySelectorAll('input[name=scope]').forEach(function(el){el.addEventListener('change',function(){if(el.checked&&state.id)openEvent(state.id,el.value)})});
+document.querySelectorAll('input[name=scope]').forEach(function(el){el.addEventListener('change',function(){
+ if(!el.checked||!state.id)return;
+ if(state.dirty&&!confirm('Changing the editing scope will discard unsaved changes. Continue?')){
+  var original=document.querySelector('input[name=scope][value='+state.scope+']');if(original)original.checked=true;return;
+ }
+ state.dirty=false;openEvent(state.active?.selectedId||state.id,el.value);
+})});
 fields.forEach(function(id){$(id).addEventListener('input',function(){state.dirty=true;if(id==='repeat')repeatPanel();preview()})});
 $('description').addEventListener('input',function(){state.changed=true;state.dirty=true;preview()});
 $('description').addEventListener('paste',function(e){
@@ -787,6 +810,7 @@ $('uploadAttachment').addEventListener('change',function(){
 $('imageRole').addEventListener('change',refreshImagePreview);
 $('allDay').addEventListener('change',function(){state.dirty=true;adjustAllDay();preview()});
 $('featured').addEventListener('change',function(){state.dirty=true;preview()});
+$('visibility').addEventListener('change',function(){state.dirty=true;if(this.value==='private')$('featured').checked=false;preview()});
 ['repeatInterval','repeatUnit','repeatEnds','repeatUntil','repeatCount'].forEach(function(id){
  $(id).addEventListener('input',function(){state.dirty=true;repeatPanel();preview()})
 });

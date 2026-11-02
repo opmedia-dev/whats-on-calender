@@ -108,7 +108,7 @@ function localEvent_(e, master) {
   const allDay = Boolean(e.start.date);
   const startDate = allDay ? e.start.date : localDate_(e.start.dateTime);
   const endDate = allDay ? addDay_(e.end.date, -1) : localDate_(e.end.dateTime);
-  const recurrence = e.recurrence || [];
+  const recurrence = e.recurrence?.length ? e.recurrence : (master?.recurrence || []);
   const rawRule = recurrence.find(r => /^RRULE:/i.test(r)) || '';
   const rule = {};
   rawRule.replace(/^RRULE:/i, '').split(';').forEach(part => {
@@ -147,11 +147,11 @@ function localEvent_(e, master) {
     endTime: allDay ? '10:00' : localClock_(e.end.dateTime),
     allDay, category: category.id, categorySource: category.source,
     repeat, customRepeat, isRecurring: Boolean(e.recurringEventId || recurrence.length),
-    revision: e.etag || '', visibility: e.visibility || 'default',
+    revision: e.etag || '', visibility: (master?.visibility === 'confidential' ? 'private' : master?.visibility) || e.visibility || 'default',
     hasFormattedDescription: /<\/?(?:p|div|span|strong|b|a|br|ul|ol|li)\b/i.test(e.description || ''),
     descriptionOriginal: e.description || '',
     attachments: attachmentsFor_(e),
-    headerImageId: e.extendedProperties?.shared?.[HEADER_IMAGE_KEY] || '',
+    headerImageId: e.extendedProperties?.shared?.[HEADER_IMAGE_KEY] || master?.extendedProperties?.shared?.[HEADER_IMAGE_KEY] || '',
     featured: featuredOf_(e, master),
     imageFocus: imageFocus_(e.extendedProperties?.shared?.[IMAGE_FOCUS_KEY] ||
       master?.extendedProperties?.shared?.[IMAGE_FOCUS_KEY]),
@@ -209,26 +209,23 @@ function fetchTarget_(id, scope) {
   const selected = Calendar.Events.get(EDITOR_CALENDAR_ID, String(id));
   if (!selected || selected.status === 'cancelled') throw new Error('Event not found.');
   const recurring = Boolean(selected.recurringEventId || (selected.recurrence && selected.recurrence.length));
-  if (recurring && scope !== 'series' && scope !== 'occurrence') {
-    throw new Error('Choose whether to edit one occurrence or the entire series.');
+  if (recurring && !['series','occurrence','following'].includes(scope)) {
+    throw new Error('Choose this occurrence, this and future, or the entire series.');
   }
   const seriesId = selected.recurringEventId || selected.id;
   const target = scope === 'series' && selected.recurringEventId
     ? Calendar.Events.get(EDITOR_CALENDAR_ID, seriesId)
     : selected;
-  return { target, recurring, seriesId };
+  const master = recurring && selected.recurringEventId
+    ? (target.id === seriesId ? target : Calendar.Events.get(EDITOR_CALENDAR_ID, seriesId))
+    : (recurring ? selected : null);
+  return { target, selected, master, recurring, seriesId };
 }
 
 function editorGetEvent(id, scope) {
   editorAccess_();
   const data = fetchTarget_(id, scope || 'occurrence');
-  // Fetch the master only when an individual occurrence has no explicit flag.
-  const shared = data.target.extendedProperties?.shared || {};
-  const master = data.target.recurringEventId &&
-    (!Object.prototype.hasOwnProperty.call(shared, FEATURED_KEY) ||
-      !Object.prototype.hasOwnProperty.call(shared, IMAGE_FOCUS_KEY))
-    ? Calendar.Events.get(EDITOR_CALENDAR_ID, data.seriesId) : null;
-  return Object.assign(localEvent_(data.target, master), {
+  return Object.assign(localEvent_(data.target, data.master), {
     selectedId: id, editScope: scope || 'occurrence',
   });
 }
@@ -318,11 +315,13 @@ function normalise_(form) {
   const end = allDay
     ? { date: addDay_(endDate, 1) }
     : { dateTime: endDate + 'T' + endTime + ':00', timeZone: EDITOR_ZONE };
+  const visibility = String(form.visibility || 'default');
+  if (!['default','public','private'].includes(visibility)) throw new Error('Select a valid visibility.');
   const body = {
-    summary: title, location, start, end,
+    summary: title, location, start, end, visibility,
     extendedProperties: { shared: {
       [CATEGORY_KEY]: category_(form.category),
-      [FEATURED_KEY]: form.featured === true ? 'true' : 'false',
+      [FEATURED_KEY]: form.visibility === 'private' ? 'false' : (form.featured === true ? 'true' : 'false'),
       [IMAGE_FOCUS_KEY]: imageFocus_(form.imageFocus),
     } },
   };
@@ -332,6 +331,133 @@ function normalise_(form) {
   const recurrence = buildRecurrence_(form, repeat, startDate, allDay);
   if (recurrence !== null) body.recurrence = recurrence;
   return { body, repeat };
+}
+
+// Google Calendar API has no atomic "this and following" edit. Split the
+// parent into two RRULE series, rather than making hundreds of exceptions.
+// Only plain single-RRULE patterns are supported. Refuse complex series and
+// existing detached future exceptions rather than silently discard them.
+function followingPlan_(record) {
+  if (!record.selected.recurringEventId || !record.master?.recurrence?.length) {
+    throw new Error('Select an occurrence within a repeating series for this and future.');
+  }
+  const master = record.master, selected = record.selected;
+  const ruleLines = master.recurrence;
+  if (ruleLines.length !== 1 || !/^RRULE:/i.test(ruleLines[0])) {
+    throw new Error('This recurring series has advanced date exceptions. Edit it in Google Calendar to avoid losing dates.');
+  }
+  const raw = ruleLines[0], parts = Object.fromEntries(raw.slice(6).split(';').map(item => item.split('=')));
+  if (!['DAILY','WEEKLY','MONTHLY','YEARLY'].includes(parts.FREQ) ||
+      Object.keys(parts).some(k => !['FREQ','INTERVAL','BYDAY','COUNT','UNTIL'].includes(k)) ||
+      (parts.BYDAY && (parts.FREQ !== 'WEEKLY' || !/^(MO|TU|WE|TH|FR|SA|SU)(,(MO|TU|WE|TH|FR|SA|SU))*$/.test(parts.BYDAY))) ||
+      (parts.COUNT && parts.UNTIL)) {
+    throw new Error('This recurring pattern is too complex to split safely. Use Google Calendar.');
+  }
+  const original = selected.originalStartTime || selected.start;
+  const pivot = original?.dateTime || original?.date;
+  if (!pivot) throw new Error('The selected recurrence has no original start time.');
+  const allDay = Boolean(original.date);
+  const startMs = new Date(allDay ? pivot + 'T12:00:00Z' : pivot).getTime();
+  if (!Number.isFinite(startMs)) throw new Error('Invalid recurrence start time.');
+  const firstMs = new Date(master.start.date ? master.start.date + 'T12:00:00Z' : master.start.dateTime).getTime();
+  if (!Number.isFinite(firstMs)) throw new Error('Invalid recurring series start time.');
+  if (startMs < firstMs) throw new Error('This event predates its recurring series.');
+  // A rescheduled exception changes the start independently of the rule.
+  if (JSON.stringify(selected.start) !== JSON.stringify(original) &&
+      (selected.start?.date || selected.start?.dateTime) !== pivot) {
+    throw new Error('This occurrence was moved from its scheduled date. Split the series in Google Calendar.');
+  }
+  const first = startMs === firstMs;
+  if (!first) {
+    // Non-expanded list returns only series masters and exception events.
+    let token, pages = 0;
+    do {
+      const response = Calendar.Events.list(EDITOR_CALENDAR_ID, {
+        singleEvents: false, showDeleted: true,
+        timeMin: new Date(startMs - 1000).toISOString(), maxResults: 250, pageToken: token,
+      });
+      if ((response.items || []).some(e => e.recurringEventId === master.id)) {
+        throw new Error('Future dates contain individual exceptions/cancellations. Edit this split in Google Calendar to preserve them.');
+      }
+      token = response.nextPageToken;
+      if (++pages >= 12 && token) throw new Error('Too many events to verify a safe series split.');
+    } while (token);
+  }
+  let beforeCount = 0;
+  if (!first && parts.COUNT) {
+    let token, pages = 0;
+    do {
+      const response = Calendar.Events.instances(EDITOR_CALENDAR_ID, master.id, {
+        timeMax: new Date(startMs).toISOString(), maxResults: 250, pageToken: token,
+        showDeleted: true,
+      });
+      beforeCount += (response.items || []).length;
+      token = response.nextPageToken;
+      if (++pages >= 12 && token) throw new Error('Too many prior occurrences for a safe count-based split.');
+    } while (token);
+    if (!beforeCount || beforeCount >= Number(parts.COUNT)) {
+      throw new Error('Could not determine the remaining recurrence count safely.');
+    }
+  }
+  const ending = allDay
+    ? new Date(startMs - 86400000).toISOString().slice(0,10).replace(/-/g,'')
+    : new Date(startMs - 1000).toISOString().replace(/[-:]/g,'').replace(/\.\d{3}Z$/,'Z');
+  const trimmed = 'RRULE:' + raw.slice(6).split(';')
+    .filter(part => !/^(COUNT|UNTIL)=/.test(part)).concat('UNTIL='+ending).join(';');
+  return { master, first, original, beforeCount, originalRule: raw, trimmed, parts };
+}
+
+function splitFollowing_(record, parsed, form) {
+  const plan = followingPlan_(record);
+  if (plan.first) {
+    // First occurrence: this-and-future is equivalent to the whole series.
+    const body = Object.assign({}, parsed.body);
+    if (parsed.repeat === 'keep') delete body.recurrence;
+    const updated = Calendar.Events.patch(body, EDITOR_CALENDAR_ID,
+      plan.master.id, { sendUpdates: 'none' });
+    return { saved:true, id:updated.id, revision:updated.etag || '', status:'updated-series', scope:'series' };
+  }
+  if (parsed.repeat === 'none' || (parsed.body.recurrence && !parsed.body.recurrence.length)) {
+    throw new Error('Future occurrences must keep a repeat pattern. To stop repeating, edit the entire series instead.');
+  }
+  const master = plan.master;
+  // Explicitly carry over title, description, attachments, and calendar fields:
+  // a PATCH-style body alone would lose these on inserting the new series.
+  const body = {
+    summary: parsed.body.summary, description: parsed.body.description ?? record.selected.description ?? master.description ?? '',
+    location: parsed.body.location, start: parsed.body.start, end: parsed.body.end,
+    visibility: parsed.body.visibility,
+    extendedProperties: { shared: parsed.body.extendedProperties.shared },
+    recurrence: parsed.repeat === 'keep' ? [...master.recurrence] : [...parsed.body.recurrence],
+  };
+  for (const key of ['colorId','transparency','reminders']) {
+    if (master[key] !== undefined) body[key] = master[key];
+  }
+  if (master.attachments?.length) body.attachments = master.attachments.map(a => ({
+    fileUrl:a.fileUrl,title:a.title,mimeType:a.mimeType,
+  }));
+  const newRule = body.recurrence[0];
+  const countMatch = newRule.match(/(?:^|;)COUNT=(\d+)/);
+  const masterCount = Number(plan.parts.COUNT || 0);
+  if (countMatch && masterCount && Number(countMatch[1]) === masterCount) {
+    body.recurrence = [newRule.replace(/COUNT=\d+/, 'COUNT='+(masterCount-plan.beforeCount))];
+  }
+  // Insert first so a failed insertion does not erase the future programme.
+  // If truncation then fails, remove the new series to prevent overlap.
+  const inserted = Calendar.Events.insert(body, EDITOR_CALENDAR_ID, {
+    sendUpdates:'none', supportsAttachments:true,
+  });
+  try {
+    Calendar.Events.patch({ recurrence:[plan.trimmed] }, EDITOR_CALENDAR_ID,
+      master.id, { sendUpdates:'none' });
+  } catch (error) {
+    try { Calendar.Events.remove(EDITOR_CALENDAR_ID, inserted.id, {sendUpdates:'none'}); }
+    catch (rollbackError) {
+      throw new Error('Series split could not finish and the new future series may overlap. Inspect Google Calendar before retrying. '+rollbackError.message);
+    }
+    throw new Error('Series split failed; the new series was rolled back. '+error.message);
+  }
+  return { saved:true,id:inserted.id, revision:inserted.etag||'', status:'split-following',scope:'series' };
 }
 
 function editorSaveEvent(form) {
@@ -354,23 +480,32 @@ function editorSaveEvent(form) {
     // Never let a discarded draft/another event supply a foreign file ID.
     const headerChoice = String(form.headerImageId || '').trim();
     if (headerChoice && headerChoice !== 'none') {
-      const match = (record.target.attachments || []).find(a =>
+      const match = [...(record.target.attachments || []), ...(record.master?.attachments || [])].find(a =>
         a.fileId === headerChoice && /^image\//i.test(a.mimeType || ''));
       if (!match) throw new Error('The selected header image is not attached to this event. Reload and choose again.');
     }
-    const existingShared = (record.target.extendedProperties && record.target.extendedProperties.shared) || {};
+    const existingShared = Object.assign({}, record.master?.extendedProperties?.shared || {},
+      record.target.extendedProperties?.shared || {});
     parsed.body.extendedProperties.shared = Object.assign({}, existingShared, {
       [CATEGORY_KEY]: category_(form.category), [HEADER_IMAGE_KEY]: headerChoice,
-      [FEATURED_KEY]: form.featured === true ? 'true' : 'false',
+      [FEATURED_KEY]: form.visibility === 'private' ? 'false' : (form.featured === true ? 'true' : 'false'),
       [IMAGE_FOCUS_KEY]: imageFocus_(form.imageFocus),
     });
     if (scope === 'occurrence' && record.recurring) {
+      // Native Google Calendar visibility is a series-level property.
+      // Reject a narrower privacy change rather than silently affect the whole series.
+      const previousVisibility = record.master?.visibility || record.target.visibility || 'default';
+      if (parsed.body.visibility !== previousVisibility) {
+        throw new Error('Privacy cannot be changed for just one recurring occurrence. Choose This event and future events or All events in the series.');
+      }
+      delete parsed.body.visibility;
       // Instance exceptions cannot alter recurring masters.
       delete parsed.body.recurrence;
     } else if (parsed.repeat === 'keep') {
       // Complex existing recurrence rules remain unchanged.
       delete parsed.body.recurrence;
     }
+    if (scope === 'following') return splitFollowing_(record, parsed, form);
     // Advanced Calendar's patch method does not expose an If-Match header.
     // We re-read and compare the event revision within a script-wide lock
     // instead of pretending an unsupported extra argument sends headers.
@@ -458,6 +593,16 @@ function editorDeleteEvent(id, scope, revision) {
     const record = fetchTarget_(id, scope);
     if (record.target.etag !== revision) {
       throw new Error('This event has changed. Reload before deleting.');
+    }
+    if (scope === 'following') {
+      const plan = followingPlan_(record);
+      if (!plan.first) {
+        const revised = Calendar.Events.patch({ recurrence: [plan.trimmed] },
+          EDITOR_CALENDAR_ID, plan.master.id, { sendUpdates: 'none' });
+        return { deleted: true, id: record.target.id, scope:'following', remainingSeriesId:revised.id };
+      }
+      Calendar.Events.remove(EDITOR_CALENDAR_ID, plan.master.id, { sendUpdates:'none' });
+      return { deleted:true, id:plan.master.id, scope:'following' };
     }
     Calendar.Events.remove(EDITOR_CALENDAR_ID, record.target.id,
       { sendUpdates: 'none' });

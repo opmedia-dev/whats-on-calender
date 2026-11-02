@@ -139,7 +139,7 @@ function matchesFilters(e) {
 }
 
 export async function loadEvents() {
-  const res = await fetch(new URL('../events.json', import.meta.url), { cache: 'no-cache' });
+  const res = await fetch(new URL('../events.json', import.meta.url), { cache: 'default' });
   if (!res.ok) throw new Error(`Could not load events (${res.status})`);
   const data = await res.json();
   if (data.preview && !document.querySelector('.wo-demo-notice')) {

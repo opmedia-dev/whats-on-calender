@@ -89,8 +89,9 @@ try {
  const cardWidth = (await embed.locator('#highlights .wo-card').first().boundingBox()).width;
  const sectionWidth = (await embed.locator('#highlights').boundingBox()).width;
  assert.ok(sectionWidth > 600, 'desktop content is wide enough to expose a stretched single card');
- assert.ok(cardWidth > 200 && cardWidth <= 341,
-   'one featured card must remain a regular-size card, not stretch: ' + cardWidth);
+ const regularCardWidth = (await embed.locator('#cards .wo-card').first().boundingBox()).width;
+ assert.ok(cardWidth > 200 && Math.abs(cardWidth - regularCardWidth) <= 2,
+   'the single Highlight must match normal event card width: ' + cardWidth + ' vs ' + regularCardWidth);
  assert.equal(await embed.locator('#selected-month').textContent(), monthLabel(current));
 
  await embed.locator('#month-next').click();
@@ -113,8 +114,34 @@ try {
  const narrowWidth = (await embed.locator('#highlights .wo-card').first().boundingBox()).width;
  const narrowSection = (await embed.locator('#highlights').boundingBox()).width;
  assert.ok(narrowWidth <= narrowSection + 1, 'single highlight must fit the mobile container');
+ // Exercise the real embed generator as well as its unit tests.
+ // Existing Duda iframes must be replaced to apply a new loading preference.
+ await page.goto(base + '/index.html');
+ const defaults = [
+  ['loadTimetable','code-timetable','eager'],
+  ['loadMailingHero','code-mailingHero','eager'],
+  ['loadBanner','code-banner','eager'],
+  ['loadMailings','code-mailings','lazy'],
+  ['loadWhatson','code-whatson','lazy'],
+  ['loadCalendar','code-calendar','lazy'],
+ ];
+ for (const [selector,output,expected] of defaults) {
+  assert.equal(await page.locator('#'+selector).inputValue(), expected,
+    selector+' default preference');
+  assert.match(await page.locator('#'+output).inputValue(),
+    new RegExp('loading="'+expected+'"'), output+' generated iframe');
+ }
+ await page.locator('#loadWhatson').selectOption('eager');
+ assert.match(await page.locator('#code-whatson').inputValue(), /loading="eager"/);
+ assert.match(await page.locator('#code-whatson').inputValue(), /data-deeplink/);
+ assert.match(await page.locator('#code-whatson').inputValue(), /whatsonHost/);
+ assert.match(await page.locator('#code-calendar').inputValue(), /loading="lazy"/);
+ await page.locator('#loadBanner').selectOption('lazy');
+ assert.match(await page.locator('#code-banner').inputValue(), /loading="lazy"/);
+ assert.match(await page.locator('#code-timetable').inputValue(), /loading="eager"/);
+
  assert.deepEqual(pageErrors, [], 'no JavaScript page exceptions');
- console.log('PASS: next/previous/current month changes in place, no parent scroll command, consistent single-highlight card on desktop and mobile');
+ console.log('PASS: month navigation and card sizing, plus all embed loading defaults and selective eager/lazy overrides in Chromium');
 } finally {
  if (browser) await browser.close();
  await new Promise(resolve => server.close(resolve));
