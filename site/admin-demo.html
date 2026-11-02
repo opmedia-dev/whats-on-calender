@@ -411,7 +411,7 @@ $('appNoticeClose').addEventListener('click',function(){$('appNotice').hidden=tr
 function status(t,bad){
  $('status').textContent=t;$('status').classList.toggle('error',!!bad);
  if(bad)notify(t,'error');
- else if(/^(?:Event .+saved\.|Deleted from calendar\.|File uploaded and attached)/i.test(t))notify(t,'success');
+ else if(/^(?:Event (?:and file )?saved\.|Deleted from calendar\.|File uploaded and attached)/i.test(t))notify(t,'success');
 }
 function askAction(options){
  const dialog=$('appConfirmDialog'),form=$('appConfirmForm');
@@ -966,8 +966,8 @@ document.querySelectorAll('[data-format]').forEach(function(button){
 $('uploadForm').addEventListener('submit',async function(ev){
  ev.preventDefault();
  if(!linked||!state.id||state.busy)return;
- if(!state.uploadConfigured){$('uploadStatus').textContent='Upload unavailable: configure EDITOR_UPLOAD_FOLDER_ID then deploy.';return}
- if(state.dirty){$('uploadStatus').textContent='Save event changes first, or save and upload the file together.';return}
+ if(!state.uploadConfigured){const message='Upload unavailable: configure EDITOR_UPLOAD_FOLDER_ID then deploy.';$('uploadStatus').textContent=message;status(message,true);return}
+ if(state.dirty){const message='Save event changes first, or save and upload the file together.';$('uploadStatus').textContent=message;status(message,true);return}
  var file=$('uploadAttachment').files[0];
  if(!file)return;
  if(!await askAction({title:'Upload attachment?',message:'Upload this file to the parish Drive folder and link it to the event?',confirmText:'Upload file'}))return;
@@ -979,7 +979,7 @@ $('uploadForm').addEventListener('submit',async function(ev){
   await call('editorUploadFile',$('uploadForm'));
   $('uploadAttachment').value='';
   var loaded=await call('editorGetEvent',state.id,state.scope);
-  put(loaded);$('uploadStatus').textContent='File uploaded and attached to this event.';
+  put(loaded);$('uploadStatus').textContent='File uploaded and attached to this event.';notify('File uploaded and attached to this event.','success');
  }catch(err){$('uploadStatus').textContent=err.message||String(err);status('Attachment upload error: '+(err.message||String(err)),true)}
  finally{pending(false)}
 });
