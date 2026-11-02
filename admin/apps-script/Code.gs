@@ -120,7 +120,8 @@ function editorListEvents(from, through) {
   let pageToken;
   do {
     const response = Calendar.Events.list(EDITOR_CALENDAR_ID, {
-      timeMin: start + 'T00:00:00Z',
+      // Include a UTC buffer so 00:00–01:00 local events during BST are not lost.
+      timeMin: addDay_(start, -1) + 'T00:00:00Z',
       timeMax: addDay_(last, 2) + 'T00:00:00Z',
       maxResults: 250, singleEvents: true, orderBy: 'startTime',
       showDeleted: false, pageToken: pageToken,
