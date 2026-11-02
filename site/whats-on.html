@@ -72,7 +72,6 @@
       highlightsSection.hidden = !highlighted.length;
       setTitle('highlights-title', param('highlightsTitle', 'Highlights'));
       if (highlighted.length) {
-        highlightsEl.style.setProperty('--wo-cols', String(Math.min(num('cols', 3), highlighted.length)));
         highlightsEl.replaceChildren(...highlighted.map((e) => renderCard(e, { showRecurrence: e.recurring, more: moreText })));
       }
 
@@ -131,6 +130,7 @@
         const pages = Math.ceil(items.length / perPage);
         page = Math.min(page, Math.max(0, pages - 1));
         cardsEl.style.setProperty('--wo-cols', String(cols));
+        highlightsEl.style.setProperty('--wo-cols', String(cols));
         regularEl.style.setProperty('--wo-cols', String(Math.min(cols, regular.length || 1)));
         // Repeat labels and recurrence patterns are visible in every view.
         cardsEl.replaceChildren(...items.slice(page * perPage, (page + 1) * perPage)
