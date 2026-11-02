@@ -112,10 +112,40 @@ textarea{resize:vertical;min-height:100px;line-height:1.5}
 .attachment-list{display:grid;gap:5px;margin:7px 0 10px}
 .attachment-item{display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:6px;background:#faf8f6;font-size:12px;overflow-wrap:anywhere}
 .attachment-item a{color:var(--accent);font-weight:650}
-.upload-form{padding:13px 0 0;border-top:1px solid var(--line)}
+.upload-form{padding:14px;border:1px solid #e6ddda;border-radius:9px;background:#fcfbfa;margin:7px 0 16px}
+.upload-heading{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:0 0 10px}
+.upload-heading strong{font-size:13px}.upload-heading small{font-size:11px;color:var(--muted)}
 .upload-form label{font-size:12px;font-weight:650;display:block;margin-bottom:7px}
-.upload-form input[type=file]{font-size:12px;border:0;padding:7px 0;max-width:100%}
-.upload-form .tools{align-items:center}
+.upload-dropzone{position:relative}
+.upload-file-input{position:absolute;width:1px!important;height:1px!important;padding:0!important;margin:0;opacity:0;overflow:hidden}
+.upload-form .upload-drop-target{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:5px;min-height:100px;padding:15px;border:2px dashed #d6c7c7;border-radius:9px;background:#fff;cursor:pointer;text-align:center;font-weight:400;margin:0}
+.upload-drop-target strong{font-size:13px;color:var(--accent)}.upload-drop-target .upload-drop-symbol{font-size:20px;color:var(--accent);line-height:1}
+.upload-drop-target small{font-size:11px;color:var(--muted);font-weight:400}
+.upload-dropzone.is-dragover .upload-drop-target,.upload-dropzone:focus-within .upload-drop-target{border-color:var(--accent);background:#fff3f4}
+.upload-dropzone.has-file .upload-drop-target{min-height:55px;border-style:solid}
+.upload-selected{display:flex;align-items:center;gap:10px;margin:10px 0 0;padding:10px 11px;border:1px solid #ddd2d1;border-radius:7px;background:#fff;min-width:0}
+.upload-selected-info{flex:1;min-width:0}.upload-selected strong{display:block;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.upload-selected small{display:block;font-size:11px;color:var(--muted);margin-top:3px}
+.upload-form .upload-clear{background:#fff;border:1px solid #ddd0d0;border-radius:6px;padding:6px 9px;font-size:11px;font-weight:650;color:var(--accent)}
+.upload-placement{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px;margin:13px 0 0}
+.upload-form .upload-placement label{margin:0}.upload-placement select{max-width:235px}
+.upload-options{margin:12px 0 0;border-top:1px solid #e8e0dd;padding-top:10px}
+.upload-options summary{font-size:12px;font-weight:650;color:var(--accent);cursor:pointer}
+.upload-options label.check{display:flex;margin:12px 0 5px;gap:8px;align-items:center}
+.upload-options .help{margin:0;font-size:11px}
+.upload-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px}
+.upload-actions .help{margin:0;flex:1;min-width:175px}
+.upload-form #uploadStatus{margin:8px 0 0;min-height:0}
+.crop-editor{margin-top:14px;padding:13px;border:1px solid #e5dad8;border-radius:9px;background:#faf8f6}
+.crop-editor-header{display:flex;flex-direction:column;gap:4px;margin-bottom:11px}
+.crop-editor-header strong{font-size:13px}.crop-editor-header small{font-size:11px;color:var(--muted);line-height:1.5}
+.crop-position-row{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.crop-pad{display:grid;grid-template-columns:repeat(3,38px);grid-template-rows:repeat(3,32px);gap:4px}
+.crop-pad button{background:#fff;border:1px solid #d9ced0;border-radius:5px;color:#6b4b53;font-size:17px;font-weight:700;padding:0}
+.crop-pad button:hover{background:#f7e9ec}.crop-pad button[aria-pressed=true]{background:var(--accent);color:#fff;border-color:var(--accent)}
+.crop-position-row .help{margin:0;flex:1;min-width:165px;line-height:1.6}
+@media(max-width:600px){.upload-placement{grid-template-columns:1fr}.upload-placement select{max-width:none}}
+
 
 /* Distinct header and listing/gallery image roles */
 .attachment-item{flex-wrap:wrap}
@@ -126,11 +156,32 @@ textarea{resize:vertical;min-height:100px;line-height:1.5}
 .preview-art #previewHeaderImage{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;object-position:50% 50%;touch-action:none;cursor:grab;user-select:none}
 .preview-art #previewHeaderImage.is-dragging{cursor:grabbing}
 .preview-art.has-photo{aspect-ratio:16/10;min-height:0}
-.image-focus-controls{padding:12px 0 0}.image-focus-controls .focus-row{display:grid;grid-template-columns:82px 1fr 40px;gap:8px;align-items:center;margin-top:8px;font-size:12px}.image-focus-controls input{width:100%;accent-color:var(--accent)}
+.preview-art.has-photo::after{content:'Drag to reposition';position:absolute;bottom:10px;right:10px;padding:5px 9px;background:#211a1bcf;color:#fff;font-size:11px;font-weight:650;border-radius:5px;pointer-events:none}
+.preview-art.has-photo:has(.is-dragging)::after{opacity:0}
 .preview-art #previewHeaderImage[hidden]{display:none}
 .preview-gallery{display:flex;gap:7px;flex-wrap:wrap;padding:10px 12px;background:#f9f7f5;border-top:1px solid var(--line)}
 .preview-gallery img{width:76px;height:59px;object-fit:cover;border-radius:5px;border:1px solid #ddd4d1}
 .preview-gallery .gallery-label{width:100%;font-size:11px;color:var(--muted);font-weight:700}
+.app-confirm-dialog{border:1px solid #e5d7da;border-radius:12px;padding:0;width:min(440px,calc(100vw - 32px));max-width:440px;max-height:90dvh;overflow:auto;background:#fff;box-shadow:0 24px 80px #220c1940;color:#302b2d}
+.app-confirm-dialog::backdrop{background:rgba(30,21,27,.58)}
+.app-confirm-dialog form{padding:0;margin:0}
+.app-confirm-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:16px 19px 12px;border-bottom:1px solid #ece4e4}
+.app-confirm-head h2{font-size:17px;font-weight:750;color:var(--accent);margin:0}
+.app-confirm-x{border:0;border-radius:5px;background:transparent;color:#6b565c;font-size:24px;line-height:1;padding:3px 8px}
+.app-confirm-dialog #appConfirmMessage{font-size:13px;line-height:1.6;margin:0;padding:16px 19px;color:#51454b}
+.app-confirm-dialog #appConfirmInputRow{padding:0 19px;margin:0 0 12px}
+.app-confirm-dialog #appConfirmInputError{color:#aa3344;display:block;min-height:1em;padding-top:5px}
+.app-confirm-actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;padding:13px 19px 18px}
+.app-confirm-actions .btn.danger{background:#a92e42;color:#fff;border-color:#a92e42}
+.app-notice{position:fixed;right:clamp(12px,3vw,30px);bottom:18px;z-index:10000;display:flex;align-items:flex-start;gap:11px;max-width:min(460px,calc(100vw - 24px));width:max-content;padding:13px 14px;background:#fff;border:1px solid #c9dfcd;border-left:4px solid #32794b;border-radius:9px;box-shadow:0 10px 35px #281d2528;color:#264d32}
+.app-notice[data-kind=error]{border-color:#ebcbd2;border-left-color:#b3364c;color:#773241}
+.app-notice[data-kind=warning]{border-color:#eadbbb;border-left-color:#be7e23;color:#815d2a}
+.app-notice p{font-size:12.5px;line-height:1.5;margin:0;flex:1;max-width:370px;overflow-wrap:anywhere}
+.app-notice-icon{font-size:15px;font-weight:800}
+.app-notice button{border:0;background:transparent;color:inherit;font-size:19px;line-height:1;cursor:pointer;padding:0 3px}
+.app-notice[hidden]{display:none!important}
+@media(max-width:600px){.app-notice{right:12px;bottom:12px;left:12px;max-width:none;width:auto}}
+input[aria-invalid=true],select[aria-invalid=true]{border-color:#ba4254!important;box-shadow:0 0 0 1px #ba4254}
 </style>
 </head>
 <body>
@@ -157,7 +208,7 @@ textarea{resize:vertical;min-height:100px;line-height:1.5}
  <section class="panel">
   <div class="panel-heading"><h2>Event details</h2><p>Updates save to the existing parish Google Calendar.</p></div>
   <div class="panel-body">
-   <form id="eventForm">
+   <form id="eventForm" novalidate>
     <fieldset id="scopeBox" hidden><legend>Recurring event: editing scope</legend>
      <div class="scope-options">
       <label class="scope-option"><input type="radio" name="scope" value="occurrence" checked><span>This event only</span></label>
@@ -241,35 +292,63 @@ textarea{resize:vertical;min-height:100px;line-height:1.5}
     </div>
     <div class="field attachments-field">
      <label>Event images and attachments</label>
-     <p class="help">Choose one image as the header for event cards. Other images appear in the event gallery; PDFs and documents appear under Downloads.</p>
+     <p class="help">Select a header image for event cards. Other images appear in the gallery; documents appear under Downloads.</p>
      <div id="attachmentList" class="attachment-list"><span class="muted">No attachments yet</span></div>
      <p id="headerImageHint" class="help">No image selected. The first attached image will be used automatically.</p>
+     <div id="imageFocusControls" class="crop-editor" hidden>
+      <div class="crop-editor-header"><strong>Position header image</strong><small>Drag the picture in the preview for fine adjustments, or choose a quick position.</small></div>
+      <div class="crop-position-row">
+       <div class="crop-pad" role="group" aria-label="Header image position">
+       <button type="button" data-focus="0,0" title="Top left" aria-label="Top left" aria-pressed="false">↖</button>
+       <button type="button" data-focus="50,0" title="Top centre" aria-label="Top centre" aria-pressed="false">↑</button>
+       <button type="button" data-focus="100,0" title="Top right" aria-label="Top right" aria-pressed="false">↗</button>
+       <button type="button" data-focus="0,50" title="Middle left" aria-label="Middle left" aria-pressed="false">←</button>
+       <button type="button" data-focus="50,50" title="Centre image" aria-label="Centre image" aria-pressed="false" id="resetImageFocus">●</button>
+       <button type="button" data-focus="100,50" title="Middle right" aria-label="Middle right" aria-pressed="false">→</button>
+       <button type="button" data-focus="0,100" title="Bottom left" aria-label="Bottom left" aria-pressed="false">↙</button>
+       <button type="button" data-focus="50,100" title="Bottom centre" aria-label="Bottom centre" aria-pressed="false">↓</button>
+       <button type="button" data-focus="100,100" title="Bottom right" aria-label="Bottom right" aria-pressed="false">↘</button>
+       </div>
+       <p class="help">The preview shows the crop on event cards. The original full image remains in event details. Save event to keep this position.</p>
+      </div>
+     </div>
     </div>
-    <div class="form-actions">
-     <div class="tools"><button type="submit" id="save" class="btn primary">Save event</button><button type="button" id="delete" class="btn danger" disabled>Delete…</button></div>
-     <button type="button" id="resetChanges" class="btn">Reset changes</button>
-    </div>
-    <p id="status" class="status" role="status" aria-live="polite"></p>
    </form>
    <form id="uploadForm" class="upload-form" enctype="multipart/form-data">
     <input type="hidden" name="eventId" id="uploadEventId">
     <input type="hidden" name="editScope" id="uploadEditScope" value="occurrence">
-    <div class="field"><label for="imageRole">Image placement</label>
-     <select id="imageRole" name="imageRole">
-      <option value="header">Use as event header</option>
-      <option value="gallery">Add to listing/gallery</option>
-     </select>
-     <p class="help">For PDFs and documents, the placement is always Downloads. A selected file will upload when you Save event; the separate Upload attachment button adds a file without changing event details.</p>
+    <div class="upload-heading"><strong>Add an image or attachment</strong><small>Images, PDF, Word or Excel · Up to 8 MB</small></div>
+    <div class="upload-dropzone" id="uploadDropzone">
+     <input type="file" name="attachment" id="uploadAttachment" class="upload-file-input" accept="image/jpeg,image/png,image/webp,image/gif,application/pdf,.doc,.docx,.xls,.xlsx,.txt">
+     <label for="uploadAttachment" class="upload-drop-target">
+      <span class="upload-drop-symbol" aria-hidden="true">＋</span>
+      <strong>Choose a file or drop it here</strong>
+      <small>Files are added when you save the event</small>
+     </label>
     </div>
-    <label for="uploadAttachment">Add an image, PDF or document (maximum 8 MB)</label>
-     <label class="check" for="optimiseUpload"><input id="optimiseUpload" type="checkbox" checked> Optimise large pictures before uploading (faster)</label>
-     <p class="help">A smaller WebP copy (up to 2400px) is uploaded to Drive for large JPEG/PNG/WebP images. The original on your computer is untouched. Untick to upload the exact file; documents and GIFs are not changed.</p>
-    <div class="tools">
-     <input type="file" name="attachment" id="uploadAttachment" accept="image/jpeg,image/png,image/webp,image/gif,application/pdf,.doc,.docx,.xls,.xlsx,.txt">
-     <button type="submit" id="uploadButton" class="btn" disabled>Upload attachment</button>
+    <div id="uploadSelected" class="upload-selected" hidden>
+     <div class="upload-selected-info"><strong id="uploadSelectedName"></strong><small id="uploadSelectedMeta"></small></div>
+     <button type="button" id="uploadClear" class="upload-clear">Remove</button>
     </div>
-    <p id="uploadStatus" class="status" role="status" aria-live="polite">Save this event before uploading a file.</p>
+    <div class="upload-placement"><label for="imageRole">Image placement</label>
+     <select id="imageRole" name="imageRole"><option value="header">Use as event header</option><option value="gallery">Add to gallery</option></select>
+    </div>
+    <details class="upload-options">
+     <summary>Image upload options</summary>
+     <label class="check" for="optimiseUpload"><input id="optimiseUpload" type="checkbox" checked> Optimise large pictures for faster uploading</label>
+     <p class="help">Large JPEG, PNG or WebP files may be converted to a smaller WebP copy. Untick to keep the exact original. PDFs, documents and GIFs are unchanged.</p>
+    </details>
+    <div class="upload-actions">
+     <p class="help">Use <strong>Save event</strong> below to save changes and upload your selected file together.</p>
+     <button type="submit" id="uploadButton" class="btn" hidden disabled>Upload file only</button>
+    </div>
+    <p id="uploadStatus" class="status" role="status" aria-live="polite"></p>
    </form>
+   <div class="form-actions">
+    <div class="tools"><button type="submit" form="eventForm" id="save" class="btn primary">Save event</button><button type="button" id="delete" class="btn danger" disabled>Delete…</button></div>
+    <button type="button" id="resetChanges" class="btn">Reset changes</button>
+   </div>
+   <p id="status" class="status" role="status" aria-live="polite"></p>
   </div>
  </section>
  <aside class="panel preview" aria-label="Live website preview">
@@ -280,12 +359,6 @@ textarea{resize:vertical;min-height:100px;line-height:1.5}
      <img id="previewHeaderImage" alt="" hidden>
      <span id="artCategory">General</span><div id="artTitle">Your event title</div><span id="artDate">Date to be confirmed</span>
     </div>
-    <div id="imageFocusControls" class="image-focus-controls" hidden>
-      <p class="help">Drag the picture above to reposition its crop. You can also use the sliders. This position will be used on event cards; the full image remains available in event details.</p>
-      <div class="focus-row"><label for="imageFocusX">Horizontal</label><input id="imageFocusX" type="range" min="0" max="100" value="50"><output id="imageFocusXValue" for="imageFocusX">50%</output></div>
-      <div class="focus-row"><label for="imageFocusY">Vertical</label><input id="imageFocusY" type="range" min="0" max="100" value="50"><output id="imageFocusYValue" for="imageFocusY">50%</output></div>
-      <button type="button" id="resetImageFocus" class="btn">Centre image</button>
-     </div>
      <div id="previewGallery" class="preview-gallery" hidden></div>
     <div class="preview-info"><h3 id="pvTitle">Your event title</h3><p id="pvDate">Select an event date</p><p id="pvLocation" hidden></p></div>
    </div>
@@ -295,6 +368,23 @@ textarea{resize:vertical;min-height:100px;line-height:1.5}
  </aside>
 </div>
 </dialog>
+<dialog id="appConfirmDialog" class="app-confirm-dialog" aria-labelledby="appConfirmTitle" aria-describedby="appConfirmMessage">
+ <form id="appConfirmForm" method="dialog">
+  <div class="app-confirm-head"><h2 id="appConfirmTitle">Confirm action</h2><button type="button" id="appConfirmClose" class="app-confirm-x" aria-label="Close dialog">×</button></div>
+  <p id="appConfirmMessage"></p>
+  <div class="field" id="appConfirmInputRow" hidden>
+   <label for="appConfirmInput">Web address</label>
+   <input id="appConfirmInput" type="text" placeholder="https://example.com" autocomplete="url">
+   <small id="appConfirmInputError" role="alert"></small>
+  </div>
+  <div class="app-confirm-actions"><button type="button" id="appConfirmCancel" class="btn">Cancel</button><button type="submit" id="appConfirmYes" class="btn primary">Continue</button></div>
+ </form>
+</dialog>
+<div id="appNotice" class="app-notice" role="status" aria-live="polite" aria-atomic="true" hidden>
+ <span id="appNoticeIcon" class="app-notice-icon" aria-hidden="true">✓</span>
+ <p id="appNoticeText"></p>
+ <button id="appNoticeClose" type="button" aria-label="Dismiss notification">×</button>
+</div>
 <script>
 (function(){
 'use strict';
@@ -309,8 +399,95 @@ function add(s,n){var d=fromDate(s);d.setUTCDate(d.getUTCDate()+n);return key(d)
 function today(){return new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/London',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())}
 function pretty(s,opts){return new Intl.DateTimeFormat('en-GB',opts).format(fromDate(s))}
 function startWeek(s){var d=fromDate(s);return add(s,-((d.getUTCDay()+6)%7))}
-function status(t,bad){$('status').textContent=t;$('status').classList.toggle('error',!!bad)}
-function pending(v){state.busy=v;$('save').disabled=v||!linked;$('delete').disabled=v||!linked||!state.id;$('newEvent').disabled=v;$('refresh').disabled=v;$('uploadButton').disabled=v||!linked||!state.id||!state.uploadConfigured}
+let noticeTimer=null;
+function notify(message,kind){
+ if(noticeTimer)clearTimeout(noticeTimer);
+ const toast=$('appNotice');
+ // Native modal dialogs occupy the top layer and block clicks to fixed
+ // notices outside them. Put active-editor notices inside the modal itself.
+ const host=$('editorDialog').open?$('editorDialog'):document.body;
+ if(toast.parentElement!==host)host.appendChild(toast);
+ toast.hidden=false;
+ toast.dataset.kind=kind||'success';
+ $('appNoticeIcon').textContent=kind==='error'?'!':kind==='warning'?'!':'✓';
+ $('appNoticeText').textContent=String(message||'');
+ if(kind==='success')noticeTimer=setTimeout(function(){toast.hidden=true},6500);
+}
+$('appNoticeClose').addEventListener('click',function(){$('appNotice').hidden=true;if(noticeTimer)clearTimeout(noticeTimer)});
+function status(t,bad){
+ $('status').textContent=t;$('status').classList.toggle('error',!!bad);
+ if(bad)notify(t,'error');
+ else if(/^(?:Event (?:and file )?saved\.|Deleted from calendar\.|File uploaded and attached)/i.test(t))notify(t,'success');
+}
+function validateEditor(){
+ const required=[['title','Enter an event title.'],['startDate','Choose a start date.'],['endDate','Choose an end date.']];
+ if(!$('allDay').checked)required.push(['startTime','Choose a start time.'],['endTime','Choose an end time.']);
+ for(const [id,message] of required){
+  if(!$(id).value.trim()){
+   $(id).setAttribute('aria-invalid','true');
+   $(id).focus();status(message,true);return false;
+  }
+  $(id).removeAttribute('aria-invalid');
+ }
+ const start=$('startDate').value+($('allDay').checked?'':'T'+$('startTime').value);
+ const end=$('endDate').value+($('allDay').checked?'':'T'+$('endTime').value);
+ if(end<start){
+  $('endDate').setAttribute('aria-invalid','true');
+  $('endDate').focus();status('The end date and time must be after the start.',true);return false;
+ }
+ $('endDate').removeAttribute('aria-invalid');
+ return true;
+}
+function askAction(options){
+ const dialog=$('appConfirmDialog'),form=$('appConfirmForm');
+ const opts=options||{};
+ $('appConfirmTitle').textContent=opts.title||'Confirm action';
+ $('appConfirmMessage').textContent=opts.message||'Continue?';
+ $('appConfirmInputRow').hidden=!opts.input;
+ $('appConfirmInputError').textContent='';
+ $('appConfirmInput').value=opts.value||'';
+ $('appConfirmYes').textContent=opts.confirmText||'Continue';
+ $('appConfirmYes').classList.toggle('danger',!!opts.danger);
+ $('appConfirmYes').classList.toggle('primary',!opts.danger);
+ return new Promise(function(resolve){
+  let resolved=false;
+  function done(value){
+   if(resolved)return;
+   resolved=true;
+   form.removeEventListener('submit',submit);
+   $('appConfirmCancel').removeEventListener('click',cancel);
+   $('appConfirmClose').removeEventListener('click',cancel);
+   dialog.removeEventListener('cancel',escape);
+   dialog.removeEventListener('close',closed);
+   if(dialog.open)dialog.close();
+   resolve(value);
+  }
+  function cancel(){done(null)}
+  function escape(e){e.preventDefault();done(null)}
+  function closed(){done(null)}
+  function submit(e){
+   e.preventDefault();
+   if(opts.input){
+    const value=$('appConfirmInput').value.trim();
+    if(!/^(?:https:\/\/|mailto:)/i.test(value)){
+     $('appConfirmInputError').textContent='Enter a valid https:// address or mailto: link.';
+     $('appConfirmInput').focus();return;
+    }
+    done(value);
+   }else done(true);
+  }
+  form.addEventListener('submit',submit);
+  $('appConfirmCancel').addEventListener('click',cancel);
+  $('appConfirmClose').addEventListener('click',cancel);
+  dialog.addEventListener('cancel',escape);
+  dialog.addEventListener('close',closed);
+  dialog.showModal();
+  if(opts.input)$('appConfirmInput').focus();
+  else $('appConfirmCancel').focus();
+ });
+}
+
+function pending(v){state.busy=v;$('save').disabled=v||!linked;$('delete').disabled=v||!linked||!state.id;$('newEvent').disabled=v;$('refresh').disabled=v;updateUploadUI()}
 function call(fn){var args=Array.prototype.slice.call(arguments,1);return new Promise(function(resolve,reject){
  if(!linked){reject(new Error('This is a demonstration, not connected to Google Calendar.'));return}
  // A missing callback must not leave the editor controls disabled indefinitely.
@@ -356,16 +533,28 @@ function safeRich(html){
  return host.innerHTML;
 }
 function richHTML(){return safeRich($('description').innerHTML)}
+function updateUploadUI(){
+ const file=$('uploadAttachment').files[0];
+ $('uploadDropzone').classList.toggle('has-file',!!file);
+ $('uploadSelected').hidden=!file;
+ if(file){
+  $('uploadSelectedName').textContent=file.name;
+  $('uploadSelectedMeta').textContent=(file.size<1024*1024?Math.max(1,Math.round(file.size/1024))+' KB':(file.size/1024/1024).toFixed(1)+' MB')+' · '+(file.type.split('/').pop()||'File').toUpperCase();
+ }
+ $('uploadButton').hidden=!file||!state.id;
+ $('uploadButton').disabled=state.busy||!linked||!state.uploadConfigured||!state.id||!file||state.dirty;
+}
 function resetDraftImage(){
  if(state.draftImageUrl)URL.revokeObjectURL(state.draftImageUrl);
  state.draftImageUrl='';
+ state.focusBeforeDraft=null;
  $('uploadForm').reset();
  $('uploadEventId').value=state.id||'';
  $('uploadEditScope').value=state.scope||'occurrence';
  $('imageRole').value='header';
  $('uploadStatus').textContent=linked&&!state.uploadConfigured
-  ? 'Image uploads are unavailable until EDITOR_UPLOAD_FOLDER_ID is configured and deployed.'
-  : 'Select a file and press Save event to save and upload together.';
+  ? 'Image uploads are unavailable until EDITOR_UPLOAD_FOLDER_ID is configured and deployed.' : '';
+ updateUploadUI();
 }
 // Reduce bytes sent through Apps Script, preserving the original local file.
 async function optimiseUpload(){
@@ -390,7 +579,7 @@ async function optimiseUpload(){
   input.files=transfer.files;
   if(state.draftImageUrl)URL.revokeObjectURL(state.draftImageUrl);
   state.draftImageUrl=URL.createObjectURL(input.files[0]);
-  refreshImagePreview();
+  refreshImagePreview();updateUploadUI();
   const kb=n=>Math.max(1,Math.round(n/1024))+' KB';
   $('uploadStatus').textContent='Optimised '+kb(file.size)+' → '+kb(output.size)+'. Uploading the smaller copy…';
  }catch(error){
@@ -413,13 +602,14 @@ function setImageFocus(x,y){
  const clamp=function(n){return Math.max(0,Math.min(100,Math.round(n)))};
  state.imageFocus=clamp(x)+','+clamp(y);
  state.dirty=true;
- renderImageFocus();
+ renderImageFocus();updateUploadUI();
 }
 function renderImageFocus(){
  const xy=focusNumbers();
- $('imageFocusX').value=xy[0];$('imageFocusY').value=xy[1];
- $('imageFocusXValue').textContent=xy[0]+'%';$('imageFocusYValue').textContent=xy[1]+'%';
  $('previewHeaderImage').style.objectPosition=xy[0]+'% '+xy[1]+'%';
+ document.querySelectorAll('.crop-pad button[data-focus]').forEach(function(button){
+  button.setAttribute('aria-pressed',String(button.dataset.focus===state.imageFocus));
+ });
 }
 function refreshImagePreview(){
  const images=state.attachments.filter(a=>/^image\//i.test(a.mimeType||''));
@@ -492,9 +682,11 @@ function showEditor(title){
  $('dialogTitle').textContent=title;
  if(!$('editorDialog').open)$('editorDialog').showModal();
 }
-function closeEditor(){
- if((state.dirty || $('uploadAttachment').files.length) &&
-    !confirm('Discard your unsaved event changes and selected files?'))return;
+async function closeEditor(){
+ if(state.busy)return;
+ if(state.dirty || $('uploadAttachment').files.length){
+  if(!await askAction({title:'Discard unsaved changes?',message:'Changes and any selected files will be discarded. The saved calendar event remains unchanged.',confirmText:'Discard changes',danger:true}))return;
+ }
  state.dirty=false;resetDraftImage();$('editorDialog').close();
 }
 function weekOf(date){
@@ -673,18 +865,19 @@ async function shift(direction){
 async function setMode(m){state.mode=m;try{await range()}catch(e){status(e.message||String(e),true)}}
 async function save(ev){
  ev.preventDefault();if(!linked||state.busy)return;
+ if(!validateEditor())return;
  var v=values(),file=$('uploadAttachment').files[0];
  if(file){
   if(!state.uploadConfigured){
    var problem='Cannot save the selected file: the parish Drive upload folder is not configured. Set EDITOR_UPLOAD_FOLDER_ID in Code.gs, then deploy a new version.';
    status(problem,true);$('uploadStatus').textContent=problem;return;
   }
-  if(!confirm('Save this event and upload "'+file.name+'" to the public parish Drive folder?'))return;
+  if(!await askAction({title:'Save event and upload file?',message:'Save the event and upload "'+file.name+'" to the parish Drive folder?',confirmText:'Save and upload'}))return;
  }
  if(state.active&&state.active.isRecurring&&state.scope==='series'
-   && !confirm('Change ALL events in this recurring series, including earlier dates?'))return;
+   && !await askAction({title:'Change all recurring events?',message:'This will change the entire series, including earlier dates.',confirmText:'Update whole series'}))return;
  if(state.active&&state.active.isRecurring&&state.scope==='following'
-   && !confirm('Change THIS event and all FUTURE occurrences? Earlier dates remain unchanged. This splits the recurrence into two calendar series.'))return;
+   && !await askAction({title:'Change this and future events?',message:'The series will split at this date. Earlier dates stay unchanged.',confirmText:'Update future events'}))return;
  var saved=null,uploaded=false;
  pending(true);status('Saving event to Google Calendar…');
  try{
@@ -720,7 +913,7 @@ async function save(ev){
 async function remove(){
  if(!linked||!state.id)return;
  var target=state.active&&state.active.isRecurring?(state.scope==='series'?'entire series':state.scope==='following'?'this event and every future occurrence':'one occurrence'):'event';
- if(!confirm('Delete this '+target+' permanently from Google Calendar?'))return;
+ if(!await askAction({title:'Delete '+target+'?',message:'Permanently delete '+target+' from Google Calendar? This cannot be undone.',confirmText:'Delete',danger:true}))return;
  pending(true);status('Deleting…');
  try{await call('editorDeleteEvent',state.id,state.scope,state.revision);await range();state.dirty=false;resetDraftImage();$('editorDialog').close();status('Deleted from calendar.')}
  catch(e){status(e.message||String(e),true);pending(false)}
@@ -736,10 +929,14 @@ $('refresh').addEventListener('click',load);
 $('eventForm').addEventListener('submit',save);
 $('delete').addEventListener('click',remove);
 $('resetChanges').addEventListener('click',function(){if(state.id){state.dirty=false;openEvent(state.id,state.scope)}else newEntry($('startDate').value||today())});
-document.querySelectorAll('input[name=scope]').forEach(function(el){el.addEventListener('change',function(){
+document.querySelectorAll('input[name=scope]').forEach(function(el){el.addEventListener('change',async function(){
  if(!el.checked||!state.id)return;
- if(state.dirty&&!confirm('Changing the editing scope will discard unsaved changes. Continue?')){
-  var original=document.querySelector('input[name=scope][value='+state.scope+']');if(original)original.checked=true;return;
+ if(state.dirty){
+  const ok=await askAction({title:'Change editing scope?',message:'Switching the recurrence scope discards unsaved editor changes.',confirmText:'Discard and switch',danger:true});
+  if(!ok){
+   const original=document.querySelector('input[name=scope][value='+state.scope+']');if(original)original.checked=true;
+   return;
+  }
  }
  state.dirty=false;openEvent(state.active?.selectedId||state.id,el.value);
 })});
@@ -751,15 +948,20 @@ $('description').addEventListener('paste',function(e){
 });
 document.querySelectorAll('[data-format]').forEach(function(button){
  button.addEventListener('mousedown',function(e){e.preventDefault()});
- button.addEventListener('click',function(){
-  $('description').focus();
-  var action=button.dataset.format;
+ button.addEventListener('click',async function(){
+  const action=button.dataset.format;
   if(action==='createLink'){
-   var href=prompt('Enter a web link (https://) or email address (mailto:)');
+   const selection=window.getSelection();
+   const range=selection&&selection.rangeCount?selection.getRangeAt(0).cloneRange():null;
+   const href=await askAction({title:'Add a link',message:'Enter a secure website address or email link.',input:true,confirmText:'Insert link'});
    if(!href)return;
-   if(!/^(?:https:\/\/|mailto:)/i.test(href)){status('Links must use https:// or mailto:',true);return}
+   $('description').focus();
+   if(range){selection.removeAllRanges();selection.addRange(range)}
    document.execCommand('createLink',false,href);
-  }else document.execCommand(action,false,null);
+  }else{
+   $('description').focus();
+   document.execCommand(action,false,null);
+  }
   state.changed=true;state.dirty=true;preview();
  });
 });
@@ -781,18 +983,21 @@ document.querySelectorAll('[data-format]').forEach(function(button){
  });
  function end(){start=null;img.classList.remove('is-dragging')}
  img.addEventListener('pointerup',end);img.addEventListener('pointercancel',end);
- $('imageFocusX').addEventListener('input',function(){setImageFocus(Number(this.value),focusNumbers()[1])});
- $('imageFocusY').addEventListener('input',function(){setImageFocus(focusNumbers()[0],Number(this.value))});
- $('resetImageFocus').addEventListener('click',function(){setImageFocus(50,50)});
+ document.querySelectorAll('.crop-pad button[data-focus]').forEach(function(button){
+  button.addEventListener('click',function(){
+   const values=button.dataset.focus.split(',').map(Number);
+   setImageFocus(values[0],values[1]);
+  });
+ });
 })();
 $('uploadForm').addEventListener('submit',async function(ev){
  ev.preventDefault();
  if(!linked||!state.id||state.busy)return;
- if(!state.uploadConfigured){$('uploadStatus').textContent='Upload unavailable: configure EDITOR_UPLOAD_FOLDER_ID then deploy.';return}
- if(state.dirty){$('uploadStatus').textContent='Save event changes first, or save and upload the file together.';return}
+ if(!state.uploadConfigured){const message='Upload unavailable: configure EDITOR_UPLOAD_FOLDER_ID then deploy.';$('uploadStatus').textContent=message;status(message,true);return}
+ if(state.dirty){const message='Save event changes first, or save and upload the file together.';$('uploadStatus').textContent=message;status(message,true);return}
  var file=$('uploadAttachment').files[0];
  if(!file)return;
- if(!confirm('This file will be publicly accessible from the event. Upload it to the parish Drive folder?'))return;
+ if(!await askAction({title:'Upload attachment?',message:'Upload this file to the parish Drive folder and link it to the event?',confirmText:'Upload file'}))return;
  $('uploadEventId').value=state.id;$('uploadEditScope').value=state.scope;
  pending(true);$('uploadStatus').textContent='Uploading to Google Drive and attaching to the event…';
  try{
@@ -801,7 +1006,7 @@ $('uploadForm').addEventListener('submit',async function(ev){
   await call('editorUploadFile',$('uploadForm'));
   $('uploadAttachment').value='';
   var loaded=await call('editorGetEvent',state.id,state.scope);
-  put(loaded);$('uploadStatus').textContent='File uploaded and attached to this event.';
+  put(loaded);$('uploadStatus').textContent='File uploaded and attached to this event.';notify('File uploaded and attached to this event.','success');
  }catch(err){$('uploadStatus').textContent=err.message||String(err);status('Attachment upload error: '+(err.message||String(err)),true)}
  finally{pending(false)}
 });
@@ -811,13 +1016,42 @@ $('uploadAttachment').addEventListener('change',function(){
  const file=this.files[0];
  if(file&&file.type.startsWith('image/'))state.draftImageUrl=URL.createObjectURL(file);
  if(file&&!file.type.startsWith('image/'))$('imageRole').value='gallery';
- if(file&&file.type.startsWith('image/')&&$('imageRole').value==='header'){state.imageFocus='50,50';state.dirty=true}
- refreshImagePreview();
- $('uploadStatus').textContent=file
-  ? (state.uploadConfigured?'Selected file will upload when you Save event.':'Upload unavailable until the parish Drive folder is configured.')
-  : 'No file selected.';
+ if(file&&file.type.startsWith('image/')&&$('imageRole').value==='header'){
+  if(state.focusBeforeDraft===null||state.focusBeforeDraft===undefined)state.focusBeforeDraft=state.imageFocus;
+  state.imageFocus='50,50';state.dirty=true;
+ }
+ refreshImagePreview();updateUploadUI();
+ $('uploadStatus').textContent=file&&!state.uploadConfigured?'Upload unavailable until the parish Drive folder is configured.':'';
 });
-$('imageRole').addEventListener('change',refreshImagePreview);
+$('imageRole').addEventListener('change',function(){
+ const file=$('uploadAttachment').files[0];
+ if(file&&file.type.startsWith('image/')&&this.value==='header'){
+  if(state.focusBeforeDraft===null||state.focusBeforeDraft===undefined)state.focusBeforeDraft=state.imageFocus;
+  state.imageFocus='50,50';state.dirty=true;
+ }
+ refreshImagePreview();updateUploadUI();
+});
+$('uploadClear').addEventListener('click',function(){
+ $('uploadAttachment').value='';
+ if(state.draftImageUrl)URL.revokeObjectURL(state.draftImageUrl);
+ state.draftImageUrl='';
+ if(state.focusBeforeDraft!==null&&state.focusBeforeDraft!==undefined)state.imageFocus=state.focusBeforeDraft;
+ state.focusBeforeDraft=null;$('uploadStatus').textContent='';
+ refreshImagePreview();updateUploadUI();
+});
+(function(){
+ const zone=$('uploadDropzone');
+ zone.addEventListener('dragover',function(event){event.preventDefault();event.dataTransfer.dropEffect='copy';zone.classList.add('is-dragover')});
+ zone.addEventListener('dragleave',function(event){if(!zone.contains(event.relatedTarget))zone.classList.remove('is-dragover')});
+ zone.addEventListener('drop',function(event){
+  event.preventDefault();zone.classList.remove('is-dragover');
+  if(!event.dataTransfer||!event.dataTransfer.files.length)return;
+  if(typeof DataTransfer==='undefined')return;
+  const transfer=new DataTransfer();transfer.items.add(event.dataTransfer.files[0]);
+  $('uploadAttachment').files=transfer.files;
+  $('uploadAttachment').dispatchEvent(new Event('change',{bubbles:true}));
+ });
+})();
 $('allDay').addEventListener('change',function(){state.dirty=true;adjustAllDay();preview()});
 $('featured').addEventListener('change',function(){state.dirty=true;preview()});
 $('visibility').addEventListener('change',function(){state.dirty=true;if(this.value==='private')$('featured').checked=false;preview()});

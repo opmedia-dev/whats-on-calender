@@ -50,10 +50,13 @@ try {
   assert.equal(await page.locator('#previewHeaderImage').isVisible(), true,
     'unsaved image should preview in the current draft');
   assert.equal(await page.locator('#imageFocusControls').isVisible(),true);
-  await page.locator('#imageFocusY').fill('80');
-  assert.equal(await page.locator('#previewHeaderImage').evaluate(el=>el.style.objectPosition),'50% 80%');
-  await page.locator('#imageFocusX').fill('25');
-  assert.equal(await page.locator('#previewHeaderImage').evaluate(el=>el.style.objectPosition),'25% 80%');
+  assert.equal(await page.locator('#uploadSelected').isVisible(),true,'selected file has clear summary');
+  assert.equal(await page.locator('#uploadSelectedName').textContent(),'draft-header.png');
+  assert.equal(await page.locator('.crop-pad button').count(),9);
+  await page.locator('.crop-pad button[data-focus="50,100"]').click();
+  assert.equal(await page.locator('#previewHeaderImage').evaluate(el=>el.style.objectPosition),'50% 100%');
+  await page.locator('.crop-pad button[data-focus="0,0"]').click();
+  assert.equal(await page.locator('#previewHeaderImage').evaluate(el=>el.style.objectPosition),'0% 0%');
   await page.locator('#resetImageFocus').click();
   assert.equal(await page.locator('#previewHeaderImage').evaluate(el=>el.style.objectPosition),'50% 50%');
   const rect = await page.locator('#previewHeaderImage').boundingBox();
@@ -67,6 +70,11 @@ try {
   assert.equal(await page.locator('#previewGallery').isVisible(), true,
     'gallery selection should not replace the header');
   await page.locator('#closeEditor').click();
+  assert.equal(await page.locator('#appConfirmDialog').isVisible(),true,'discard confirmation is rendered on-site');
+  await page.locator('#appConfirmCancel').click();
+  assert.equal(await page.locator('#editorDialog').evaluate(el => el.open),true,'cancelling keeps the editor open');
+  await page.locator('#closeEditor').click();
+  await page.locator('#appConfirmYes').click();
   assert.equal(await page.locator('#editorDialog').evaluate(el => el.open), false);
   await page.locator('.event-pill').first().click();
   await assertModal('existing event after discarded draft image');
@@ -81,7 +89,17 @@ try {
   await assertModal('New event');
   await page.locator('#title').fill('Test Parish Event');
   assert.equal(await page.locator('#pvTitle').textContent(), 'Test Parish Event');
+  await page.locator('#description').fill('Read details');
+  await page.locator('[data-format="createLink"]').click();
+  assert.equal(await page.locator('#appConfirmDialog').isVisible(),true,'link entry uses an in-app dialog');
+  await page.locator('#appConfirmInput').fill('javascript:alert(1)');
+  await page.locator('#appConfirmYes').click();
+  assert.match(await page.locator('#appConfirmInputError').textContent(),/valid https:/);
+  assert.equal(await page.locator('#appConfirmDialog').isVisible(),true,'invalid URL remains in the in-app prompt');
+  await page.locator('#appConfirmCancel').click();
+  assert.equal(await page.locator('#appConfirmDialog').isVisible(),false);
   await page.locator('#closeEditor').click();
+  await page.locator('#appConfirmYes').click();
   assert.equal(await page.locator('#editorDialog').evaluate(el => el.open), false, 'close should dismiss modal');
 
   await page.locator('.date-btn').first().click();
@@ -97,6 +115,7 @@ try {
   await page.locator('#repeatEnds').selectOption('count');
   assert.equal(await page.locator('#repeatCountField').isVisible(), true, 'count end should show input');
   await page.locator('#closeEditor').click();
+  await page.locator('#appConfirmYes').click();
 
   await page.locator('#newEvent').click();
   await assertModal('reopening New event after editing');
@@ -183,12 +202,30 @@ try {
   await linkedPage.locator('#visibility').selectOption('public');
   assert.equal(await linkedPage.locator('#visibility').inputValue(),'public');
   await linkedPage.locator('input[name=scope][value=series]').check();
+  await linkedPage.locator('#appConfirmDialog').waitFor();
+  await linkedPage.locator('#appConfirmYes').click();
   await linkedPage.waitForFunction(() => {
     return document.querySelector('input[name=scope][value=series]').checked &&
       !document.getElementById('visibility').disabled &&
       document.getElementById('visibility').value==='private';
   });
   assert.match(await linkedPage.locator('#visibilityHint').textContent(), /every event in the series/);
+  await linkedPage.locator('#title').fill('');
+  await linkedPage.locator('#save').click();
+  assert.equal(await linkedPage.locator('#appNotice').isVisible(),true,'required-field errors appear within editor');
+  assert.match(await linkedPage.locator('#appNoticeText').textContent(),/Enter an event title/);
+  assert.equal(await linkedPage.locator('#title').getAttribute('aria-invalid'),'true');
+  await linkedPage.locator('#title').fill('Private weekly meeting');
+  await linkedPage.locator('#appNoticeClose').click();
+  await linkedPage.locator('#uploadAttachment').setInputFiles({
+    name:'testing.png',mimeType:'image/png',buffer:tinyPng,
+  });
+  await linkedPage.locator('#save').click();
+  assert.equal(await linkedPage.locator('#appNotice').isVisible(),true,'an upload error is shown in-app');
+  assert.equal(await linkedPage.locator('#appNotice').getAttribute('data-kind'),'error');
+  assert.match(await linkedPage.locator('#appNoticeText').textContent(),/Drive upload folder is not configured/);
+  await linkedPage.locator('#appNoticeClose').click();
+  assert.equal(await linkedPage.locator('#appNotice').isVisible(),false,'error notification can be dismissed');
   await linkedPage.close();
 
   await page.setViewportSize({ width: 390, height: 780 });
