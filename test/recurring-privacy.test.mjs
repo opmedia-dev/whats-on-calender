@@ -90,15 +90,19 @@ test('non-recurring event can become private through native Calendar visibility'
  assert.ok(standAlone);
 });
 
-test('this-event-only hides one occurrence from public embeds without changing native Google Calendar series visibility',()=>{
+test('this-event-only supports non-privacy edits but refuses native series privacy changes',()=>{
  const {context,form,calls}=fixture();
- const res=context.editorSaveEvent({...form,editScope:'occurrence',visibility:'private',repeat:'none'});
- assert.equal(res.status,'updated');
+ assert.throws(
+  ()=>context.editorSaveEvent({...form,editScope:'occurrence',visibility:'private',repeat:'none'}),
+  /Privacy cannot be changed for just one recurring occurrence/
+ );
+ assert.equal(calls.filter(c=>c.method==='patch').length,0);
+ const result=context.editorSaveEvent({...form,editScope:'occurrence',visibility:'default',repeat:'none'});
+ assert.equal(result.status,'updated');
  const patches=calls.filter(c=>c.method==='patch');
  assert.equal(patches.length,1);
  assert.equal(patches[0].id,'weekly-series_20261115T100000Z');
- assert.equal(patches[0].body.extendedProperties.shared.woPrivate,'true');
- assert.equal(patches[0].body.extendedProperties.shared.woFeatured,'false');
+ assert.equal(patches[0].body.summary,'Updated Coffee Morning');
  assert.equal('visibility' in patches[0].body,false);
  assert.equal('recurrence' in patches[0].body,false);
 });
@@ -166,7 +170,9 @@ test('editor exposes every scope and private-event control while public sync hid
  }
  assert.match(editor,/id="visibility"/);
  assert.match(editor,/state\.scope===\x27following\x27/);
- assert.match(sync,/e\.extendedProperties\?\.shared\?\.woPrivate === 'false'/);
- assert.match(sync,/e\.extendedProperties\?\.shared\?\.woPrivate === 'true'/);
+ assert.match(sync,/e\.visibility === 'private'/);
+ assert.match(sync,/!isHidden\(masters\.get\(e\.recurringEventId\) \|\| \{\}\)/);
+ assert.doesNotMatch(sync,/woPrivate/);
+ assert.match(editor,/\$\('visibility'\)\.disabled=!!e\.isRecurring && state\.scope==='occurrence'/);
  assert.match(sync,/events = events\.filter[\s\S]*?Attachment metadata/);
 });
