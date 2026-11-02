@@ -94,6 +94,20 @@ textarea{resize:vertical;min-height:100px;line-height:1.5}
 .editor-dialog .preview-art{min-height:210px}
 @media(max-width:930px){.editor-dialog .layout{grid-template-columns:1fr}.editor-dialog .layout>.panel:first-child{border-right:0;border-bottom:1px solid var(--line)}.editor-dialog .preview{position:static}}
 @media(max-width:600px){.editor-dialog{width:calc(100vw - 12px);max-height:96dvh;border-radius:9px}.dialog-bar{padding:12px 15px}.repeat-config .repeat-row{grid-template-columns:1fr;gap:4px}}
+
+.formatbar{display:flex;flex-wrap:wrap;gap:4px;border:1px solid #ded7d4;border-radius:7px 7px 0 0;background:#f8f5f3;padding:6px}
+.formatbar button{border:1px solid transparent;background:transparent;border-radius:4px;padding:5px 10px;font-size:12px}
+.formatbar button:hover{border-color:#dccdd0;background:white}
+.rich-editor{border:1px solid #ded7d4;border-top:0;border-radius:0 0 7px 7px;min-height:128px;max-height:320px;overflow:auto;padding:12px;font-size:13px;line-height:1.55;background:white;outline-offset:2px}
+.rich-editor:empty::before{content:attr(data-placeholder);color:#989095}
+.rich-editor p{margin:0 0 8px}.rich-editor ul,.rich-editor ol{padding-left:22px}
+.attachment-list{display:grid;gap:5px;margin:7px 0 10px}
+.attachment-item{display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:6px;background:#faf8f6;font-size:12px;overflow-wrap:anywhere}
+.attachment-item a{color:var(--accent);font-weight:650}
+.upload-form{padding:13px 0 0;border-top:1px solid var(--line)}
+.upload-form label{font-size:12px;font-weight:650;display:block;margin-bottom:7px}
+.upload-form input[type=file]{font-size:12px;border:0;padding:7px 0;max-width:100%}
+.upload-form .tools{align-items:center}
 </style>
 </head>
 <body>
@@ -177,14 +191,37 @@ textarea{resize:vertical;min-height:100px;line-height:1.5}
      <div class="field"><label for="endTime">End time</label><input id="endTime" type="time" required></div>
     </div>
     <div class="field"><label for="location">Location</label><input id="location" maxlength="1000" placeholder="Church, hall or another venue"></div>
-    <div class="field"><label for="description">Description</label><textarea id="description" rows="4" placeholder="Event details for visitors…"></textarea>
-      <p class="warning" id="descriptionWarning" hidden>Google Calendar contains formatted text for this event. Changing its description here will replace that formatting. Leaving it unchanged preserves the original description.</p>
+    <div class="field"><label id="descriptionLabel" for="description">Description</label>
+     <div class="formatbar" role="toolbar" aria-label="Text formatting">
+      <button type="button" data-format="bold" aria-label="Bold"><strong>B</strong></button>
+      <button type="button" data-format="italic" aria-label="Italic"><em>I</em></button>
+      <button type="button" data-format="insertUnorderedList">• List</button>
+      <button type="button" data-format="insertOrderedList">1. List</button>
+      <button type="button" data-format="createLink">Link</button>
+     </div>
+     <div id="description" class="rich-editor" contenteditable="true" role="textbox" aria-labelledby="descriptionLabel" aria-multiline="true" data-placeholder="Event details for visitors…"></div>
+     <p class="help">Use the toolbar for bold, italic, lists and links. Formatting is retained in Google Calendar.</p>
+    </div>
+    <div class="field attachments-field">
+     <label>Images, PDFs and attachments</label>
+     <div id="attachmentList" class="attachment-list"><span class="muted">No attachments yet</span></div>
+     <p class="help">Attachments are stored in the parish Google Drive folder. Files attached to public events will be publicly viewable.</p>
     </div>
     <div class="form-actions">
      <div class="tools"><button type="submit" id="save" class="btn primary">Save event</button><button type="button" id="delete" class="btn danger" disabled>Delete…</button></div>
      <button type="button" id="resetChanges" class="btn">Reset changes</button>
     </div>
     <p id="status" class="status" role="status" aria-live="polite"></p>
+   </form>
+   <form id="uploadForm" class="upload-form" enctype="multipart/form-data">
+    <input type="hidden" name="eventId" id="uploadEventId">
+    <input type="hidden" name="editScope" id="uploadEditScope" value="occurrence">
+    <label for="uploadAttachment">Add an image, PDF or document (maximum 8 MB)</label>
+    <div class="tools">
+     <input type="file" name="attachment" id="uploadAttachment" accept="image/jpeg,image/png,image/webp,image/gif,application/pdf,.doc,.docx,.xls,.xlsx,.txt">
+     <button type="submit" id="uploadButton" class="btn" disabled>Upload attachment</button>
+    </div>
+    <p id="uploadStatus" class="status" role="status" aria-live="polite">Save this event before uploading a file.</p>
    </form>
   </div>
  </section>
