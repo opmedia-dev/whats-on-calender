@@ -155,6 +155,7 @@ export async function loadEvents() {
   const details = data.details || {};
   for (const d of Object.values(details)) {
     if (d.image) { d.image.src = resolve(d.image.src); d.image.small = resolve(d.image.small); }
+    for (const g of d.gallery || []) { g.src = resolve(g.src); g.small = resolve(g.small); }
     for (const a of d.attachments || []) a.url = resolve(a.url);
   }
   const events = (data.events || []).map((e) => {
@@ -500,6 +501,13 @@ export function renderDetail(e, events, { backLabel = 'Back', onBack, onNavigate
         info.contacts.phones.map((p) => h('li', {}, icon('phone'), h('a', { href: p.href }, p.number)))))
     : null;
 
+  const gallery = info.gallery?.length
+    ? h('section', { class: 'wo-detail-gallery wo-panel' }, h('h3', {}, 'More event photos'),
+      h('div', { class: 'wo-gallery-grid' }, info.gallery.map((photo) =>
+        h('a', { href: photo.src, target: '_blank', rel: 'noopener noreferrer', title: 'Open photo' },
+          h('img', { src: photo.small || photo.src, alt: photo.alt || e.title, loading: 'lazy' })))))
+    : null;
+
   const files = info.attachments?.length
     ? h('section', { class: 'wo-panel' }, h('h3', {}, info.attachments.length > 1 ? 'Downloads' : 'Download'),
       h('ul', { class: 'wo-files' }, info.attachments.map((a) => h('li', {},
@@ -530,6 +538,7 @@ export function renderDetail(e, events, { backLabel = 'Back', onBack, onNavigate
       h('aside', { class: 'wo-detail-aside' }, h('div', { class: 'wo-panel' }, info_, actions), contacts, files),
       h('div', { class: 'wo-detail-body' },
         info.html ? h('div', { class: 'wo-description', html: info.html }) : null,
+        gallery,
         dates)));
 }
 

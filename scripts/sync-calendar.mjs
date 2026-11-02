@@ -4,8 +4,9 @@
 // Repeating events are expanded into individual dates (Google does this for us)
 // and described in plain English from the series' RRULE. Files attached to an
 // event in Google Calendar (from Google Drive, shared "Anyone with the link")
-// are downloaded: the first image, or the first page of the first PDF, becomes
-// the event's header image/poster, which also makes it a "featured" event.
+// are downloaded. Editor-selected header images take priority; legacy events use
+// the first image or first PDF page. Other images form the event-detail gallery.
+// A header image makes the event eligible for existing image-based banner rules.
 //
 // Env: GOOGLE_API_KEY  API key with the Google Calendar API and Google Drive API enabled
 //      GCAL_ID         optional, overrides config.calendarId
@@ -19,6 +20,7 @@ import { execFileSync } from 'node:child_process';
 import sharp from 'sharp';
 import { describeRecurrence } from './lib/recurrence.mjs';
 import { processDescription } from './lib/description.mjs';
+import { eventCategory } from './lib/event-category.mjs';
 
 const root = path.resolve(import.meta.dirname, '..');
 const config = JSON.parse(fs.readFileSync(path.join(root, 'config.json'), 'utf8'));
@@ -190,7 +192,7 @@ async function publishAttachment(att) {
     const rel = `files/${id}/${name}`;
     fs.mkdirSync(path.join(dataDir, 'files', id), { recursive: true });
     fs.copyFileSync(dl.file, path.join(dataDir, rel));
-    info = { title: att.title || dl.meta.name, url: rel, mimeType: dl.meta.mimeType, size: Number(dl.meta.size) || null, local: dl.file, id };
+    info = { title: att.title || dl.meta.name, url: rel, mimeType: dl.meta.mimeType, size: Number(dl.meta.size) || null, local: dl.file, id, fileId: att.fileId };
   } else if (att.fileUrl && (!att.fileId || fileMeta.get(att.fileId))) {
     info = { title: att.title || 'Attachment', url: att.fileUrl, mimeType: att.mimeType || '', size: null };
   }
@@ -233,18 +235,32 @@ const out = [];
 for (const e of events) {
   const master = e.recurringEventId ? masters.get(e.recurringEventId) : null;
   const attachments = (await Promise.all((e.attachments || []).map(publishAttachment))).filter(Boolean);
-  const imageSource = attachments.find((a) => IMAGE_TYPES.test(a.mimeType) && a.local) ||
+  // Explicit editor selection takes priority; legacy events keep the existing
+  // first-image (then first-PDF) fallback. No separate featured checkbox.
+  const headerFileId = e.extendedProperties?.shared?.woHeaderImageId ||
+    master?.extendedProperties?.shared?.woHeaderImageId || '';
+  const imageCandidates = attachments.filter((a) => IMAGE_TYPES.test(a.mimeType) && a.local);
+  const imageSource = headerFileId === 'none' ? null :
+    imageCandidates.find((a) => a.fileId === headerFileId) ||
+    imageCandidates[0] ||
     attachments.find((a) => a.mimeType === 'application/pdf' && a.local);
   const image = imageSource ? await makeImage(imageSource) : null;
+  const gallery = (await Promise.all(imageCandidates.filter((a) => a !== imageSource)
+    .map(async a => {
+      const preview = await makeImage(a);
+      return preview ? { ...preview, alt: a.title || e.summary || '' } : null;
+    }))).filter(Boolean);
   const desc = processDescription(e.description);
+  const category = eventCategory(e, master);
   const files = attachments
-    .filter((a) => !(image && a === imageSource && IMAGE_TYPES.test(a.mimeType)))
+    .filter((a) => !(IMAGE_TYPES.test(a.mimeType) && a.local))
     .map(({ title, url, mimeType, size }) => ({ title, url, mimeType, size }));
   const detail = {
     html: desc.html,
     summary: desc.summary,
     contacts: desc.contacts,
     image: image && { ...image, alt: imageSource.title || e.summary || '' },
+    gallery,
     attachments: files,
   };
   const key = crypto.createHash('sha1').update(JSON.stringify(detail)).digest('hex').slice(0, 10);
@@ -259,6 +275,8 @@ for (const e of events) {
     allDay,
     location: e.location?.trim() || '',
     colorId: e.colorId || null,
+    category: category.category,
+    categorySource: category.source,
     recurring: Boolean(e.recurringEventId),
     recurrence: master?.recurrence ? describeRecurrence(master.recurrence, master.start?.dateTime || master.start?.date, timeZone) : null,
     featured: Boolean(image),

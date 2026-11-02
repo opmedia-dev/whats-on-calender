@@ -556,3 +556,11 @@ button { font: inherit; color: inherit; }
   font: 700 13px/1.5 system-ui, sans-serif;
   letter-spacing: .02em;
 }
+
+
+/* Optional gallery, separate from the chosen event header image. */
+.wo-detail-gallery { min-width: 0; }
+.wo-gallery-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(112px,1fr)); gap: 10px; margin-top: 10px; }
+.wo-gallery-grid a { display: block; border-radius: 7px; overflow: hidden; background: #f3eee9; border: 1px solid var(--wo-border); }
+.wo-gallery-grid img { display: block; width: 100%; aspect-ratio: 4 / 3; height: auto; object-fit: cover; transition: transform .18s ease; }
+.wo-gallery-grid a:hover img { transform: scale(1.035); }
