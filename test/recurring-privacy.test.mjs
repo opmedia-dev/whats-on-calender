@@ -171,7 +171,7 @@ test('editor exposes every scope and private-event control while public sync hid
  assert.match(editor,/id="visibility"/);
  assert.match(editor,/state\.scope===\x27following\x27/);
  assert.match(sync,/e\.visibility === 'private'/);
- assert.match(sync,/!isHidden\(masters\.get\(e\.recurringEventId\) \|\| \{\}\)/);
+ assert.match(sync,/masters\.has\(e\.recurringEventId\) && !isHidden\(masters\.get\(e\.recurringEventId\)\)/);
  assert.doesNotMatch(sync,/woPrivate/);
  assert.match(editor,/\$\('visibility'\)\.disabled=!!e\.isRecurring && state\.scope==='occurrence'/);
  assert.match(sync,/events = events\.filter[\s\S]*?Attachment metadata/);
