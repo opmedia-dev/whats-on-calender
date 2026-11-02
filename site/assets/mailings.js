@@ -1,7 +1,7 @@
 // Used by both the standalone mailing archive and the homepage banner.
 // Mailing metadata contains public browser links only; no subscriber data.
 export async function loadMailings(fetcher = fetch) {
-  const res = await fetcher(new URL('../mailings.json', import.meta.url), { cache: 'no-cache' });
+  const res = await fetcher(new URL('../mailings.json', import.meta.url), { cache: 'default' });
   if (!res.ok) throw new Error(`Mailings unavailable (HTTP ${res.status})`);
   const data = await res.json();
   const mailings = (data.mailings || []).filter((entry) => {
