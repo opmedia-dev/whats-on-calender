@@ -133,6 +133,48 @@ test('editor exposes a signed-in attachment handler while preserving existing at
   assert.match(frontend, /editorUploadFile/);
 });
 
+test('header image metadata is event-scoped and rejects a file from another draft', () => {
+  const { context, event, events } = setup();
+  event.attachments = [
+    { fileId:'drive-img-one', title:'First poster', mimeType:'image/png', fileUrl:'https://drive.google.com/file/d/one/view' },
+    { fileId:'drive-img-two', title:'Second poster', mimeType:'image/jpeg', fileUrl:'https://drive.google.com/file/d/two/view' },
+  ];
+  const input = {
+    id:event.id, editScope:'occurrence', revision:event.etag,
+    title:event.summary, startDate:'2026-11-08', endDate:'2026-11-08',
+    startTime:'10:00', endTime:'11:00', repeat:'none', allDay:false,
+    descriptionChanged:false, category:'community',
+    headerImageId:'drive-img-two',
+  };
+  assert.equal(context.editorGetEvent(event.id,'occurrence').attachments.length,2);
+  context.editorSaveEvent(input);
+  assert.equal(events[0].body.extendedProperties.shared.woHeaderImageId,'drive-img-two');
+  assert.equal(events[0].body.extendedProperties.shared.otherField,'preserve');
+  context.editorSaveEvent({...input,headerImageId:'none'});
+  assert.equal(events[1].body.extendedProperties.shared.woHeaderImageId,'none');
+  assert.throws(()=>context.editorSaveEvent({...input,headerImageId:'drive-from-another-event'}),/not attached to this event/);
+  assert.equal(events.length,2, 'rejected cross-event header must not modify the calendar');
+});
+
+test('public sync separates header photo, additional gallery pictures and downloads', () => {
+  assert.match(sync, /woHeaderImageId/);
+  assert.match(sync, /headerFileId === 'none'/);
+  assert.match(sync, /imageCandidates\.find\(\(a\) => a\.fileId === headerFileId\)/);
+  assert.match(sync, /const gallery =/);
+  assert.match(sync, /gallery,\s*attachments: files/);
+  const shared = fs.readFileSync(path.join(root,'site/assets/wo.js'),'utf8');
+  assert.match(shared, /d\.gallery \|\| \[\]/);
+  assert.match(shared, /const gallery = info\.gallery\?\.length/);
+  assert.match(shared, /More event photos/);
+  assert.match(shared, /wo-detail-gallery/);
+  assert.match(frontend, /id="imageRole"/);
+  assert.match(frontend, /Use as header/);
+  assert.match(frontend, /Listing images only/);
+  assert.match(frontend, /function resetDraftImage\(\)/);
+  assert.match(frontend, /state\.draftImageUrl/);
+  assert.match(frontend, /resetDraftImage\(\);attachmentList\(e\.attachments\|\|\[\]\)/);
+});
+
 test('new events write to the Calendar API with weekly recurrence and time-zone', () => {
   const { context, events } = setup();
   const result = context.editorSaveEvent({
