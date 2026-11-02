@@ -127,7 +127,7 @@ configure **each embed** independently before copying its HTML snippet into a Du
 
 - **Shared:** brand colours, font families, corner radius, 12/24-hour clock and excluded titles.
 - **Hero timetable:** seven full-width horizontal day rows at the 593×434px desktop size, using a narrow date rail and compact time + event title lines (no thumbnail images or locations). The iframe defaults to **434px**. Empty days are a single subtle line instead of an oversized card. Rows expand naturally on phones; unusually busy days use a counted link to the full agenda rather than silently clipping events.
-- **Homepage banner:** heading, featured/all events, cards per page, maximum events,
+- **Homepage banner:** heading, featured-only events, cards per page, maximum events,
   **14-day** lookahead (configurable), **8-second** automatic paging (configurable;
   pauses on hover, focus, event detail, hidden tabs and reduced motion), latest
   weekly mailing toggle, and optional alternate HTTPS magazine-preview URL.
@@ -138,7 +138,7 @@ configure **each embed** independently before copying its HTML snippet into a Du
   from the flipbook's published `issues.json` and opens the complete flipbook.
 - **Weekly Mailing Hero:** a 593×434px content-only preview intended for the existing **Duda Mailing hero tab**, which already provides its own section heading, tabs and subscription controls. A genuine image from the sent Mailchimp issue fills the top of the embed; the issue title, date and small Read mailing link sit below it. Without a suitable image, a clean text-led fallback shows the issue excerpt. No redundant masthead, additional heading, subscription button or decorative illustration is inserted. Mobile height adapts and preview content is labelled.
 - **Weekly Mailings:** searchable independent archive of sent Mailchimp campaigns.
-- **What's On page:** regular events row, search, filters, default tab, grid columns and page size.
+- **What's On page:** permanent featured Highlights at top, a browsable current-month view by default, optional regular events row, search, filters, repeating badges in every view, grid columns and page size.
 - **Monthly calendar:** grid/list/automatic view, events per day and minimum cell height.
 
 The magazine column is a banner-only integration with the separate `flipbook` repository;
@@ -196,7 +196,7 @@ under the list), `emptyText`.
 
 - `title` (`0` hides it)
 - `perPage` (3, fewer on narrow screens), `max` (9), `minCardWidth` (240)
-- Only events marked **Featured** appear (including those without pictures); `days` (14 by default, 1–90 permitted). The former banner `show=all` override is no longer supported.
+- Only events marked **Featured** appear (including those without pictures); `days` (400 by default, 1–400 permitted). Previously embedded banner URLs with `days=14` must be regenerated or updated if you want events further ahead. The former banner `show=all` override is no longer supported.
 - `autoplay` (8 seconds by default, `0` disables; 3–60 seconds permitted)
 - `mailing=0` hides the fixed latest sent weekly mailing card. With both publications enabled, only two event cards rotate at a time. The mailing archive is a separate optional embed; no archive button is shown beneath the carousel.
 - `style=plain` (no colour band), `ratio=4:3`
@@ -205,9 +205,9 @@ under the list), `emptyText`.
 
 `whats-on.html`:
 
-- `regular=0` (hide the regular events row), `regularTitle` ("Regular events"), `regularMax` (6), `moreText` ("More info")
+- Featured events appear in a **separate Highlights section above the event listings**, not as a tab. `highlightsMax` (6), `highlightsTitle` ("Highlights"), `regular=0` (hide optional regular events row), `regularTitle` ("Regular events"), `regularMax` (6), `moreText` ("More info")
 - `upcomingTitle` ("Coming up"); `0` hides a title
-- `filters=0` (hide the Highlights / This week / This month / All events buttons), `filter=week` (start on another tab)
+- `filters=0` hides the Month / This week / All events buttons. Month is the default and has previous/next-month controls. `filter=week` or `filter=all` changes the initial view; `month=2026-12` selects a starting month.
 - `summary=0` (no description excerpt on cards)
 - `search=0`, `searchText`
 - `perPage` (9), `cols` (3), `minCardWidth` (260)
