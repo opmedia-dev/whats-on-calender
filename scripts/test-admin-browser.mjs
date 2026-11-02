@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import sharp from 'sharp';
 
 const browser = await chromium.launch({ headless: true });
 try {
@@ -34,7 +35,7 @@ try {
   assert.equal(await page.locator('#dialogTitle').textContent(), 'New event');
   // Reproduce the reported bug: choose an image for an unsaved new event,
   // discard it, then open another event. No image or file may cross over.
-  const tinyPng = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScL/nwAAAABJRU5ErkJggg==', 'base64');
+  const tinyPng = await sharp({create:{width:90,height:240,channels:3,background:'#a66d52'}}).png().toBuffer();
   await page.locator('#uploadAttachment').setInputFiles({
     name: 'draft-header.png', mimeType: 'image/png', buffer: tinyPng,
   });
@@ -48,6 +49,20 @@ try {
   console.log('Draft header image preview:', JSON.stringify(imgState));
   assert.equal(await page.locator('#previewHeaderImage').isVisible(), true,
     'unsaved image should preview in the current draft');
+  assert.equal(await page.locator('#imageFocusControls').isVisible(),true);
+  await page.locator('#imageFocusY').fill('80');
+  assert.equal(await page.locator('#previewHeaderImage').evaluate(el=>el.style.objectPosition),'50% 80%');
+  await page.locator('#imageFocusX').fill('25');
+  assert.equal(await page.locator('#previewHeaderImage').evaluate(el=>el.style.objectPosition),'25% 80%');
+  await page.locator('#resetImageFocus').click();
+  assert.equal(await page.locator('#previewHeaderImage').evaluate(el=>el.style.objectPosition),'50% 50%');
+  const rect = await page.locator('#previewHeaderImage').boundingBox();
+  await page.mouse.move(rect.x + rect.width / 2, rect.y + rect.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(rect.x + rect.width / 2, rect.y + rect.height / 2 + 30, {steps:5});
+  await page.mouse.up();
+  assert.notEqual(await page.locator('#previewHeaderImage').evaluate(el=>el.style.objectPosition),'50% 50%',
+    'dragging a portrait image changes its crop position');
   await page.locator('#imageRole').selectOption('gallery');
   assert.equal(await page.locator('#previewGallery').isVisible(), true,
     'gallery selection should not replace the header');
