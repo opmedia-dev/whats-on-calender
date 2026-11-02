@@ -2,10 +2,14 @@
 // calendar data in data/ (written by sync-calendar.mjs).
 import fs from 'node:fs';
 import path from 'node:path';
+import { assertMailingsReady } from './lib/output-data.mjs';
 
 const root = path.resolve(import.meta.dirname, '..');
 const out = path.join(root, '_site');
 const data = path.join(root, 'data');
+
+// Never convert a successful real RSS import into an empty live page.
+assertMailingsReady(data, { liveFeedConfigured: Boolean(process.env.MAILCHIMP_RSS_URL?.trim()) });
 
 fs.rmSync(out, { recursive: true, force: true });
 fs.cpSync(path.join(root, 'site'), out, { recursive: true });
