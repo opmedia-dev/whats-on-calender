@@ -368,7 +368,9 @@ function editorUploadFile(form) {
   if (!lock.tryLock(15000)) throw new Error('Another calendar update is in progress. Try again.');
   try {
     const record = fetchTarget_(id, scope);
-    const existing = attachmentsFor_(record.target);
+    const existing = attachmentsFor_(record.target).map(a => ({
+      fileUrl: a.fileUrl, title: a.title, mimeType: a.mimeType,
+    })); // The read-only Google fileId is deliberately omitted from writes.
     if (existing.length >= 25) throw new Error('Google Calendar allows at most 25 attachments per event.');
     // Validate the destination folder (and user's Drive permissions) before
     // creating a file. Only event editors already granted Drive access can upload.
