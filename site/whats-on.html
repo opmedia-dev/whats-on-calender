@@ -48,9 +48,10 @@
       const now = new Date();
       const upcoming = events.filter((e) => isUpcoming(e, now));
       const series = nextPerSeries(upcoming);
+      const featured = nextPerSeries(upcoming.filter((e) => e.featured === true));
 
-      // Regular events: repeating events with a picture, one tile per series.
-      const regular = flag('regular', true) ? series.filter((e) => e.recurring && e.featured).slice(0, num('regularMax', 6)) : [];
+      // Only selected repeating events are shown in the top regular row.
+      const regular = flag('regular', true) ? featured.filter((e) => e.recurring).slice(0, num('regularMax', 6)) : [];
       if (regular.length) {
         document.getElementById('regular-section').hidden = false;
         setTitle('regular-title', param('regularTitle', 'Regular events'));
@@ -60,13 +61,13 @@
 
       const within = (days) => upcoming.filter((e) => e.startDate - now < days * 86400000);
       const lists = {
-        featured: series.filter((e) => e.featured && !regular.includes(e)),
+        featured,
         week: within(7),
         month: within(31),
         all: series,
       };
       const labels = { featured: 'Highlights', week: 'This week', month: 'This month', all: 'All events' };
-      const filterKeys = Object.keys(labels).filter((k) => k !== 'featured' || lists.featured.length);
+      const filterKeys = Object.keys(labels);
       let filter = param('show') === 'all' ? 'all' : filterKeys.includes(param('filter')) ? param('filter') : filterKeys[0];
       const showFilters = flag('filters', true);
       filtersEl.hidden = !showFilters;
@@ -85,8 +86,8 @@
       const render = (scroll) => {
         const q = search.value.trim().toLowerCase();
         const dated = filter === 'week' || filter === 'month';
-        // Searching covers every upcoming event, not just the ones with pictures.
-        const items = q ? (dated ? lists[filter] : series).filter((e) => matches(e, q)) : lists[filter];
+        // Search only within the active filter; Highlights never includes unfeatured events.
+        const items = q ? lists[filter].filter((e) => matches(e, q)) : lists[filter];
         cols = columns();
         const perPage = Math.max(cols, Math.floor(perPageMax / cols) * cols || cols);
         const pages = Math.ceil(items.length / perPage);
