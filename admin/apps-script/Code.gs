@@ -325,7 +325,7 @@ function editorSaveEvent(form) {
     // A chosen header must be a real image already attached to THIS event.
     // Never let a discarded draft/another event supply a foreign file ID.
     const headerChoice = String(form.headerImageId || '').trim();
-    if (headerChoice) {
+    if (headerChoice && headerChoice !== 'none') {
       const match = (record.target.attachments || []).find(a =>
         a.fileId === headerChoice && /^image\//i.test(a.mimeType || ''));
       if (!match) throw new Error('The selected header image is not attached to this event. Reload and choose again.');
@@ -408,6 +408,12 @@ function editorUploadFile(form) {
     const changes = { attachments: existing.concat([attachment]) };
     if (role === 'header') {
       changes.extendedProperties = { shared: Object.assign({}, shared, { [HEADER_IMAGE_KEY]: file.id }) };
+    } else if (mimeType.startsWith('image/') &&
+               !existing.some(a => /^image\//i.test(a.mimeType || '')) &&
+               !shared[HEADER_IMAGE_KEY]) {
+      // A newly uploaded gallery-only picture should not become the header
+      // through the legacy first-image fallback.
+      changes.extendedProperties = { shared: Object.assign({}, shared, { [HEADER_IMAGE_KEY]: 'none' }) };
     }
     const updated = Calendar.Events.patch(changes,
       EDITOR_CALENDAR_ID, record.target.id, { sendUpdates: 'none', supportsAttachments: true });
