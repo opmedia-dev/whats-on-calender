@@ -83,12 +83,45 @@ Neither option requires installations on the editor users' desktops.
 - Dates and times use `Europe/London`; Google Calendar remains authoritative for all event times and series.
 - Event categories are written to the Google event's **shared extended property** `woCategory` (one of: general, worship, community, music, families, heritage, fundraising). No visible description tag is required.
 - Existing events without metadata get a conservative suggested category; a volunteer can change it explicitly. Unknown titles default to General.
-- Existing HTML-rich descriptions are **not rewritten** when a user only changes other fields. Editing one in this first version warns that formatting may be replaced; a rich-text editor is a later milestone.
+- Existing HTML-rich descriptions are **not rewritten** unless changed. The editor now has a limited rich-text toolbar (bold, italic, lists and safe links), with HTML sanitisation before preview and save.
 - For recurring events, the user must choose **this occurrence** or **entire series**. Complex rules can be retained, rather than replaced with an incorrect simplified pattern.
 - Saves and deletes check the event's revision and use a script-wide lock to prevent two concurrent editor writes. This is not a fully atomic conditional write against changes made directly in Google Calendar; verify with real accounts before rolling out broadly.
 - Deletion is confirmation-gated. Calendar API write operations use `sendUpdates: none`; this first milestone does **not** manage meeting invitations or notify attendees.
 - Newly saved or deleted events should appear in the public What's On embeds after the existing scheduled GitHub Actions sync (normally around 15 minutes), not instantaneously.
 - The desktop layout has a **full-width month/week calendar**, then **left-side form + right-side preview**. On tablet/phone widths, these panels stack naturally.
+
+## Choosing header images and listing/gallery images
+
+The public system previously made the **first attached picture** the event
+header automatically. That behaviour is retained **only as the fallback for
+legacy events** without an explicit choice.
+
+- **Save the new event first**, then upload images from the editor using the
+  `Image placement` selector: **Use as event header** or **Add to
+  listing/gallery**. PDF/Word/Excel/text files remain under Downloads.
+- For an existing event with several images, select **Use as header** beside
+  any image in the attachment list, then press **Save event**. The selection is
+  stored in Google Calendar's shared `woHeaderImageId` property, referencing
+  a Drive file attached to **that specific event**.
+- Select **Listing images only — no header** to use the category text
+  placeholder while still publishing photos in the detail-page gallery. A
+  gallery-only first upload does not silently become a header.
+- The original image-based banner selection is unchanged: an event with a
+  header image may be eligible under the existing rules. There is **no
+  separate featured checkbox**.
+- Draft file selections are local to the open event. Closing without saving,
+  switching events or resetting clears their file input, temporary preview and
+  browser object URL. The read-only demo can preview a chosen local picture
+  without uploading it anywhere.
+- On the public event detail page, the selected header appears at the top,
+  other attached images appear in **More event photos**, and non-image files
+  appear in **Downloads**.
+- Always review photo and attachment permissions: uploaded files are made
+  publicly link-viewable so visitors can see them on the website.
+
+**Deployment caution:** the OAuth/Calendar/Drive functions still require a
+real parish test calendar and Drive folder for end-to-end validation. The
+downloadable editor demo proves browser UI state, not live Google uploads.
 
 ## Verification before rollout
 
