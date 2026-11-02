@@ -39,6 +39,13 @@ try {
     name: 'draft-header.png', mimeType: 'image/png', buffer: tinyPng,
   });
   assert.equal(await page.locator('#uploadAttachment').evaluate(el => el.files.length), 1);
+  const imgState = await page.locator('#previewHeaderImage').evaluate(el => ({
+    hidden:el.hidden,src:el.getAttribute('src'),width:el.getBoundingClientRect().width,
+    height:el.getBoundingClientRect().height,display:getComputedStyle(el).display,
+    parent:el.parentElement.className,role:document.querySelector('#imageRole').value,
+    upload:document.querySelector('#uploadAttachment').files[0]?.type,
+  }));
+  console.log('Draft header image preview:', JSON.stringify(imgState));
   assert.equal(await page.locator('#previewHeaderImage').isVisible(), true,
     'unsaved image should preview in the current draft');
   await page.locator('#imageRole').selectOption('gallery');
