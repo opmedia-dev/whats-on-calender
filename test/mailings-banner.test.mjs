@@ -2,6 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { parseMailchimpRss, sampleMailings, mailingImageFromHtml } from '../scripts/lib/mailing.mjs';
 import { horizonDays, autoplaySeconds, mayAutoAdvance } from '../site/assets/banner-config.js';
+import { makeMailingCard } from '../site/assets/mailings.js';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 const rss = [
   '<?xml version="1.0" encoding="UTF-8"?>',
@@ -49,6 +52,64 @@ test('mailing feed can use actual campaign artwork but ignores tracking pixels a
   ].join('');
   assert.equal(parseMailchimpRss(xml)[0].image, 'https://mcusercontent.com/example/parish.jpg');
   assert.equal(parseMailchimpRss(xml)[0].summary, 'Parish news');
+});
+
+test('the first parish logo is preferred over a later larger campaign photograph', () => {
+  const xml = [
+    '<rss version="2.0"><channel><item><title>Parish weekly mailing</title>',
+    '<link>https://example.org/mailings/1</link>',
+    '<pubDate>Fri, 30 Oct 2026 09:00:00 GMT</pubDate>',
+    '<description><![CDATA[',
+    '<img width="1" height="1" src="https://example.org/open/pixel.gif">',
+    '<img width="104" height="60" src="https://mcusercontent.com/parish-logo.png">',
+    '<img width="630" height="360" src="https://mcusercontent.com/second-photo.jpg">',
+    ']]></description></item></channel></rss>',
+  ].join('');
+  assert.equal(mailingImageFromHtml('<img width="104" height="60" src="https://example.org/logo.png">'), 'https://example.org/logo.png');
+  assert.equal(parseMailchimpRss(xml)[0].image, 'https://mcusercontent.com/parish-logo.png');
+  assert.equal(mailingImageFromHtml('<img width="1" height="1" src="https://example.org/pixel.gif"><img width="16" height="16" src="https://example.org/icon.png">'), '');
+});
+
+test('lazy image src placeholders do not displace the first real newsletter logo', () => {
+  assert.equal(mailingImageFromHtml(
+    '<img width="118" height="62" src="data:image/gif;base64,AA==" data-src="https://mcusercontent.com/logo.jpg">' +
+    '<img width="600" height="330" src="https://mcusercontent.com/photo.jpg">'),
+    'https://mcusercontent.com/logo.jpg');
+});
+
+test('the banner mailing card displays the identical RSS image used by the mailing hero', () => {
+  const h = (tag, attrs, ...children) => ({ tag, attrs: attrs || {}, children: children.flat() });
+  const icon = (name) => ({ icon: name });
+  const find = (node, predicate) => {
+    if (!node || typeof node !== 'object') return [];
+    return [...(predicate(node) ? [node] : []), ...(node.children || []).flatMap(n => find(n, predicate))];
+  };
+  const mailing = {
+    title: 'Parish mailing — All Saints', url: 'https://example.org/mailing',
+    published: '2026-10-30T09:00:00Z', image: 'https://mcusercontent.com/parish-logo.png',
+  };
+  const card = makeMailingCard(mailing, { h, icon });
+  const media = find(card, n => n.attrs?.class?.includes('wo-mailing-media'))[0];
+  assert.match(media.attrs.class, /has-image/);
+  const image = find(card, n => n.tag === 'img')[0];
+  assert.equal(image.attrs.src, mailing.image);
+  assert.match(image.attrs.alt, /All Saints/);
+  const parent = { classList: { remove(name) { media.attrs.class = media.attrs.class.replace(name, '').trim(); } } };
+  let removed = false;
+  image.attrs.onerror({ currentTarget: { parentElement: parent, remove() { removed = true; } } });
+  assert.equal(removed, true);
+  assert.doesNotMatch(media.attrs.class, /has-image/);
+
+  const noImage = makeMailingCard({ ...mailing, image: '' }, { h, icon });
+  assert.equal(find(noImage, n => n.tag === 'img').length, 0);
+  const unsafe = makeMailingCard({ ...mailing, image: 'javascript:alert(1)' }, { h, icon });
+  assert.equal(find(unsafe, n => n.tag === 'img').length, 0);
+});
+
+test('both mailing placements preserve the logo rather than cropping it', () => {
+  const css = readFileSync(fileURLToPath(new URL('../site/assets/wo.css', import.meta.url)), 'utf8');
+  assert.match(css, /\.wo-mailing-media \.wo-mailing-cover\s*\{[^}]*object-fit: contain/);
+  assert.match(css, /\.wo-mailing-hero-picture img\s*\{[^}]*object-fit: contain/);
 });
 
 test('malformed RSS is rejected, valid empty RSS is accepted', () => {
