@@ -147,7 +147,7 @@ function localEvent_(e, master) {
     endTime: allDay ? '10:00' : localClock_(e.end.dateTime),
     allDay, category: category.id, categorySource: category.source,
     repeat, customRepeat, isRecurring: Boolean(e.recurringEventId || recurrence.length),
-    revision: e.etag || '', visibility: e.visibility || master?.visibility || 'default',
+    revision: e.etag || '', visibility: (master?.visibility === 'confidential' ? 'private' : master?.visibility) || e.visibility || 'default',
     hasFormattedDescription: /<\/?(?:p|div|span|strong|b|a|br|ul|ol|li)\b/i.test(e.description || ''),
     descriptionOriginal: e.description || '',
     attachments: attachmentsFor_(e),
