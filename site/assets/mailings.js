@@ -12,14 +12,34 @@ export async function loadMailings(fetcher = fetch) {
 }
 
 export function makeMailingCard(mailing, { preview = false, h, icon }) {
+  // Use the same imported cover as the standalone mailing hero. The old card
+  // ignored mailing.image and always showed a decorative envelope instead.
+  let imageUrl = '';
+  try {
+    const image = new URL(mailing.image || '');
+    if (image.protocol === 'https:') imageUrl = image.href;
+  } catch { /* No usable RSS artwork: retain the accessible placeholder. */ }
+
+  const media = h('div', {
+    class: `wo-card-media wo-mailing-media${imageUrl ? ' has-image' : ''}`,
+  },
+    h('div', { class: 'wo-mailing-art' },
+      icon('mail'), h('span', {}, preview ? 'SAMPLE MAILING' : 'PARISH WEEKLY MAILING')),
+    ...(imageUrl ? [h('img', {
+      class: 'wo-mailing-cover', src: imageUrl,
+      alt: `Artwork for ${mailing.title}`, loading: 'lazy',
+      onerror: (event) => {
+        const img = event.currentTarget;
+        img?.parentElement?.classList.remove('has-image');
+        img?.remove();
+      },
+    })] : []));
   return h('a', {
     class: 'wo-card wo-mailing-card',
     href: mailing.url, target: '_blank', rel: 'noopener noreferrer',
     'aria-label': `Read ${mailing.title}${preview ? ' (sample mailing)' : ''}`,
   },
-  h('div', { class: 'wo-card-media wo-mailing-media' },
-    h('div', { class: 'wo-mailing-art' }, icon('mail'),
-      h('span', {}, preview ? 'SAMPLE MAILING' : 'PARISH WEEKLY MAILING'))),
+  media,
   h('div', { class: 'wo-card-body wo-mailing-body' },
     h('h3', { class: 'wo-card-title' }, mailing.title),
     h('p', { class: 'wo-card-meta' }, icon('calendar'),
