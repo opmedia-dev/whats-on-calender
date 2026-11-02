@@ -1,7 +1,7 @@
 // Defaults for the homepage carousel. Pure helpers are regression-tested.
 export function horizonDays(raw) {
   const n = Number(raw);
-  return Number.isInteger(n) && n >= 1 && n <= 90 ? n : 14;
+  return Number.isInteger(n) && n >= 1 && n <= 400 ? n : 400;
 }
 export function autoplaySeconds(raw) {
   const n = Number(raw);

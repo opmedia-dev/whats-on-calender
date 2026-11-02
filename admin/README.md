@@ -100,6 +100,7 @@ legacy events** without an explicit choice.
   `Image placement` selector: **Use as event header** or **Add to
   listing/gallery**. PDF/Word/Excel/text files remain under Downloads.
 - **When an image is selected in the editor**, Save event now saves the calendar data and uploads the selected image together. The operation reports separate calendar/save/upload results, preserves the selected file on failure, and restores controls even if refresh fails. Drive upload requires `EDITOR_UPLOAD_FOLDER_ID` to be set in the Apps Script source and a new web-app deployment version.
+- **Faster uploads:** the editor now offers an enabled-by-default **Optimise large pictures** option. JPEG/PNG/WebP files of 700 KB or more can be converted to a smaller WebP copy (longest side at most 2400px) in the browser before transfer. The local original is untouched. Untick to upload the exact original; GIFs and documents are unchanged. Compression falls back to the original when not supported or not beneficial.
 - **Reposition an image** in the editor's card preview by dragging it or using the horizontal/vertical sliders; the crop centre is stored as `woImageFocus` (two 0–100 percentages). The public banner, listing and regular-event cards reproduce the crop. The full image in event detail remains unchanged.
 - For an existing event with several images, select **Use as header** beside
   any image in the attachment list, then press **Save event**. The selection is

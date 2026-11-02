@@ -139,11 +139,13 @@ test('sample mailings are clearly marked, without pretending to be real', () => 
   assert.match(preview.mailings[0].summary, /not a real mailing/i);
 });
 
-test('banner event horizon defaults to two weeks', () => {
-  assert.equal(horizonDays(undefined), 14);
+test('banner event horizon defaults to the published calendar window, with explicit legacy limits preserved', () => {
+  assert.equal(horizonDays(undefined), 400);
   assert.equal(horizonDays('14'), 14);
-  assert.equal(horizonDays('0'), 14);
-  assert.equal(horizonDays('120'), 14);
+  assert.equal(horizonDays('0'), 400);
+  assert.equal(horizonDays('120'), 120);
+  assert.equal(horizonDays('400'), 400);
+  assert.equal(horizonDays('401'), 400);
   assert.equal(horizonDays('7'), 7);
 });
 

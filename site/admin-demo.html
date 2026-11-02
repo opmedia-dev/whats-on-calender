@@ -34,7 +34,7 @@ h1{font-size:27px;letter-spacing:-.04em;margin:0 0 4px}h2{font-size:17px;margin:
 .event-pill[data-category=families]{background:#edf4eb;color:#41674d;border-color:#759975}
 .event-pill[data-category=heritage]{background:#edf0ef;color:#46635d;border-color:#6e918a}
 .event-pill[data-category=fundraising]{background:#f8eceb;color:#7e3640;border-color:#ad6571}
-.more{font-size:10px;color:var(--muted);margin:3px 4px}.week-list{display:grid;gap:7px}
+.more{font-size:10px;color:var(--muted);margin:3px 4px}.cal-day button.more{background:none;border:0;text-align:left;cursor:pointer;padding:3px 2px;width:100%;color:var(--accent)}.cal-day button.more:focus-visible{outline:2px solid var(--accent)}.week-list{display:grid;gap:7px}
 .week-day{display:grid;grid-template-columns:120px minmax(0,1fr);gap:14px;padding:13px;border:1px solid var(--line);border-radius:7px}
 .week-day.today{background:#fdf5f5}.week-day .date-btn{text-align:left;align-self:start}
 .week-events{display:grid;gap:4px}.week-events .event-pill{padding:8px;font-size:12px;margin:0}.week-none{font-size:12px;color:#91898e;padding:7px}
@@ -244,6 +244,8 @@ textarea{resize:vertical;min-height:100px;line-height:1.5}
      <p class="help">For PDFs and documents, the placement is always Downloads. A selected file will upload when you Save event; the separate Upload attachment button adds a file without changing event details.</p>
     </div>
     <label for="uploadAttachment">Add an image, PDF or document (maximum 8 MB)</label>
+     <label class="check" for="optimiseUpload"><input id="optimiseUpload" type="checkbox" checked> Optimise large pictures before uploading (faster)</label>
+     <p class="help">A smaller WebP copy (up to 2400px) is uploaded to Drive for large JPEG/PNG/WebP images. The original on your computer is untouched. Untick to upload the exact file; documents and GIFs are not changed.</p>
     <div class="tools">
      <input type="file" name="attachment" id="uploadAttachment" accept="image/jpeg,image/png,image/webp,image/gif,application/pdf,.doc,.docx,.xls,.xlsx,.txt">
      <button type="submit" id="uploadButton" class="btn" disabled>Upload attachment</button>
@@ -282,7 +284,7 @@ var $=function(id){return document.getElementById(id)};
 var labels={general:'General',worship:'Worship & services',community:'Community',music:'Music',families:'Children & families',heritage:'Heritage & talks',fundraising:'Fundraising'};
 var fields=['title','category','repeat','startDate','endDate','startTime','endTime','location'];
 var linked=(typeof google!=='undefined' && google.script && google.script.run);
-var state={events:[],date:new Date(),mode:'month',busy:false,id:'',revision:'',scope:'occurrence',active:null,changed:false,dirty:false,attachments:[],headerImageId:'',draftImageUrl:'',imageFocus:'50,50',uploadConfigured:false};
+var state={events:[],date:new Date(),mode:'month',busy:false,id:'',revision:'',scope:'occurrence',active:null,changed:false,dirty:false,attachments:[],headerImageId:'',draftImageUrl:'',imageFocus:'50,50',uploadConfigured:false,expandedDays:new Set()};
 function key(d){return d.toISOString().slice(0,10)}
 function fromDate(s){return new Date(s+'T12:00:00Z')}
 function add(s,n){var d=fromDate(s);d.setUTCDate(d.getUTCDate()+n);return key(d)}
@@ -346,6 +348,37 @@ function resetDraftImage(){
  $('uploadStatus').textContent=linked&&!state.uploadConfigured
   ? 'Image uploads are unavailable until EDITOR_UPLOAD_FOLDER_ID is configured and deployed.'
   : 'Select a file and press Save event to save and upload together.';
+}
+// Reduce bytes sent through Apps Script, preserving the original local file.
+async function optimiseUpload(){
+ const input=$('uploadAttachment'),file=input.files[0];
+ if(!file||!$('optimiseUpload').checked||file.size<700000||
+    !/^(image\/jpeg|image\/png|image\/webp)$/.test(file.type))return;
+ if(typeof createImageBitmap!=='function'||typeof DataTransfer==='undefined')return;
+ let image;
+ try{
+  image=await createImageBitmap(file);
+  const scale=Math.min(1,2400/Math.max(image.width,image.height));
+  const width=Math.max(1,Math.round(image.width*scale));
+  const height=Math.max(1,Math.round(image.height*scale));
+  const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;
+  const context=canvas.getContext('2d');if(!context)return;
+  context.drawImage(image,0,0,width,height);
+  const output=await new Promise(function(resolve){canvas.toBlob(resolve,'image/webp',0.88)});
+  if(!output||output.type!=='image/webp'||output.size>=file.size*0.9)return;
+  const name=file.name.replace(/\.[^.]+$/,'')+'.webp';
+  const transfer=new DataTransfer();
+  transfer.items.add(new File([output],name,{type:'image/webp',lastModified:Date.now()}));
+  input.files=transfer.files;
+  if(state.draftImageUrl)URL.revokeObjectURL(state.draftImageUrl);
+  state.draftImageUrl=URL.createObjectURL(input.files[0]);
+  refreshImagePreview();
+  const kb=n=>Math.max(1,Math.round(n/1024))+' KB';
+  $('uploadStatus').textContent='Optimised '+kb(file.size)+' → '+kb(output.size)+'. Uploading the smaller copy…';
+ }catch(error){
+  console.warn('Image optimisation unavailable; original will be used:',error);
+  $('uploadStatus').textContent='Optimisation unavailable; uploading the original image.';
+ }finally{if(image)image.close()}
 }
 function mediaUrl(item){
  if(item && item.fileId && /^[A-Za-z0-9_-]{10,}$/.test(item.fileId))
@@ -535,8 +568,20 @@ function calendar(){
    var label=create('button','date-btn',String(Number(date.slice(8))));label.type='button';label.title='Create event on '+date;
    (function(d){label.addEventListener('click',function(){newEntry(d)})})(date);day.append(label);
    var entries=eventsAt(date);
-   entries.slice(0,3).forEach(function(e){day.append(eventButton(e,'event-pill'))});
-   if(entries.length>3)day.append(create('div','more','+'+(entries.length-3)+' more'));
+   var expanded=state.expandedDays.has(date);
+   (expanded?entries:entries.slice(0,3)).forEach(function(e){day.append(eventButton(e,'event-pill'))});
+   if(entries.length>3){
+    var more=create('button','more',expanded?'Show less':'+'+(entries.length-3)+' more');
+    more.type='button';more.dataset.date=date;more.setAttribute('aria-expanded',String(expanded));
+    more.setAttribute('aria-label',expanded?'Show fewer events on '+date:'Show all '+entries.length+' events on '+date);
+    (function(d){more.addEventListener('click',function(){
+     if(state.expandedDays.has(d))state.expandedDays.delete(d);else state.expandedDays.add(d);
+     calendar();
+     var buttons=document.querySelectorAll('.cal-day .more');
+     for(var k=0;k<buttons.length;k++)if(buttons[k].dataset.date===d){buttons[k].focus();break}
+    })})(date);
+    day.append(more);
+   }
    grid.append(day);
   }
   container.append(grid);
@@ -598,7 +643,7 @@ async function range(){
 async function shift(direction){
  var d=state.mode==='month'?fromDate(key(state.date).slice(0,7)+'-01'):new Date(state.date);
  if(state.mode==='month')d.setUTCMonth(d.getUTCMonth()+direction);else d.setUTCDate(d.getUTCDate()+7*direction);
- state.date=d;try{await range()}catch(e){status(e.message||String(e),true)}
+ state.date=d;state.expandedDays.clear();try{await range()}catch(e){status(e.message||String(e),true)}
 }
 async function setMode(m){state.mode=m;try{await range()}catch(e){status(e.message||String(e),true)}}
 async function save(ev){
@@ -609,7 +654,6 @@ async function save(ev){
    var problem='Cannot save the selected file: the parish Drive upload folder is not configured. Set EDITOR_UPLOAD_FOLDER_ID in Code.gs, then deploy a new version.';
    status(problem,true);$('uploadStatus').textContent=problem;return;
   }
-  if(file.size>8*1024*1024){status('Selected file exceeds the 8 MB limit.',true);return}
   if(!confirm('Save this event and upload "'+file.name+'" to the public parish Drive folder?'))return;
  }
  if(state.active&&state.active.isRecurring&&state.scope==='series'
@@ -617,6 +661,12 @@ async function save(ev){
  var saved=null,uploaded=false;
  pending(true);status('Saving event to Google Calendar…');
  try{
+  if(file){
+   status('Preparing image for upload…');
+   await optimiseUpload();
+   if($('uploadAttachment').files[0]?.size>8*1024*1024)
+    throw new Error('Selected file exceeds 8 MB, even after optimisation.');
+  }
   saved=await call('editorSaveEvent',v);
   if(!saved||!saved.id)throw new Error('Calendar did not return a saved event ID. Check Calendar before retrying.');
   state.id=saved.id;state.revision=saved.revision||state.revision;
@@ -627,6 +677,7 @@ async function save(ev){
    status('Event saved. Uploading file…');
    await call('editorUploadFile',$('uploadForm'));
    uploaded=true;
+   status('File uploaded. Refreshing calendar…');
   }
   var refreshWarning='';
   try{await range()}catch(err){refreshWarning=' Calendar refresh failed; use Refresh to reload.'}
@@ -708,11 +759,12 @@ $('uploadForm').addEventListener('submit',async function(ev){
  if(state.dirty){$('uploadStatus').textContent='Save event changes first, or save and upload the file together.';return}
  var file=$('uploadAttachment').files[0];
  if(!file)return;
- if(file.size>8*1024*1024){$('uploadStatus').textContent='File must be smaller than 8 MB.';return}
  if(!confirm('This file will be publicly accessible from the event. Upload it to the parish Drive folder?'))return;
  $('uploadEventId').value=state.id;$('uploadEditScope').value=state.scope;
  pending(true);$('uploadStatus').textContent='Uploading to Google Drive and attaching to the event…';
  try{
+  await optimiseUpload();
+  if($('uploadAttachment').files[0]?.size>8*1024*1024)throw new Error('Selected file exceeds 8 MB, even after optimisation.');
   await call('editorUploadFile',$('uploadForm'));
   $('uploadAttachment').value='';
   var loaded=await call('editorGetEvent',state.id,state.scope);

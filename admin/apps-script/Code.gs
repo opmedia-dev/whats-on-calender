@@ -421,9 +421,8 @@ function editorUploadFile(form) {
       fileUrl: a.fileUrl, title: a.title, mimeType: a.mimeType,
     })); // The read-only Google fileId is deliberately omitted from writes.
     if (existing.length >= 25) throw new Error('Google Calendar allows at most 25 attachments per event.');
-    // Validate the destination folder (and user's Drive permissions) before
-    // creating a file. Only event editors already granted Drive access can upload.
-    Drive.Files.get(EDITOR_UPLOAD_FOLDER_ID, { fields: 'id,name,mimeType' });
+    // Drive.Files.create validates access to the destination folder itself;
+    // avoid an extra synchronous Drive API request for every upload.
     const file = Drive.Files.create({
       name: name, mimeType: mimeType, parents: [EDITOR_UPLOAD_FOLDER_ID],
     }, blob, { fields: 'id,name,mimeType,webViewLink' });

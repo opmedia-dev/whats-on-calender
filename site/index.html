@@ -69,14 +69,14 @@
       <h2>3. "What's happening" banner</h2>
       <div class="grid2">
         <div><label for="bannerTitle">Section heading</label><input id="bannerTitle" type="text" value="What's happening at St John's"></div>
-        <div><label for="bannerShow">Events to show</label><select id="bannerShow"><option value="featured">Events with posters/images</option><option value="all">All events</option></select></div>
+        <div><label>Events to show</label><p class="muted">Only events explicitly marked Featured in the event manager (with or without a poster).</p></div>
         <div>
           <label class="inline" for="flipbook"><input id="flipbook" type="checkbox"> Show latest magazine as a matching 4th card</label>
           <p class="muted" id="flipbookHelp" role="status" aria-live="polite">Magazine disabled. Tick this box or enter a preview URL below.</p>
         </div>
         <div><label for="bannerPerPage">Event cards per page (maximum)</label><input id="bannerPerPage" type="number" min="1" max="6" value="3"><p class="muted">Automatically limited to two rotating event cards when both the mailing and magazine are fixed alongside them.</p></div>
         <div><label for="bannerMax">Maximum upcoming events in carousel</label><input id="bannerMax" type="number" min="1" max="60" value="9"></div>
-        <div><label for="bannerDays">Look ahead (days)</label><input id="bannerDays" type="number" min="1" max="90" value="14"><p class="muted">Only upcoming events within this window appear in the banner; the full calendar is unaffected.</p></div>
+        <div><label for="bannerDays">Look ahead (days)</label><input id="bannerDays" type="number" min="1" max="400" value="400"><p class="muted">Featured events within this window appear in the banner. Increase for events advertised further in advance.</p></div>
         <div><label for="bannerAutoplay">Automatically change page every (seconds; 0 = off)</label><input id="bannerAutoplay" type="number" min="0" max="60" value="8"><p class="muted">Pauses when hovered, keyboard-focused, an event is open, or reduced motion is enabled.</p></div>
         <div><label class="inline"><input id="bannerMailing" type="checkbox" checked> Show latest weekly mailing as a fixed card</label><p class="muted">The latest sent mailing stays visible while events rotate. The magazine can also stay fixed beside it. Older mailings remain in the separate archive; no extra link is added beneath the carousel.</p></div>
         <div>
@@ -104,10 +104,10 @@
       <h2>5. What's On page (regular events, search, all events, event details)</h2>
       <p class="muted">Put this on the page whose URL you entered above.</p>
       <div class="grid2">
-        <div><label class="inline"><input id="regular" type="checkbox" checked> Show regular/repeating events row</label></div>
+        <div><label class="inline"><input id="regular" type="checkbox" checked> Show regular/repeating events row below Highlights</label></div>
         <div><label class="inline"><input id="filters" type="checkbox" checked> Show event category filters</label></div>
         <div><label class="inline"><input id="search" type="checkbox" checked> Show event search field</label></div>
-        <div><label for="whatsonFilter">Default event filter</label><select id="whatsonFilter"><option value="">Automatic (highlights first)</option><option value="week">This week</option><option value="month">This month</option><option value="all">All events</option></select></div>
+        <div><label for="whatsonFilter">Default event view</label><select id="whatsonFilter"><option value="">Current month (default)</option><option value="week">This week</option><option value="all">All events</option></select></div>
         <div><label for="whatsonCols">Maximum columns</label><input id="whatsonCols" type="number" min="1" max="5" value="3"></div>
         <div><label for="whatsonPerPage">Events per page</label><input id="whatsonPerPage" type="number" min="1" max="60" value="9"></div>
       </div>
@@ -201,10 +201,9 @@ if(d.type==='event'&&deep){var u=new URL(location.href);if(d.id)u.searchParams.s
       setInt(tt, 'heroHeight', 'ttHeroHeight', 320, 900);
       const bn = new URLSearchParams(withLink);
       bn.set('title', val('bannerTitle') || '0');
-      bn.set('show', val('bannerShow'));
       setInt(bn, 'perPage', 'bannerPerPage', 1, 6);
       setInt(bn, 'max', 'bannerMax', 1, 60);
-      setInt(bn, 'days', 'bannerDays', 1, 90);
+      setInt(bn, 'days', 'bannerDays', 1, 400);
       setInt(bn, 'autoplay', 'bannerAutoplay', 0, 60);
       if (!document.getElementById('bannerMailing').checked) bn.set('mailing', '0');
       if (hex('accent2')) bn.set('accent2', hex('accent2'));
