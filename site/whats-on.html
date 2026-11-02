@@ -4,11 +4,15 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>What's On</title>
-  <link rel="stylesheet" href="assets/wo.css">
+  <link rel="stylesheet" href="assets/wo.css?v=monthly-highlights-20261102">
 </head>
 <body>
   <main class="wo-wrap">
     <div id="main">
+      <section class="wo-section" id="highlights-section" hidden>
+        <div class="wo-section-head"><h2 class="wo-section-title" id="highlights-title">Highlights</h2></div>
+        <div id="highlights" class="wo-cards"></div>
+      </section>
       <section class="wo-section" id="regular-section" hidden>
         <div class="wo-section-head" id="regular-head"><h2 class="wo-section-title" id="regular-title"></h2></div>
         <div id="regular" class="wo-cards is-overlay"></div>
@@ -18,6 +22,16 @@
         <div class="wo-toolbar">
           <label class="wo-search" id="search-box"><svg class="wo-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM21 21l-4.3-4.3"/></svg><input id="search" type="search" placeholder="Search events" aria-label="Search events" autocomplete="off"></label>
           <div class="wo-filters" id="filters" role="group" aria-label="Show"></div>
+        </div>
+        <div id="month-navigation" class="wo-month-navigation">
+          <h3 id="selected-month" aria-live="polite"></h3>
+          <div class="wo-cal-nav">
+            <div class="wo-group"><button type="button" id="month-today">This month</button></div>
+            <div class="wo-group">
+              <button type="button" id="month-prev" aria-label="Previous month">‹</button>
+              <button type="button" id="month-next" aria-label="Next month">›</button>
+            </div>
+          </div>
         </div>
         <div id="cards" class="wo-cards"><p class="wo-loading">Loading events…</p></div>
         <div class="wo-foot"><div id="pager"></div></div>
@@ -44,40 +58,72 @@
     const summaries = flag('summary', true);
 
     try {
-      const { events } = await loadEvents();
+      const { events, range } = await loadEvents();
       const now = new Date();
       const upcoming = events.filter((e) => isUpcoming(e, now));
       const series = nextPerSeries(upcoming);
       const featured = nextPerSeries(upcoming.filter((e) => e.featured === true));
 
-      // Only selected repeating events are shown in the top regular row.
-      const regular = flag('regular', true) ? featured.filter((e) => e.recurring).slice(0, num('regularMax', 6)) : [];
+      // Highlights is always a dedicated section, never a filter/tab.
+      const highlightsEl = document.getElementById('highlights');
+      const highlightsSection = document.getElementById('highlights-section');
+      const highlighted = featured.slice(0, Math.max(1, Math.min(18, num('highlightsMax', 6))));
+      highlightsSection.hidden = !highlighted.length;
+      setTitle('highlights-title', param('highlightsTitle', 'Highlights'));
+      if (highlighted.length) {
+        highlightsEl.style.setProperty('--wo-cols', String(Math.min(num('cols', 3), highlighted.length)));
+        highlightsEl.replaceChildren(...highlighted.map((e) => renderCard(e, { showRecurrence: e.recurring, more: moreText })));
+      }
+
+      // Keep the optional Regular events strip, but avoid repeating Highlights.
+      const regular = flag('regular', true)
+        ? series.filter((e) => e.recurring && !e.featured).slice(0, num('regularMax', 6)) : [];
       if (regular.length) {
         document.getElementById('regular-section').hidden = false;
         setTitle('regular-title', param('regularTitle', 'Regular events'));
         regularEl.replaceChildren(...regular.map((e) => renderCard(e, { showRecurrence: true, more: moreText })));
       }
-      setTitle('upcoming-title', param('upcomingTitle', 'Coming up'));
+      setTitle('upcoming-title', param('upcomingTitle', 'Events'));
 
-      const within = (days) => upcoming.filter((e) => e.startDate - now < days * 86400000);
-      const lists = {
-        featured,
-        week: within(7),
-        month: within(31),
-        all: series,
+      const ym = (date) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London', year: 'numeric', month: '2-digit' }).format(date).slice(0, 7);
+      const currentMonth = ym(now);
+      const shiftMonth = (value, n) => {
+        const d = new Date(value + '-15T12:00:00Z');
+        d.setUTCMonth(d.getUTCMonth() + n);
+        return d.toISOString().slice(0, 7);
       };
-      const labels = { featured: 'Highlights', week: 'This week', month: 'This month', all: 'All events' };
+      const minMonth = range?.from ? ym(new Date(range.from)) : currentMonth;
+      const maxMonth = range?.to ? ym(new Date(range.to)) : shiftMonth(currentMonth, 12);
+      const validMonth = (value) => /^\d{4}-(0[1-9]|1[0-2])$/.test(value);
+      let selectedMonth = validMonth(param('month')) ? param('month') : currentMonth;
+      if (selectedMonth < minMonth) selectedMonth = minMonth;
+      if (selectedMonth > maxMonth) selectedMonth = maxMonth;
+
+      const week = upcoming.filter((e) => e.startDate - now < 7 * 86400000);
+      const labels = { month: 'Month', week: 'This week', all: 'All events' };
       const filterKeys = Object.keys(labels);
-      let filter = param('show') === 'all' ? 'all' : filterKeys.includes(param('filter')) ? param('filter') : filterKeys[0];
-      const showFilters = flag('filters', true);
-      filtersEl.hidden = !showFilters;
+      let filter = filterKeys.includes(param('filter')) ? param('filter') : 'month';
+      filtersEl.hidden = !flag('filters', true);
+      const navigation = document.getElementById('month-navigation');
+      const previous = document.getElementById('month-prev');
+      const next = document.getElementById('month-next');
+      const todayButton = document.getElementById('month-today');
+      previous.addEventListener('click', () => { if (selectedMonth > minMonth) { selectedMonth = shiftMonth(selectedMonth, -1); page = 0; render(true); } });
+      next.addEventListener('click', () => { if (selectedMonth < maxMonth) { selectedMonth = shiftMonth(selectedMonth, 1); page = 0; render(true); } });
+      todayButton.addEventListener('click', () => { selectedMonth = currentMonth; page = 0; render(true); });
 
       const perPageMax = num('perPage', 9);
       let page = 0;
       let cols = 3;
       const columns = () => Math.max(1, Math.min(num('cols', 3), Math.floor(cardsEl.clientWidth / num('minCardWidth', 260)) || 1));
-      const matches = (e, q) => [e.title, e.location, e.info.summary, e.recurrence].join(' ').toLowerCase().includes(q);
-
+      const matches = (e, q) => [e.title, e.location, e.info?.summary || '', e.recurrence || ''].join(' ').toLowerCase().includes(q);
+      const monthEvents = () => {
+        const start = selectedMonth + '-01';
+        const end = shiftMonth(selectedMonth, 1) + '-01';
+        // Month is a genuine calendar month, not a rolling 31-day period.
+        // Keep every occurrence of recurring events in this view.
+        return events.filter((e) => e.startKey < end && e.endKey >= start);
+      };
       const renderFilters = () => filtersEl.replaceChildren(...filterKeys.map((k) => h('button', {
         type: 'button', class: 'wo-chip', 'aria-pressed': String(k === filter),
         onclick: () => { filter = k; page = 0; renderFilters(); render(); },
@@ -85,18 +131,24 @@
 
       const render = (scroll) => {
         const q = search.value.trim().toLowerCase();
-        const dated = filter === 'week' || filter === 'month';
-        // Search only within the active filter; Highlights never includes unfeatured events.
+        const lists = { month: monthEvents(), week, all: series };
         const items = q ? lists[filter].filter((e) => matches(e, q)) : lists[filter];
+        navigation.hidden = filter !== 'month';
+        document.getElementById('selected-month').textContent = new Intl.DateTimeFormat('en-GB', { month: 'long', year: 'numeric' })
+          .format(new Date(selectedMonth + '-15T12:00:00Z'));
+        previous.disabled = selectedMonth <= minMonth;
+        next.disabled = selectedMonth >= maxMonth;
+        todayButton.disabled = selectedMonth === currentMonth;
         cols = columns();
         const perPage = Math.max(cols, Math.floor(perPageMax / cols) * cols || cols);
         const pages = Math.ceil(items.length / perPage);
         page = Math.min(page, Math.max(0, pages - 1));
         cardsEl.style.setProperty('--wo-cols', String(cols));
         regularEl.style.setProperty('--wo-cols', String(Math.min(cols, regular.length || 1)));
+        // Repeat labels and recurrence patterns are visible in every view.
         cardsEl.replaceChildren(...items.slice(page * perPage, (page + 1) * perPage)
-          .map((e) => renderCard(e, { showRecurrence: !dated && e.recurring, summary: summaries, more: moreText })));
-        if (!items.length) cardsEl.replaceChildren(emptyState(q ? `No events match “${search.value.trim()}”.` : param('emptyText', 'More events coming soon.')));
+          .map((e) => renderCard(e, { showRecurrence: e.recurring, summary: summaries, more: moreText })));
+        if (!items.length) cardsEl.replaceChildren(emptyState(q ? `No events match “${search.value.trim()}”.` : 'No events for this period.'));
         countEl.textContent = `${items.length} event${items.length === 1 ? '' : 's'}`;
         pagerEl.replaceChildren(renderPager(page, pages, (p) => { page = p; render(true); }));
         if (scroll) { document.getElementById('upcoming-section').scrollIntoView({ block: 'start' }); scrollHostToTop(); }
