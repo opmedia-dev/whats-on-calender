@@ -225,8 +225,22 @@ function fetchTarget_(id, scope) {
 function editorGetEvent(id, scope) {
   editorAccess_();
   const data = fetchTarget_(id, scope || 'occurrence');
-  return Object.assign(localEvent_(data.target, data.master), {
+  // When the user chooses "All events in the series", the Calendar API
+  // returns the master whose start can be years before the clicked occurrence.
+  // Show the clicked date as *context*, but retain the master's clock, pattern,
+  // revision and metadata. Never treat that selected date as a new series anchor.
+  const event = localEvent_(data.target, data.master);
+  const seriesMode = scope === 'series' && Boolean(data.selected.recurringEventId);
+  if (seriesMode) {
+    const selected = localEvent_(data.selected, data.master);
+    event.startDate = selected.startDate;
+    event.endDate = selected.endDate;
+    event.seriesStartDate = localEvent_(data.master).startDate;
+    event.selectedOccurrenceDate = selected.startDate;
+  }
+  return Object.assign(event, {
     selectedId: id, editScope: scope || 'occurrence',
+    attachmentScope: seriesMode ? 'series' : scope || 'occurrence',
   });
 }
 
@@ -475,6 +489,23 @@ function editorSaveEvent(form) {
     const record = fetchTarget_(form.id, scope);
     if (form.revision !== record.target.etag) {
       throw new Error('This event changed in Google Calendar. Reload it before saving to avoid overwriting another editor.');
+    }
+    if (scope === 'series' && record.selected.recurringEventId) {
+      // Dates displayed in the editor refer to the selected occurrence, not
+      // the recurrence master. Keep that reference date read-only and rebase
+      // submitted clock/duration changes to the *original master dates*.
+      const selectedContext = localEvent_(record.selected, record.master);
+      if (String(form.startDate) !== selectedContext.startDate ||
+          String(form.endDate) !== selectedContext.endDate) {
+        throw new Error('The selected occurrence date is a reference only for All events in the series. Reload this event; use Google Calendar to move the series to another date.');
+      }
+      const anchor = localEvent_(record.master);
+      parsed.body.start = form.allDay
+        ? { date: anchor.startDate }
+        : { dateTime: anchor.startDate + 'T' + String(form.startTime) + ':00', timeZone: EDITOR_ZONE };
+      parsed.body.end = form.allDay
+        ? { date: addDay_(anchor.endDate, 1) }
+        : { dateTime: anchor.endDate + 'T' + String(form.endTime) + ':00', timeZone: EDITOR_ZONE };
     }
     // A chosen header must be a real image already attached to THIS event.
     // Never let a discarded draft/another event supply a foreign file ID.
