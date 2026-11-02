@@ -85,7 +85,8 @@ test('authorised editors can query a month or week but not arbitrary historical 
 });
 
 test('a calendar event category can be saved without altering an unchanged HTML description', () => {
-  const { context, events, event, lockCalls } = setup();
+  const fixture = setup();
+  const { context, events, event } = fixture;
   const payload = {
     id: event.id, editScope: 'occurrence', revision: event.etag, title: event.summary,
     startDate: '2026-11-08', endDate: '2026-11-08',
@@ -97,7 +98,7 @@ test('a calendar event category can be saved without altering an unchanged HTML 
   assert.equal(events[0].kind, 'patch');
   assert.equal(events[0].body.extendedProperties.shared.woCategory, 'community');
   assert.equal('description' in events[0].body, false);
-  assert.equal(lockCalls, 2);
+  assert.equal(fixture.lockCalls, 2);
   assert.throws(() => context.editorSaveEvent({ ...payload, revision: 'old' }), /Reload/);
   assert.throws(() => context.editorSaveEvent({ ...payload, category: 'unknown' }), /valid event category/);
 });
