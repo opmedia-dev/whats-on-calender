@@ -22,6 +22,7 @@ import { describeRecurrence } from './lib/recurrence.mjs';
 import { processDescription } from './lib/description.mjs';
 import { eventCategory } from './lib/event-category.mjs';
 import { eventFeatured } from './lib/featured.mjs';
+import { eventImageFocus } from './lib/image-focus.mjs';
 import { prepareCalendarOutput } from './lib/output-data.mjs';
 
 const root = path.resolve(import.meta.dirname, '..');
@@ -125,7 +126,7 @@ for (const a of events.flatMap((e) => e.attachments || [])) {
 
 const londonDate = new Intl.DateTimeFormat('en-CA', { timeZone }).format(now);
 const codeVersion = crypto.createHash('sha256')
-  .update(['sync-calendar.mjs', 'lib/description.mjs', 'lib/recurrence.mjs', 'lib/featured.mjs']
+  .update(['sync-calendar.mjs', 'lib/description.mjs', 'lib/recurrence.mjs', 'lib/featured.mjs', 'lib/image-focus.mjs']
     .map((f) => fs.readFileSync(path.join(root, 'scripts', f))).join('')).digest('hex').slice(0, 8);
 const fingerprint = crypto.createHash('sha256').update(JSON.stringify([
   londonDate, codeVersion, config,
@@ -261,7 +262,7 @@ for (const e of events) {
     html: desc.html,
     summary: desc.summary,
     contacts: desc.contacts,
-    image: image && { ...image, alt: imageSource.title || e.summary || '' },
+    image: image && { ...image, alt: imageSource.title || e.summary || '', position: eventImageFocus(e, master) },
     gallery,
     attachments: files,
   };
