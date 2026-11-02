@@ -228,36 +228,50 @@ function normalise_(form) {
 function editorSaveEvent(form) {
   editorAccess_();
   const parsed = normalise_(form);
-  if (!form.id) {
-    if (parsed.repeat === 'keep') throw new Error('Choose a recurrence for a new event.');
-    const inserted = Calendar.Events.insert(parsed.body, EDITOR_CALENDAR_ID, { sendUpdates: 'none' });
-    return { saved: true, id: inserted.id, status: 'created' };
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(15000)) throw new Error('Another calendar update is in progress. Try again.');
+  try {
+    if (!form.id) {
+      if (parsed.repeat === 'keep') throw new Error('Choose a recurrence for a new event.');
+      const inserted = Calendar.Events.insert(parsed.body, EDITOR_CALENDAR_ID, { sendUpdates: 'none' });
+      return { saved: true, id: inserted.id, status: 'created' };
+    }
+    const scope = String(form.editScope || '');
+    const record = fetchTarget_(form.id, scope);
+    if (form.revision !== record.target.etag) {
+      throw new Error('This event changed in Google Calendar. Reload it before saving to avoid overwriting another editor.');
+    }
+    if (scope === 'occurrence' && record.recurring) {
+      // Instance exceptions cannot alter recurring masters.
+      delete parsed.body.recurrence;
+    } else if (parsed.repeat === 'keep') {
+      // Complex existing recurrence rules remain unchanged.
+      delete parsed.body.recurrence;
+    }
+    // Advanced Calendar's patch method does not expose an If-Match header.
+    // We re-read and compare the event revision within a script-wide lock
+    // instead of pretending an unsupported extra argument sends headers.
+    const updated = Calendar.Events.patch(parsed.body, EDITOR_CALENDAR_ID,
+      record.target.id, { sendUpdates: 'none' });
+    return { saved: true, id: updated.id, status: 'updated' };
+  } finally {
+    lock.releaseLock();
   }
-  const scope = String(form.editScope || '');
-  const record = fetchTarget_(form.id, scope);
-  if (form.revision !== record.target.etag) {
-    throw new Error('This event changed in Google Calendar. Reload it before saving to avoid overwriting another editor.');
-  }
-  if (scope === 'occurrence' && record.recurring) {
-    // Instance exceptions cannot alter recurring masters.
-    delete parsed.body.recurrence;
-  } else if (parsed.repeat === 'keep') {
-    // Complex old recurrence rules are retained untouched by this initial UI.
-    delete parsed.body.recurrence;
-  }
-  // The Calendar advanced service supports optimistic If-Match headers.
-  const updated = Calendar.Events.patch(parsed.body, EDITOR_CALENDAR_ID,
-    record.target.id, { sendUpdates: 'none' }, { 'If-Match': record.target.etag });
-  return { saved: true, id: updated.id, status: 'updated' };
 }
 
 function editorDeleteEvent(id, scope, revision) {
   editorAccess_();
-  const record = fetchTarget_(id, scope);
-  if (record.target.etag !== revision) {
-    throw new Error('This event has changed. Reload before deleting.');
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(15000)) throw new Error('Another calendar update is in progress. Try again.');
+  try {
+    const record = fetchTarget_(id, scope);
+    if (record.target.etag !== revision) {
+      throw new Error('This event has changed. Reload before deleting.');
+    }
+    Calendar.Events.remove(EDITOR_CALENDAR_ID, record.target.id,
+      { sendUpdates: 'none' });
+    return { deleted: true, id: record.target.id };
+  } finally {
+    lock.releaseLock();
   }
-  Calendar.Events.remove(EDITOR_CALENDAR_ID, record.target.id,
-    { sendUpdates: 'none' }, { 'If-Match': record.target.etag });
-  return { deleted: true, id: record.target.id };
 }
