@@ -13,6 +13,9 @@ try {
   page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
   const url = pathToFileURL(path.resolve('site/admin-demo.html')).href;
   await page.goto(url);
+  await page.waitForFunction(() => /^\\d+m \\d{2}s$/.test(document.getElementById('refresh-countdown')?.textContent || ''));
+  assert.match(await page.locator('#refresh-time').textContent(), /^\\d{2}:\\d{2}$/);
+  assert.match(await page.locator('#refresh-history').getAttribute('href'), /actions\\/workflows\\/deploy\\.yml/);
   await page.getByText('Demonstration · read-only').waitFor({ timeout: 15000 });
   console.log('Loaded demo:', url);
 
