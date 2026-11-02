@@ -153,7 +153,7 @@ function editorBootstrap() {
   return {
     calendarName: cal.summary || 'Parish calendar',
     timeZone: EDITOR_ZONE, categories: CATEGORIES,
-    capabilities: { eventCrud: true, category: true, recurring: true, imageUpload: false },
+    capabilities: { eventCrud: true, category: true, recurring: true, imageUpload: Boolean(EDITOR_UPLOAD_FOLDER_ID) },
   };
 }
 
@@ -331,7 +331,7 @@ function editorSaveEvent(form) {
     if (!form.id) {
       if (parsed.repeat === 'keep') throw new Error('Choose a recurrence for a new event.');
       const inserted = Calendar.Events.insert(parsed.body, EDITOR_CALENDAR_ID, { sendUpdates: 'none' });
-      return { saved: true, id: inserted.id, status: 'created' };
+      return { saved: true, id: inserted.id, revision: inserted.etag || '', status: 'created' };
     }
     const scope = String(form.editScope || '');
     const record = fetchTarget_(form.id, scope);
@@ -363,7 +363,7 @@ function editorSaveEvent(form) {
     // instead of pretending an unsupported extra argument sends headers.
     const updated = Calendar.Events.patch(parsed.body, EDITOR_CALENDAR_ID,
       record.target.id, { sendUpdates: 'none' });
-    return { saved: true, id: updated.id, status: 'updated' };
+    return { saved: true, id: updated.id, revision: updated.etag || '', status: 'updated' };
   } finally {
     lock.releaseLock();
   }
