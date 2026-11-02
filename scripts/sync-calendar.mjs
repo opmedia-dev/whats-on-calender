@@ -6,7 +6,7 @@
 // event in Google Calendar (from Google Drive, shared "Anyone with the link")
 // are downloaded. Editor-selected header images take priority; legacy events use
 // the first image or first PDF page. Other images form the event-detail gallery.
-// A header image makes the event eligible for existing image-based banner rules.
+// Banner and Highlights selection is controlled by the independent woFeatured flag.
 //
 // Env: GOOGLE_API_KEY  API key with the Google Calendar API and Google Drive API enabled
 //      GCAL_ID         optional, overrides config.calendarId
@@ -21,6 +21,7 @@ import sharp from 'sharp';
 import { describeRecurrence } from './lib/recurrence.mjs';
 import { processDescription } from './lib/description.mjs';
 import { eventCategory } from './lib/event-category.mjs';
+import { eventFeatured } from './lib/featured.mjs';
 import { prepareCalendarOutput } from './lib/output-data.mjs';
 
 const root = path.resolve(import.meta.dirname, '..');
@@ -124,7 +125,7 @@ for (const a of events.flatMap((e) => e.attachments || [])) {
 
 const londonDate = new Intl.DateTimeFormat('en-CA', { timeZone }).format(now);
 const codeVersion = crypto.createHash('sha256')
-  .update(['sync-calendar.mjs', 'lib/description.mjs', 'lib/recurrence.mjs']
+  .update(['sync-calendar.mjs', 'lib/description.mjs', 'lib/recurrence.mjs', 'lib/featured.mjs']
     .map((f) => fs.readFileSync(path.join(root, 'scripts', f))).join('')).digest('hex').slice(0, 8);
 const fingerprint = crypto.createHash('sha256').update(JSON.stringify([
   londonDate, codeVersion, config,
@@ -237,7 +238,7 @@ for (const e of events) {
   const master = e.recurringEventId ? masters.get(e.recurringEventId) : null;
   const attachments = (await Promise.all((e.attachments || []).map(publishAttachment))).filter(Boolean);
   // Explicit editor selection takes priority; legacy events keep the existing
-  // first-image (then first-PDF) fallback. No separate featured checkbox.
+  // first-image (then first-PDF) fallback, independent of featuring.
   const headerFileId = e.extendedProperties?.shared?.woHeaderImageId ||
     master?.extendedProperties?.shared?.woHeaderImageId || '';
   const imageCandidates = attachments.filter((a) => IMAGE_TYPES.test(a.mimeType) && a.local);
@@ -280,7 +281,7 @@ for (const e of events) {
     categorySource: category.source,
     recurring: Boolean(e.recurringEventId),
     recurrence: master?.recurrence ? describeRecurrence(master.recurrence, master.start?.dateTime || master.start?.date, timeZone) : null,
-    featured: Boolean(image),
+    featured: eventFeatured(e, master),
     detail: key,
   });
 }
@@ -295,5 +296,5 @@ fs.writeFileSync(path.join(dataDir, 'events.json'), JSON.stringify({
   details,
 }));
 const featured = out.filter((e) => e.featured).length;
-console.log(`Wrote data/events.json: ${out.length} event(s), ${featured} with images, ${Object.keys(details).length} distinct detail block(s)`);
+console.log(`Wrote data/events.json: ${out.length} event(s), ${featured} explicitly featured, ${Object.keys(details).length} distinct detail block(s)`);
 setOutput('changed', 'true');
