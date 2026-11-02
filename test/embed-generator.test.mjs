@@ -75,3 +75,44 @@ test('manual disabling is respected even if a custom URL remains filled in', () 
   assert.equal(g.bannerUrl().searchParams.has('flipbook'), false);
   assert.match(g.el('flipbookHelp').textContent, /disabled/);
 });
+
+const preferences = [
+  { select: 'loadTimetable', output: 'code-timetable', default: 'eager' },
+  { select: 'loadMailingHero', output: 'code-mailingHero', default: 'eager' },
+  { select: 'loadBanner', output: 'code-banner', default: 'eager' },
+  { select: 'loadMailings', output: 'code-mailings', default: 'lazy' },
+  { select: 'loadWhatson', output: 'code-whatson', default: 'lazy' },
+  { select: 'loadCalendar', output: 'code-calendar', default: 'lazy' },
+];
+
+test('the embed generator offers per-embed loading controls with intentional defaults', () => {
+  for (const item of preferences) {
+    const pattern = new RegExp('<select id="' + item.select + '">([\\s\\S]*?)<\\/select>');
+    const match = html.match(pattern);
+    assert.ok(match, 'missing select ' + item.select);
+    assert.match(match[1], new RegExp('<option value="' + item.default + '" selected>'));
+    assert.match(match[1], /<option value="(eager|lazy)"/);
+  }
+});
+
+test('loading preference generates eager or lazy iframe attributes separately for each embed', () => {
+  const g = generator();
+  for (const item of preferences) {
+    g.el(item.select).value = item.default;
+    g.el(item.select).fire('change');
+  }
+  for (const item of preferences) {
+    assert.match(g.el(item.output).value, new RegExp('loading="' + item.default + '"'));
+    assert.match(g.el(item.output).value, /data-whatson/);
+    assert.match(g.el(item.output).value, /whatsonHost/);
+  }
+  const original = g.el('code-calendar').value;
+  g.el('loadBanner').value = 'lazy';
+  g.el('loadBanner').fire('change');
+  assert.match(g.el('code-banner').value, /loading="lazy"/);
+  assert.equal(g.el('code-calendar').value, original, 'changing banner loading must not alter another embed');
+  g.el('loadWhatson').value = 'eager';
+  g.el('loadWhatson').fire('change');
+  assert.match(g.el('code-whatson').value, /loading="eager"/);
+  assert.match(g.el('code-whatson').value, /data-deeplink/);
+});
