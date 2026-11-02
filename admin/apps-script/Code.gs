@@ -12,6 +12,7 @@ const EDITOR_CALENDAR_ID = 'c_d30f3ffb0daab410095d7c8446d61248b0f80e4925fe7599e3
 const EDITOR_ZONE = 'Europe/London';
 const CATEGORY_KEY = 'woCategory';
 const HEADER_IMAGE_KEY = 'woHeaderImageId';
+const FEATURED_KEY = 'woFeatured';
 const CATEGORIES = ['general', 'worship', 'community', 'music', 'families', 'heritage', 'fundraising'];
 const WRITE_ROLES = ['writer', 'owner'];
 // Set to a dedicated parish-controlled Google Drive folder before enabling uploads.
@@ -88,7 +89,13 @@ function addDay_(dateString, n) {
   d.setUTCDate(d.getUTCDate() + n);
   return Utilities.formatDate(d, 'UTC', 'yyyy-MM-dd');
 }
-function localEvent_(e) {
+// An occurrence may inherit the series flag, or explicitly override it.
+function featuredOf_(event, master) {
+  const value = event?.extendedProperties?.shared?.[FEATURED_KEY];
+  if (value === 'true' || value === 'false') return value === 'true';
+  return master?.extendedProperties?.shared?.[FEATURED_KEY] === 'true';
+}
+function localEvent_(e, master) {
   if (!e || !e.start) throw new Error('Event data is missing a start date.');
   const allDay = Boolean(e.start.date);
   const startDate = allDay ? e.start.date : localDate_(e.start.dateTime);
@@ -137,6 +144,7 @@ function localEvent_(e) {
     descriptionOriginal: e.description || '',
     attachments: attachmentsFor_(e),
     headerImageId: e.extendedProperties?.shared?.[HEADER_IMAGE_KEY] || '',
+    featured: featuredOf_(e, master),
   };
 }
 
@@ -204,7 +212,12 @@ function fetchTarget_(id, scope) {
 function editorGetEvent(id, scope) {
   editorAccess_();
   const data = fetchTarget_(id, scope || 'occurrence');
-  return Object.assign(localEvent_(data.target), {
+  // Fetch the master only when an individual occurrence has no explicit flag.
+  const shared = data.target.extendedProperties?.shared || {};
+  const master = data.target.recurringEventId &&
+    !Object.prototype.hasOwnProperty.call(shared, FEATURED_KEY)
+    ? Calendar.Events.get(EDITOR_CALENDAR_ID, data.seriesId) : null;
+  return Object.assign(localEvent_(data.target, master), {
     selectedId: id, editScope: scope || 'occurrence',
   });
 }
@@ -296,7 +309,10 @@ function normalise_(form) {
     : { dateTime: endDate + 'T' + endTime + ':00', timeZone: EDITOR_ZONE };
   const body = {
     summary: title, location, start, end,
-    extendedProperties: { shared: { [CATEGORY_KEY]: category_(form.category) } },
+    extendedProperties: { shared: {
+      [CATEGORY_KEY]: category_(form.category),
+      [FEATURED_KEY]: form.featured === true ? 'true' : 'false',
+    } },
   };
   // Don't degrade HTML-rich calendar descriptions when the editor has not
   // changed that field. Omit it from PATCH instead of resaving plain text.
@@ -333,6 +349,7 @@ function editorSaveEvent(form) {
     const existingShared = (record.target.extendedProperties && record.target.extendedProperties.shared) || {};
     parsed.body.extendedProperties.shared = Object.assign({}, existingShared, {
       [CATEGORY_KEY]: category_(form.category), [HEADER_IMAGE_KEY]: headerChoice,
+      [FEATURED_KEY]: form.featured === true ? 'true' : 'false',
     });
     if (scope === 'occurrence' && record.recurring) {
       // Instance exceptions cannot alter recurring masters.

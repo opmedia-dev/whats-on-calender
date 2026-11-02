@@ -66,7 +66,7 @@ test('event type is explicit metadata, with conservative fallback for older cale
   assert.equal(eventCategory({ summary: 'Misc', recurringEventId: '123' },
     { extendedProperties: { shared: { woCategory: 'heritage' } } }).category, 'heritage');
   assert.match(sync, /category: category\.category/);
-  assert.match(sync, /featured: Boolean\(image\)/);
+  assert.match(sync, /featured: eventFeatured\(e, master\)/);
 });
 
 test('read-only calendar accounts cannot list or edit parish events', () => {
@@ -97,10 +97,28 @@ test('a calendar event category can be saved without altering an unchanged HTML 
   assert.equal(context.editorSaveEvent(payload).saved, true);
   assert.equal(events[0].kind, 'patch');
   assert.equal(events[0].body.extendedProperties.shared.woCategory, 'community');
+  assert.equal(events[0].body.extendedProperties.shared.woFeatured, 'false');
   assert.equal('description' in events[0].body, false);
   assert.equal(fixture.lockCalls, 2);
   assert.throws(() => context.editorSaveEvent({ ...payload, revision: 'old' }), /Reload/);
   assert.throws(() => context.editorSaveEvent({ ...payload, category: 'unknown' }), /valid event category/);
+});
+
+test('featured selection round-trips and can be turned off without removing images', () => {
+  const { context, event, events } = setup();
+  event.extendedProperties.shared.woFeatured = 'true';
+  assert.equal(context.editorGetEvent(event.id, 'occurrence').featured, true);
+  const payload = {
+    id: event.id, editScope: 'occurrence', revision: event.etag, title: event.summary,
+    startDate: '2026-11-08', endDate: '2026-11-08',
+    startTime: '10:00', endTime: '11:00', repeat: 'none', allDay: false,
+    category: 'community', featured: false,
+  };
+  context.editorSaveEvent(payload);
+  assert.equal(events[0].body.extendedProperties.shared.woFeatured, 'false');
+  assert.equal(events[0].body.extendedProperties.shared.otherField, 'preserve');
+  context.editorSaveEvent({ ...payload, featured: true });
+  assert.equal(events[1].body.extendedProperties.shared.woFeatured, 'true');
 });
 
 test('custom recurrence supports selected weekdays, intervals and termination', () => {
@@ -187,6 +205,7 @@ test('new events write to the Calendar API with weekly recurrence and time-zone'
   assert.equal(events[0].body.start.timeZone, 'Europe/London');
   assert.equal(events[0].body.recurrence[0], 'RRULE:FREQ=WEEKLY;BYDAY=MO');
   assert.equal(events[0].body.description, 'Visitors welcome');
+  assert.equal(events[0].body.extendedProperties.shared.woFeatured, 'false');
 });
 
 test('frontend contains month/week controls, side-by-side form/preview and a safe demo', () => {
@@ -209,7 +228,8 @@ test('frontend contains month/week controls, side-by-side form/preview and a saf
   assert.match(frontend, /id="artTitle"/);
   assert.match(frontend, /editorListEvents/);
   assert.match(frontend, /editorSaveEvent/);
-  assert.doesNotMatch(frontend, /featuredEvent|featuredCheckbox|id="featured"/);
+  assert.match(frontend, /id="featured" type="checkbox"/);
+  assert.match(published, /id="featured" type="checkbox"/);
   assert.match(published, /Demonstration · read-only/);
   assert.match(published, /noindex,nofollow/);
 });

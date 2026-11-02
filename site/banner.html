@@ -115,8 +115,8 @@
       const { events } = await loadEvents();
       const now = new Date();
       const days = horizonDays(param('days'));
-      let upcoming = nextPerSeries(events.filter((e) =>
-        isUpcoming(e, now) && (param('show', 'featured') === 'all' || e.featured)));
+      // Event slots show editorial selections only, not every event with artwork.
+      let upcoming = nextPerSeries(events.filter((e) => isUpcoming(e, now) && e.featured === true));
       upcoming = upcoming.filter((e) => e.startDate - now < days * 86400000);
       upcoming = upcoming.slice(0, Math.max(1, Math.min(60, num('max', 9))));
       // The most recent sent weekly mailing is now a FIXED third-column card:

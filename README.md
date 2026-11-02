@@ -50,8 +50,8 @@ The mailing hero and archive are separate, optional embeds, both using the same 
 A **private What's On Event Manager** is being developed to replace routine
 Google Calendar editing. The interface has a **month/week calendar**, click-to-create
 and click-to-edit events, and a **side-by-side event form and live category-placeholder
-preview** on desktop (stacked on phones). There is **no featured-event checkbox**;
-existing public banner selection remains unchanged.
+preview** on desktop (stacked on phones). The editor has a **Feature this event** checkbox, independent of image attachments;
+only selected events enter the homepage banner and What's On Highlights.
 
 - [Read-only editor demonstration](https://opmedia-dev.github.io/whats-on-calender/admin-demo.html)
   — built by GitHub Pages, populated with example events. It cannot edit Google Calendar.
@@ -79,7 +79,7 @@ event cards remain a separate release.
 - **Pictures and posters:** in the event, use **Add attachment** and pick an image or PDF from
   Google Drive. Share the file as **Anyone with the link** (Viewer).
   - The first image, or the first page of the first PDF, becomes the event's picture.
-  - Events with a picture appear in the banner and on the What's On page.
+  - Adding a picture does not automatically feature an event. Tick **Feature this event** in the event manager to show it in the banner and What's On Highlights.
   - PDFs and other attachments are listed as downloads.
   - If a file can't be read (not shared), the run shows a warning naming the file.
 - **Description:** bold, italics, lists and links from the Google Calendar editor are kept. Web
@@ -187,7 +187,7 @@ All embeds:
 | `backText` | `backText=Back` | Detail view's back button label |
 
 `timetable.html`: `days` (7; generator allows 1–7), `heroHeight` (434px), `compact=1` (default compact hero), `compact=0` (legacy roomy agenda), `maxHeight` (legacy agenda only), `location=0` (legacy agenda only),
-`highlightToday=0`, `featured=1` (only events with pictures), `moreLink` + `moreText` (link
+`highlightToday=0`, `featured=1` (only events explicitly marked Featured), `moreLink` + `moreText` (link
 under the list), `emptyText`.
 
 `mailing-hero.html`: Shows **only the mailing preview content**, designed to replace the existing card inside the Duda Mailing hero tab (not the tab header or Subscribe action). It uses the first suitable HTTPS campaign image from Mailchimp RSS as a wide top image, followed by the latest issue's date, title and unobtrusive Read mailing link. If no image is available, it shows an excerpt instead of stock artwork. Desktop canvas **593×434px**, mobile content-sized. The original Mailchimp mailing opens on click. Requires no integration beyond `MAILCHIMP_RSS_URL`; does not change the banner or mailing archive.
@@ -196,7 +196,7 @@ under the list), `emptyText`.
 
 - `title` (`0` hides it)
 - `perPage` (3, fewer on narrow screens), `max` (9), `minCardWidth` (240)
-- `show=all` (include events without pictures), `days` (14 by default, 1–90 permitted)
+- Only events marked **Featured** appear (including those without pictures); `days` (14 by default, 1–90 permitted). The former banner `show=all` override is no longer supported.
 - `autoplay` (8 seconds by default, `0` disables; 3–60 seconds permitted)
 - `mailing=0` hides the fixed latest sent weekly mailing card. With both publications enabled, only two event cards rotate at a time. The mailing archive is a separate optional embed; no archive button is shown beneath the carousel.
 - `style=plain` (no colour band), `ratio=4:3`
