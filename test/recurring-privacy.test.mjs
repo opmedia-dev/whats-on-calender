@@ -107,6 +107,32 @@ test('this-event-only supports non-privacy edits but refuses native series priva
  assert.equal('recurrence' in patches[0].body,false);
 });
 
+test('existing private recurring event retains privacy when editing one occurrence, while a broader scope can change visibility',()=>{
+ const {context,master,selected,form,calls}=fixture();
+ master.visibility='private';
+ // Google recurring instances sometimes report default while inheriting the
+ // master series' native Private flag.
+ selected.visibility='default';
+ const occurrence=context.editorGetEvent(selected.id,'occurrence');
+ assert.equal(occurrence.visibility,'private');
+ assert.equal(occurrence.editScope,'occurrence');
+ const future=context.editorGetEvent(selected.id,'following');
+ assert.equal(future.visibility,'private');
+ const series=context.editorGetEvent(selected.id,'series');
+ assert.equal(series.visibility,'private');
+ assert.equal(series.editScope,'series');
+ // Updating a single occurrence's title must not change private visibility.
+ context.editorSaveEvent({...form,editScope:'occurrence',visibility:'private',repeat:'none'});
+ const single=calls.find(c=>c.method==='patch');
+ assert.equal(single.id,selected.id);
+ assert.equal('visibility' in single.body,false);
+ // A deliberate whole-series visibility change may be sent to the master.
+ context.editorSaveEvent({...form,editScope:'series',revision:master.etag,
+  visibility:'public',repeat:'weekly'});
+ const updateMaster=calls.find(c=>c.method==='patch'&&c.id===master.id);
+ assert.equal(updateMaster.body.visibility,'public');
+});
+
 test('this-and-future splits series, retains media and previous history, and returns new series ID',()=>{
  const {context,form,calls}=fixture();
  const res=context.editorSaveEvent(form);

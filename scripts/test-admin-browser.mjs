@@ -105,6 +105,92 @@ try {
   assert.equal(await page.locator('#title').inputValue(), '');
   await page.locator('#closeEditor').click();
 
+  // Drive the real scope-change handlers with a simulated Apps Script backend.
+  // The read-only demo intentionally closes its functions in an IIFE.
+  const linkedPage = await browser.newPage({viewport:{width:1400,height:940}});
+  linkedPage.on('pageerror', error => errors.push(error.stack || error.message));
+  linkedPage.on('dialog', dialog => dialog.accept());
+  await linkedPage.addInitScript(() => {
+    const now = new Date();
+    const date = new Intl.DateTimeFormat('en-CA', {
+      timeZone:'Europe/London',year:'numeric',month:'2-digit',day:'2-digit',
+    }).format(now);
+    const eventId='private-recurring-instance';
+    const mockedEvent={
+      id:eventId,selectedId:eventId,seriesId:'private-recurring-master',
+      title:'Private weekly meeting',category:'general',categorySource:'selected',
+      startDate:date,endDate:date,startTime:'10:00',endTime:'11:00',
+      allDay:false,description:'Private meeting',location:'Hall',repeat:'weekly',
+      featured:false,visibility:'private',revision:'etag',isRecurring:true,
+      isInstance:true,attachments:[],
+    };
+    const scopeEvents=[{
+      id:eventId,seriesId:'private-recurring-master',isInstance:true,recurring:true,
+      title:'Private weekly meeting',category:'general',
+      start:date+'T10:00:00Z',end:date+'T11:00:00Z',visibility:'private',
+      allDay:false,
+    }];
+    function runner(success, failure) {
+      return {
+        withSuccessHandler: fn => runner(fn,failure),
+        withFailureHandler: fn => runner(success,fn),
+        editorBootstrap: () => success({
+          calendarName:'Parish',timeZone:'Europe/London',
+          capabilities:{eventCrud:true,recurring:true,imageUpload:false},
+        }),
+        editorListEvents: () => success(scopeEvents),
+        editorGetEvent: (id,scope) => success({
+          ...mockedEvent,selectedId:id,editScope:scope,
+          isInstance:scope!=='series',
+        }),
+      };
+    }
+    window.google={script:{run:runner(()=>{},()=>{})}};
+  });
+  await linkedPage.goto(url);
+  await linkedPage.getByText('Google Calendar · editor').waitFor({timeout:15000});
+  await linkedPage.locator('.event-pill').first().click();
+  await linkedPage.locator('#scopeBox .scope-option').first().waitFor();
+  assert.equal(await linkedPage.locator('#scopeBox .scope-option').count(),3);
+  assert.equal(await linkedPage.locator('#visibility').inputValue(),'private');
+  assert.equal(await linkedPage.locator('#visibility').isDisabled(),true);
+  assert.match(await linkedPage.locator('#visibilityHint').textContent(), /Current privacy: Private/);
+  const scopeGeometry = await linkedPage.locator('#scopeBox').evaluate(fieldset => ({
+    height:fieldset.getBoundingClientRect().height,
+    labels:[...fieldset.querySelectorAll('.scope-option')].map(label=>{
+      const radio=label.querySelector('input').getBoundingClientRect();
+      const span=label.querySelector('span').getBoundingClientRect();
+      return {radioX:radio.x,radioMidY:radio.y+radio.height/2,
+        radioWidth:radio.width,textX:span.x,textMidY:span.y+span.height/2,
+        labelHeight:label.getBoundingClientRect().height};
+    }),
+  }));
+  assert.ok(scopeGeometry.height < 240, 'scope choices must be compact: '+JSON.stringify(scopeGeometry));
+  for (const choice of scopeGeometry.labels) {
+    assert.ok(choice.radioWidth <= 20, 'radio input must not expand across the row');
+    assert.ok(choice.radioX + choice.radioWidth <= choice.textX,
+      'radio must appear immediately before its label');
+    assert.ok(Math.abs(choice.radioMidY-choice.textMidY) < 6,
+      'radio and label text must share a horizontal baseline');
+    assert.ok(choice.labelHeight < 58, 'one choice must not fill multiple rows');
+  }
+  await linkedPage.locator('input[name=scope][value=following]').check();
+  await linkedPage.waitForFunction(() => {
+    const select=document.getElementById('visibility');
+    return select && !select.disabled && document.querySelector('input[name=scope][value=following]').checked;
+  });
+  assert.equal(await linkedPage.locator('#visibility').inputValue(),'private');
+  await linkedPage.locator('#visibility').selectOption('public');
+  assert.equal(await linkedPage.locator('#visibility').inputValue(),'public');
+  await linkedPage.locator('input[name=scope][value=series]').check();
+  await linkedPage.waitForFunction(() => {
+    return document.querySelector('input[name=scope][value=series]').checked &&
+      !document.getElementById('visibility').disabled &&
+      document.getElementById('visibility').value==='private';
+  });
+  assert.match(await linkedPage.locator('#visibilityHint').textContent(), /every event in the series/);
+  await linkedPage.close();
+
   await page.setViewportSize({ width: 390, height: 780 });
   await page.locator('#newEvent').click();
   await assertModal('mobile New event');
@@ -112,5 +198,5 @@ try {
   assert.ok(dialog.width < 390, 'mobile dialog must fit viewport');
   assert.ok(dialog.height <= 780, 'mobile dialog must not exceed viewport');
   assert.deepEqual(errors, [], 'browser must not report runtime errors');
-  console.log('PASS: New event, existing event, date, custom repeat, Reset, mobile modal');
+  console.log('PASS: Editor workflow, aligned recurring scope choices, private visibility by scope, mobile modal');
 } finally { await browser.close(); }

@@ -39,7 +39,7 @@ h1{font-size:27px;letter-spacing:-.04em;margin:0 0 4px}h2{font-size:17px;margin:
 .week-day.today{background:#fdf5f5}.week-day .date-btn{text-align:left;align-self:start}
 .week-events{display:grid;gap:4px}.week-events .event-pill{padding:8px;font-size:12px;margin:0}.week-none{font-size:12px;color:#91898e;padding:7px}
 .layout{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);gap:22px;align-items:start}
-input:not([type=checkbox]),select,textarea{border:1px solid #ded7d4;border-radius:7px;width:100%;padding:10px 11px;background:#fff;font-size:13px;color:#312e31;min-width:0}
+input:not([type=checkbox]):not([type=radio]),select,textarea{border:1px solid #ded7d4;border-radius:7px;width:100%;padding:10px 11px;background:#fff;font-size:13px;color:#312e31;min-width:0}
 textarea{resize:vertical;min-height:100px;line-height:1.5}
 .field{margin-bottom:15px;min-width:0}.field label{display:block;font-size:12px;font-weight:700;margin-bottom:6px}
 .field small,.muted{font-size:11.5px;color:var(--muted)}
@@ -47,8 +47,15 @@ textarea{resize:vertical;min-height:100px;line-height:1.5}
 .featured-setting{padding:12px 14px;margin:0 0 16px;border:1px solid #e6d9dc;border-radius:8px;background:#fcf8f7}.featured-setting .check{margin:0 0 5px}.featured-setting .help{margin:0 0 0 23px}
 #scopeBox{border:1px solid #e7dadd;background:#faf5f5;padding:11px;margin:0 0 17px;border-radius:7px}
 #scopeBox legend{font-size:12px;font-weight:700;color:var(--accent)}
-#scopeBox label{font-size:12px;margin-right:18px}
-#scopeBox input{accent-color:var(--accent)}
+#scopeBox .scope-options{display:grid;gap:6px;margin:3px 0 9px}
+#scopeBox .scope-option{display:flex;align-items:center;justify-content:flex-start;gap:10px;width:100%;padding:7px 8px;margin:0;border:1px solid transparent;border-radius:6px;cursor:pointer;font-size:13px;line-height:1.4;text-align:left}
+#scopeBox .scope-option:has(input:checked){border-color:#dcc6cc;background:#fff}
+#scopeBox .scope-option input[type=radio]{appearance:auto;display:block;flex:0 0 17px;width:17px;height:17px;min-width:17px;margin:0;padding:0;accent-color:var(--accent);border:0}
+#scopeBox .scope-option span{display:block;min-width:0}
+#scopeBox .scope-option:focus-within{outline:2px solid #b65f6e;outline-offset:1px}
+#scopeBox .muted{margin:6px 7px 1px;line-height:1.5}
+#visibility:disabled{background:#f7f5f4;color:#5b5055;opacity:1}
+#visibilityHint{display:block;line-height:1.5;margin-top:6px}
 .browser{background:#fbfaf8;border:1px solid var(--line);padding:12px;border-radius:8px;margin-bottom:18px}
 .browser-top{display:flex;justify-content:space-between;align-items:center;font-size:12px;margin-bottom:8px}
 #eventList{display:grid;gap:2px;max-height:110px;overflow:auto;margin-top:7px}
@@ -152,10 +159,12 @@ textarea{resize:vertical;min-height:100px;line-height:1.5}
   <div class="panel-body">
    <form id="eventForm">
     <fieldset id="scopeBox" hidden><legend>Recurring event: editing scope</legend>
-     <label><input type="radio" name="scope" value="occurrence" checked> This event only</label>
-     <label><input type="radio" name="scope" value="following"> This event and future events</label>
-     <label><input type="radio" name="scope" value="series"> All events in the series</label>
-     <p class="muted">This event and future events splits the repeat at this date. Earlier dates remain unchanged. Advanced patterns or existing exceptions may require Google Calendar.</p>
+     <div class="scope-options">
+      <label class="scope-option"><input type="radio" name="scope" value="occurrence" checked><span>This event only</span></label>
+      <label class="scope-option"><input type="radio" name="scope" value="following"><span>This event and future events</span></label>
+      <label class="scope-option"><input type="radio" name="scope" value="series"><span>All events in the series</span></label>
+     </div>
+     <p class="muted">For future events, the repeating series is split at this date. Earlier dates remain unchanged. Complex repeats may require editing in Google Calendar.</p>
     </fieldset>
     <div class="field"><label for="title">Event title</label><input id="title" required maxlength="180" placeholder="e.g. Community Coffee Morning"></div>
     <div class="two">
@@ -623,8 +632,8 @@ function put(e){
  $('repeat').disabled=!!e.isRecurring && state.scope==='occurrence';
  $('visibility').disabled=!!e.isRecurring && state.scope==='occurrence';
  $('visibilityHint').textContent=$('visibility').disabled
-  ? 'Privacy applies to a recurring series. To change privacy, select This event and future events or All events in the series. Other details can still be changed for this event only.'
-  : 'Private events remain available to authorised editors but are excluded from all public What’s On displays after the next sync.';
+  ? 'Current privacy: '+($('visibility').value==='private'?'Private':$('visibility').value==='public'?'Public':'Calendar default')+'. To change it, select This event and future events or All events in the series above. You can still edit this occurrence without changing its privacy.'
+  : 'Privacy applies to '+(e.isRecurring && state.scope==='following'?'this date and future occurrences':e.isRecurring?'every event in the series':'this event')+'. Private events remain accessible to authorised editors but are excluded from all public What’s On displays after the next sync.';
  customPopulate(e.customRepeat);repeatPanel();
  $('repeatHint').textContent=e.repeat==='keep'?'Complex recurrence preserved unless deliberately changed.':'Weekly and monthly patterns supported.';
  $('categoryHint').textContent=e.categorySource==='suggested'?'Suggested from title; choose a category to save it.':'Category stored on event.';
