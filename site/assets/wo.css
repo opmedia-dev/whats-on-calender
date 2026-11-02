@@ -553,6 +553,9 @@ button { font: inherit; color: inherit; }
 .wo-cal-ev.is-featured a:hover { filter: brightness(1.12); }
 .wo-cal-more { margin-top: 3px; border: 0; background: none; padding: 2px 7px; border-radius: 6px; color: var(--wo-accent); font-weight: 700; cursor: pointer; font-size: inherit; }
 .wo-cal-more:hover { background: var(--wo-accent-soft); }
+.wo-cal-more:focus-visible { outline:2px solid var(--wo-accent); outline-offset:2px; }
+.wo-cal-repeat { font-weight:800; color:var(--wo-accent); margin-right:3px; }
+.wo-cal-ev.is-featured .wo-cal-repeat { color:#fff; }
 .wo-cal-list { display: none; }
 .wo-cal-earlier { justify-self: center; }
 .wo-cal.is-list .wo-cal-board { display: none; }
