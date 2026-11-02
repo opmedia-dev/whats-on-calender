@@ -111,8 +111,10 @@ for (const id of new Set(events.map((e) => e.recurringEventId).filter(Boolean)))
 
 // A recurring instance can inherit privacy from its master, even when its own
 // visibility field says default. Exclude these BEFORE downloading any media.
+// If a master cannot be fetched, fail closed; never publish an instance
+// whose privacy cannot be established.
 events = events.filter(e => !e.recurringEventId ||
-  !isHidden(masters.get(e.recurringEventId) || {}));
+  (masters.has(e.recurringEventId) && !isHidden(masters.get(e.recurringEventId))));
 
 // Attachment metadata (cheap) is fetched up front so a replaced poster counts as a change.
 const fileMeta = new Map();
