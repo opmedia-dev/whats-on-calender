@@ -847,9 +847,12 @@ document.querySelectorAll('[data-format]').forEach(function(button){
  });
  function end(){start=null;img.classList.remove('is-dragging')}
  img.addEventListener('pointerup',end);img.addEventListener('pointercancel',end);
- $('imageFocusX').addEventListener('input',function(){setImageFocus(Number(this.value),focusNumbers()[1])});
- $('imageFocusY').addEventListener('input',function(){setImageFocus(focusNumbers()[0],Number(this.value))});
- $('resetImageFocus').addEventListener('click',function(){setImageFocus(50,50)});
+ document.querySelectorAll('.crop-pad button[data-focus]').forEach(function(button){
+  button.addEventListener('click',function(){
+   const values=button.dataset.focus.split(',').map(Number);
+   setImageFocus(values[0],values[1]);
+  });
+ });
 })();
 $('uploadForm').addEventListener('submit',async function(ev){
  ev.preventDefault();
@@ -877,13 +880,42 @@ $('uploadAttachment').addEventListener('change',function(){
  const file=this.files[0];
  if(file&&file.type.startsWith('image/'))state.draftImageUrl=URL.createObjectURL(file);
  if(file&&!file.type.startsWith('image/'))$('imageRole').value='gallery';
- if(file&&file.type.startsWith('image/')&&$('imageRole').value==='header'){state.imageFocus='50,50';state.dirty=true}
- refreshImagePreview();
- $('uploadStatus').textContent=file
-  ? (state.uploadConfigured?'Selected file will upload when you Save event.':'Upload unavailable until the parish Drive folder is configured.')
-  : 'No file selected.';
+ if(file&&file.type.startsWith('image/')&&$('imageRole').value==='header'){
+  if(state.focusBeforeDraft===null||state.focusBeforeDraft===undefined)state.focusBeforeDraft=state.imageFocus;
+  state.imageFocus='50,50';state.dirty=true;
+ }
+ refreshImagePreview();updateUploadUI();
+ $('uploadStatus').textContent=file&&!state.uploadConfigured?'Upload unavailable until the parish Drive folder is configured.':'';
 });
-$('imageRole').addEventListener('change',refreshImagePreview);
+$('imageRole').addEventListener('change',function(){
+ const file=$('uploadAttachment').files[0];
+ if(file&&file.type.startsWith('image/')&&this.value==='header'){
+  if(state.focusBeforeDraft===null||state.focusBeforeDraft===undefined)state.focusBeforeDraft=state.imageFocus;
+  state.imageFocus='50,50';state.dirty=true;
+ }
+ refreshImagePreview();updateUploadUI();
+});
+$('uploadClear').addEventListener('click',function(){
+ $('uploadAttachment').value='';
+ if(state.draftImageUrl)URL.revokeObjectURL(state.draftImageUrl);
+ state.draftImageUrl='';
+ if(state.focusBeforeDraft!==null&&state.focusBeforeDraft!==undefined)state.imageFocus=state.focusBeforeDraft;
+ state.focusBeforeDraft=null;$('uploadStatus').textContent='';
+ refreshImagePreview();updateUploadUI();
+});
+(function(){
+ const zone=$('uploadDropzone');
+ zone.addEventListener('dragover',function(event){event.preventDefault();event.dataTransfer.dropEffect='copy';zone.classList.add('is-dragover')});
+ zone.addEventListener('dragleave',function(event){if(!zone.contains(event.relatedTarget))zone.classList.remove('is-dragover')});
+ zone.addEventListener('drop',function(event){
+  event.preventDefault();zone.classList.remove('is-dragover');
+  if(!event.dataTransfer||!event.dataTransfer.files.length)return;
+  if(typeof DataTransfer==='undefined')return;
+  const transfer=new DataTransfer();transfer.items.add(event.dataTransfer.files[0]);
+  $('uploadAttachment').files=transfer.files;
+  $('uploadAttachment').dispatchEvent(new Event('change',{bubbles:true}));
+ });
+})();
 $('allDay').addEventListener('change',function(){state.dirty=true;adjustAllDay();preview()});
 $('featured').addEventListener('change',function(){state.dirty=true;preview()});
 $('visibility').addEventListener('change',function(){state.dirty=true;if(this.value==='private')$('featured').checked=false;preview()});
