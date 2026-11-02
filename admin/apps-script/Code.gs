@@ -151,7 +151,7 @@ function localEvent_(e, master) {
     hasFormattedDescription: /<\/?(?:p|div|span|strong|b|a|br|ul|ol|li)\b/i.test(e.description || ''),
     descriptionOriginal: e.description || '',
     attachments: attachmentsFor_(e),
-    headerImageId: e.extendedProperties?.shared?.[HEADER_IMAGE_KEY] || '',
+    headerImageId: e.extendedProperties?.shared?.[HEADER_IMAGE_KEY] || master?.extendedProperties?.shared?.[HEADER_IMAGE_KEY] || '',
     featured: featuredOf_(e, master),
     imageFocus: imageFocus_(e.extendedProperties?.shared?.[IMAGE_FOCUS_KEY] ||
       master?.extendedProperties?.shared?.[IMAGE_FOCUS_KEY]),
@@ -321,7 +321,7 @@ function normalise_(form) {
     summary: title, location, start, end, visibility,
     extendedProperties: { shared: {
       [CATEGORY_KEY]: category_(form.category),
-      [FEATURED_KEY]: form.featured === true ? 'true' : 'false',
+      [FEATURED_KEY]: form.visibility === 'private' ? 'false' : (form.featured === true ? 'true' : 'false'),
       [IMAGE_FOCUS_KEY]: imageFocus_(form.imageFocus),
     } },
   };
@@ -484,19 +484,28 @@ function editorSaveEvent(form) {
         a.fileId === headerChoice && /^image\//i.test(a.mimeType || ''));
       if (!match) throw new Error('The selected header image is not attached to this event. Reload and choose again.');
     }
-    const existingShared = (record.target.extendedProperties && record.target.extendedProperties.shared) || {};
+    const existingShared = Object.assign({}, record.master?.extendedProperties?.shared || {},
+      record.target.extendedProperties?.shared || {});
     parsed.body.extendedProperties.shared = Object.assign({}, existingShared, {
       [CATEGORY_KEY]: category_(form.category), [HEADER_IMAGE_KEY]: headerChoice,
-      [FEATURED_KEY]: form.featured === true ? 'true' : 'false',
+      [FEATURED_KEY]: form.visibility === 'private' ? 'false' : (form.featured === true ? 'true' : 'false'),
       [IMAGE_FOCUS_KEY]: imageFocus_(form.imageFocus),
     });
     if (scope === 'occurrence' && record.recurring) {
+      // Google Calendar enforces stricter visibility changes across ALL
+      // instances, even when updating just one. Never widen the user's scope.
+      const inheritedVisibility = record.master?.visibility || record.target.visibility || 'default';
+      if (parsed.body.visibility !== inheritedVisibility) {
+        throw new Error('Google Calendar applies visibility changes across the whole recurring series. Choose This and future or All events to change privacy.');
+      }
+      delete parsed.body.visibility;
       // Instance exceptions cannot alter recurring masters.
       delete parsed.body.recurrence;
     } else if (parsed.repeat === 'keep') {
       // Complex existing recurrence rules remain unchanged.
       delete parsed.body.recurrence;
     }
+    if (scope === 'following') return splitFollowing_(record, parsed, form);
     // Advanced Calendar's patch method does not expose an If-Match header.
     // We re-read and compare the event revision within a script-wide lock
     // instead of pretending an unsupported extra argument sends headers.
