@@ -227,6 +227,8 @@ try {
     assert.ok(choice.labelHeight < 58, 'one choice must not fill multiple rows');
   }
   await linkedPage.locator('input[name=scope][value=following]').check();
+  await linkedPage.locator('#appConfirmDialog').waitFor();
+  await linkedPage.locator('#appConfirmYes').click();
   await linkedPage.waitForFunction(() => {
     const select=document.getElementById('visibility');
     return select && !select.disabled && document.querySelector('input[name=scope][value=following]').checked;
