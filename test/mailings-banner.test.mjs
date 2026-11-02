@@ -54,27 +54,41 @@ test('mailing feed can use actual campaign artwork but ignores tracking pixels a
   assert.equal(parseMailchimpRss(xml)[0].summary, 'Parish news');
 });
 
-test('the first parish logo is preferred over a later larger campaign photograph', () => {
-  const xml = [
-    '<rss version="2.0"><channel><item><title>Parish weekly mailing</title>',
-    '<link>https://example.org/mailings/1</link>',
-    '<pubDate>Fri, 30 Oct 2026 09:00:00 GMT</pubDate>',
-    '<description><![CDATA[',
-    '<img width="1" height="1" src="https://example.org/open/pixel.gif">',
-    '<img width="104" height="60" src="https://mcusercontent.com/parish-logo.png">',
-    '<img width="630" height="360" src="https://mcusercontent.com/second-photo.jpg">',
-    ']]></description></item></channel></rss>',
-  ].join('');
-  assert.equal(mailingImageFromHtml('<img width="104" height="60" src="https://example.org/logo.png">'), 'https://example.org/logo.png');
-  assert.equal(parseMailchimpRss(xml)[0].image, 'https://mcusercontent.com/parish-logo.png');
-  assert.equal(mailingImageFromHtml('<img width="1" height="1" src="https://example.org/pixel.gif"><img width="16" height="16" src="https://example.org/icon.png">'), '');
+test('the first editorial picture follows the verified recurring parish masthead', () => {
+  // Exact image URL/order measured from the live public Mailchimp RSS
+  // 2 November 2026: 533px masthead followed by 225px saints artwork.
+  const masthead = 'https://mcusercontent.com/d0fc454c51d7e9daa986cd29a/images/bb22fe35-e559-23bb-c7d2-18f3dee7c289.jpg';
+  const saints = 'https://mcusercontent.com/d0fc454c51d7e9daa986cd29a/images/b7a2bf63-db2b-4814-40f0-c3f7cc8cb637.jpeg';
+  const html = '<img alt="" width="533" class="mcnImage" src="' + masthead + '">' +
+    '<img alt="" width="225" class="mcnImage" src="' + saints + '">' +
+    '<img alt="" width="562" src="https://mcusercontent.com/diary.png">';
+  assert.equal(mailingImageFromHtml(html), saints);
+  const xml = '<rss><channel><item><title>St Johns Parish mailing - All Saints Sunday</title>' +
+    '<link>https://example.org/mailings/1</link>' +
+    '<pubDate>Fri, 30 Oct 2026 09:00:00 GMT</pubDate>' +
+    '<description><![CDATA[' + html + ']]></description></item></channel></rss>';
+  assert.equal(parseMailchimpRss(xml)[0].image, saints);
+  // Other archive editions share the masthead but their first content image varies.
+  const nextIssueImage='https://mcusercontent.com/d0fc454c51d7e9daa986cd29a/images/3d53e171-2866-3d30-5be0-4d5de731a81d.jpg';
+  assert.equal(mailingImageFromHtml('<img src="' + masthead + '" width="533"><img width="270" src="' + nextIssueImage + '">'), nextIssueImage);
+  // The third edition starts with a smaller 92px content picture. Preserve it.
+  const smallEditorial = 'https://mcusercontent.com/d0fc454c51d7e9daa986cd29a/images/88af5785-d93a-5002-d581-29abf800b6f5.jpg';
+  assert.equal(mailingImageFromHtml('<img src="' + masthead + '" width="533"><img width="92" src="' + smallEditorial + '">'), smallEditorial);
 });
 
-test('lazy image src placeholders do not displace the first real newsletter logo', () => {
+test('masthead-only newsletters use text fallback, without selecting a later tracking image', () => {
+  const masthead = 'https://mcusercontent.com/d0fc454c51d7e9daa986cd29a/images/bb22fe35-e559-23bb-c7d2-18f3dee7c289.jpg';
+  assert.equal(mailingImageFromHtml('<img src="' + masthead + '" width="533">'), '');
+  assert.equal(mailingImageFromHtml('<img width="490" src="https://example.org/brand-logo.png"><img width="300" src="https://example.org/article.jpg">'), 'https://example.org/article.jpg');
+  assert.equal(mailingImageFromHtml('<img src="https://example.org/masthead.jpg" width="400">'), '');
+  assert.equal(mailingImageFromHtml('<img width="320" src="https://example.org/genuine-first-photo.jpg">'), 'https://example.org/genuine-first-photo.jpg');
+});
+
+test('lazy-loaded mastheads do not displace the first genuine newsletter illustration', () => {
   assert.equal(mailingImageFromHtml(
     '<img width="118" height="62" src="data:image/gif;base64,AA==" data-src="https://mcusercontent.com/logo.jpg">' +
     '<img width="600" height="330" src="https://mcusercontent.com/photo.jpg">'),
-    'https://mcusercontent.com/logo.jpg');
+    'https://mcusercontent.com/photo.jpg');
 });
 
 test('the banner mailing card displays the identical RSS image used by the mailing hero', () => {
@@ -106,7 +120,7 @@ test('the banner mailing card displays the identical RSS image used by the maili
   assert.equal(find(unsafe, n => n.tag === 'img').length, 0);
 });
 
-test('both mailing placements preserve the logo rather than cropping it', () => {
+test('both mailing placements preserve the selected editorial image without cropping', () => {
   const css = readFileSync(fileURLToPath(new URL('../site/assets/wo.css', import.meta.url)), 'utf8');
   assert.match(css, /\.wo-mailing-media \.wo-mailing-cover\s*\{[^}]*object-fit: contain/);
   assert.match(css, /\.wo-mailing-hero-picture img\s*\{[^}]*object-fit: contain/);
