@@ -12,6 +12,7 @@ const EDITOR_CALENDAR_ID = 'c_d30f3ffb0daab410095d7c8446d61248b0f80e4925fe7599e3
 const EDITOR_ZONE = 'Europe/London';
 const CATEGORY_KEY = 'woCategory';
 const HEADER_IMAGE_KEY = 'woHeaderImageId';
+const IMAGE_FOCUS_KEY = 'woImageFocus';
 const FEATURED_KEY = 'woFeatured';
 const CATEGORIES = ['general', 'worship', 'community', 'music', 'families', 'heritage', 'fundraising'];
 const WRITE_ROLES = ['writer', 'owner'];
@@ -95,6 +96,13 @@ function featuredOf_(event, master) {
   if (value === 'true' || value === 'false') return value === 'true';
   return master?.extendedProperties?.shared?.[FEATURED_KEY] === 'true';
 }
+// Only percentage pairs are stored; never accept CSS or arbitrary markup.
+function imageFocus_(value) {
+  const match = String(value || '').match(/^(\d{1,3}),(\d{1,3})$/);
+  if (!match) return '50,50';
+  const x = Number(match[1]), y = Number(match[2]);
+  return x <= 100 && y <= 100 ? x + ',' + y : '50,50';
+}
 function localEvent_(e, master) {
   if (!e || !e.start) throw new Error('Event data is missing a start date.');
   const allDay = Boolean(e.start.date);
@@ -145,6 +153,8 @@ function localEvent_(e, master) {
     attachments: attachmentsFor_(e),
     headerImageId: e.extendedProperties?.shared?.[HEADER_IMAGE_KEY] || '',
     featured: featuredOf_(e, master),
+    imageFocus: imageFocus_(e.extendedProperties?.shared?.[IMAGE_FOCUS_KEY] ||
+      master?.extendedProperties?.shared?.[IMAGE_FOCUS_KEY]),
   };
 }
 
@@ -153,7 +163,7 @@ function editorBootstrap() {
   return {
     calendarName: cal.summary || 'Parish calendar',
     timeZone: EDITOR_ZONE, categories: CATEGORIES,
-    capabilities: { eventCrud: true, category: true, recurring: true, imageUpload: false },
+    capabilities: { eventCrud: true, category: true, recurring: true, imageUpload: Boolean(EDITOR_UPLOAD_FOLDER_ID) },
   };
 }
 
@@ -215,7 +225,8 @@ function editorGetEvent(id, scope) {
   // Fetch the master only when an individual occurrence has no explicit flag.
   const shared = data.target.extendedProperties?.shared || {};
   const master = data.target.recurringEventId &&
-    !Object.prototype.hasOwnProperty.call(shared, FEATURED_KEY)
+    (!Object.prototype.hasOwnProperty.call(shared, FEATURED_KEY) ||
+      !Object.prototype.hasOwnProperty.call(shared, IMAGE_FOCUS_KEY))
     ? Calendar.Events.get(EDITOR_CALENDAR_ID, data.seriesId) : null;
   return Object.assign(localEvent_(data.target, master), {
     selectedId: id, editScope: scope || 'occurrence',
@@ -312,6 +323,7 @@ function normalise_(form) {
     extendedProperties: { shared: {
       [CATEGORY_KEY]: category_(form.category),
       [FEATURED_KEY]: form.featured === true ? 'true' : 'false',
+      [IMAGE_FOCUS_KEY]: imageFocus_(form.imageFocus),
     } },
   };
   // Don't degrade HTML-rich calendar descriptions when the editor has not
@@ -331,7 +343,7 @@ function editorSaveEvent(form) {
     if (!form.id) {
       if (parsed.repeat === 'keep') throw new Error('Choose a recurrence for a new event.');
       const inserted = Calendar.Events.insert(parsed.body, EDITOR_CALENDAR_ID, { sendUpdates: 'none' });
-      return { saved: true, id: inserted.id, status: 'created' };
+      return { saved: true, id: inserted.id, revision: inserted.etag || '', status: 'created' };
     }
     const scope = String(form.editScope || '');
     const record = fetchTarget_(form.id, scope);
@@ -350,6 +362,7 @@ function editorSaveEvent(form) {
     parsed.body.extendedProperties.shared = Object.assign({}, existingShared, {
       [CATEGORY_KEY]: category_(form.category), [HEADER_IMAGE_KEY]: headerChoice,
       [FEATURED_KEY]: form.featured === true ? 'true' : 'false',
+      [IMAGE_FOCUS_KEY]: imageFocus_(form.imageFocus),
     });
     if (scope === 'occurrence' && record.recurring) {
       // Instance exceptions cannot alter recurring masters.
@@ -363,7 +376,7 @@ function editorSaveEvent(form) {
     // instead of pretending an unsupported extra argument sends headers.
     const updated = Calendar.Events.patch(parsed.body, EDITOR_CALENDAR_ID,
       record.target.id, { sendUpdates: 'none' });
-    return { saved: true, id: updated.id, status: 'updated' };
+    return { saved: true, id: updated.id, revision: updated.etag || '', status: 'updated' };
   } finally {
     lock.releaseLock();
   }

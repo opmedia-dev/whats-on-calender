@@ -98,6 +98,7 @@ test('a calendar event category can be saved without altering an unchanged HTML 
   assert.equal(events[0].kind, 'patch');
   assert.equal(events[0].body.extendedProperties.shared.woCategory, 'community');
   assert.equal(events[0].body.extendedProperties.shared.woFeatured, 'false');
+  assert.equal(events[0].body.extendedProperties.shared.woImageFocus, '50,50');
   assert.equal('description' in events[0].body, false);
   assert.equal(fixture.lockCalls, 2);
   assert.throws(() => context.editorSaveEvent({ ...payload, revision: 'old' }), /Reload/);
@@ -119,6 +120,22 @@ test('featured selection round-trips and can be turned off without removing imag
   assert.equal(events[0].body.extendedProperties.shared.otherField, 'preserve');
   context.editorSaveEvent({ ...payload, featured: true });
   assert.equal(events[1].body.extendedProperties.shared.woFeatured, 'true');
+});
+
+test('image focus persists, is validated and retains unrelated shared properties', () => {
+  const { context, event, events } = setup();
+  event.extendedProperties.shared.woImageFocus = '75,20';
+  assert.equal(context.editorGetEvent(event.id, 'occurrence').imageFocus, '75,20');
+  const payload = {
+    id:event.id, editScope:'occurrence', revision:event.etag, title:event.summary,
+    startDate:'2026-11-08',endDate:'2026-11-08',startTime:'10:00',endTime:'11:00',
+    repeat:'none', allDay:false, category:'community',imageFocus:'80,30',
+  };
+  context.editorSaveEvent(payload);
+  assert.equal(events[0].body.extendedProperties.shared.woImageFocus, '80,30');
+  assert.equal(events[0].body.extendedProperties.shared.otherField,'preserve');
+  context.editorSaveEvent({...payload,imageFocus:'url(javascript:evil)'});
+  assert.equal(events[1].body.extendedProperties.shared.woImageFocus,'50,50');
 });
 
 test('custom recurrence supports selected weekdays, intervals and termination', () => {
@@ -229,6 +246,10 @@ test('frontend contains month/week controls, side-by-side form/preview and a saf
   assert.match(frontend, /editorListEvents/);
   assert.match(frontend, /editorSaveEvent/);
   assert.match(frontend, /id="featured" type="checkbox"/);
+  assert.match(frontend, /id="imageFocusControls"/);
+  assert.match(frontend, /function setImageFocus\(x,y\)/);
+  assert.match(frontend, /finally\{pending\(false\)\}/);
+  assert.match(frontend, /await call\('editorUploadFile',\$\('uploadForm'\)\)/);
   assert.match(published, /id="featured" type="checkbox"/);
   assert.match(published, /Demonstration · read-only/);
   assert.match(published, /noindex,nofollow/);

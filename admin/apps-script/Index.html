@@ -116,7 +116,10 @@ textarea{resize:vertical;min-height:100px;line-height:1.5}
 .attachment-item .image-role{font-size:11px;font-weight:750;color:#655d60}
 .preview-art.has-photo{position:relative;padding:0;min-height:210px;background:#ebe7e3}
 .preview-art.has-photo:before,.preview-art.has-photo>#artCategory,.preview-art.has-photo>#artTitle,.preview-art.has-photo>#artDate{display:none}
-.preview-art #previewHeaderImage{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.preview-art #previewHeaderImage{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;object-position:50% 50%;touch-action:none;cursor:grab;user-select:none}
+.preview-art #previewHeaderImage.is-dragging{cursor:grabbing}
+.preview-art.has-photo{aspect-ratio:16/10;min-height:0}
+.image-focus-controls{padding:12px 0 0}.image-focus-controls .focus-row{display:grid;grid-template-columns:82px 1fr 40px;gap:8px;align-items:center;margin-top:8px;font-size:12px}.image-focus-controls input{width:100%;accent-color:var(--accent)}
 .preview-art #previewHeaderImage[hidden]{display:none}
 .preview-gallery{display:flex;gap:7px;flex-wrap:wrap;padding:10px 12px;background:#f9f7f5;border-top:1px solid var(--line)}
 .preview-gallery img{width:76px;height:59px;object-fit:cover;border-radius:5px;border:1px solid #ddd4d1}
@@ -238,7 +241,7 @@ textarea{resize:vertical;min-height:100px;line-height:1.5}
       <option value="header">Use as event header</option>
       <option value="gallery">Add to listing/gallery</option>
      </select>
-     <p class="help">For PDFs and documents, the placement is always Downloads.</p>
+     <p class="help">For PDFs and documents, the placement is always Downloads. A selected file will upload when you Save event; the separate Upload attachment button adds a file without changing event details.</p>
     </div>
     <label for="uploadAttachment">Add an image, PDF or document (maximum 8 MB)</label>
     <div class="tools">
@@ -257,7 +260,13 @@ textarea{resize:vertical;min-height:100px;line-height:1.5}
      <img id="previewHeaderImage" alt="" hidden>
      <span id="artCategory">General</span><div id="artTitle">Your event title</div><span id="artDate">Date to be confirmed</span>
     </div>
-    <div id="previewGallery" class="preview-gallery" hidden></div>
+    <div id="imageFocusControls" class="image-focus-controls" hidden>
+      <p class="help">Drag the picture above to reposition its crop. You can also use the sliders. This position will be used on event cards; the full image remains available in event details.</p>
+      <div class="focus-row"><label for="imageFocusX">Horizontal</label><input id="imageFocusX" type="range" min="0" max="100" value="50"><output id="imageFocusXValue" for="imageFocusX">50%</output></div>
+      <div class="focus-row"><label for="imageFocusY">Vertical</label><input id="imageFocusY" type="range" min="0" max="100" value="50"><output id="imageFocusYValue" for="imageFocusY">50%</output></div>
+      <button type="button" id="resetImageFocus" class="btn">Centre image</button>
+     </div>
+     <div id="previewGallery" class="preview-gallery" hidden></div>
     <div class="preview-info"><h3 id="pvTitle">Your event title</h3><p id="pvDate">Select an event date</p><p id="pvLocation" hidden></p></div>
    </div>
    <div id="previewDescription">Your event description will appear here.</div>
@@ -273,7 +282,7 @@ var $=function(id){return document.getElementById(id)};
 var labels={general:'General',worship:'Worship & services',community:'Community',music:'Music',families:'Children & families',heritage:'Heritage & talks',fundraising:'Fundraising'};
 var fields=['title','category','repeat','startDate','endDate','startTime','endTime','location'];
 var linked=(typeof google!=='undefined' && google.script && google.script.run);
-var state={events:[],date:new Date(),mode:'month',busy:false,id:'',revision:'',scope:'occurrence',active:null,changed:false,dirty:false,attachments:[],headerImageId:'',draftImageUrl:''};
+var state={events:[],date:new Date(),mode:'month',busy:false,id:'',revision:'',scope:'occurrence',active:null,changed:false,dirty:false,attachments:[],headerImageId:'',draftImageUrl:'',imageFocus:'50,50',uploadConfigured:false};
 function key(d){return d.toISOString().slice(0,10)}
 function fromDate(s){return new Date(s+'T12:00:00Z')}
 function add(s,n){var d=fromDate(s);d.setUTCDate(d.getUTCDate()+n);return key(d)}
@@ -281,11 +290,23 @@ function today(){return new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/London
 function pretty(s,opts){return new Intl.DateTimeFormat('en-GB',opts).format(fromDate(s))}
 function startWeek(s){var d=fromDate(s);return add(s,-((d.getUTCDay()+6)%7))}
 function status(t,bad){$('status').textContent=t;$('status').classList.toggle('error',!!bad)}
-function pending(v){state.busy=v;$('save').disabled=v||!linked;$('delete').disabled=v||!linked||!state.id;$('newEvent').disabled=v;$('refresh').disabled=v;$('uploadButton').disabled=v||!linked||!state.id}
+function pending(v){state.busy=v;$('save').disabled=v||!linked;$('delete').disabled=v||!linked||!state.id;$('newEvent').disabled=v;$('refresh').disabled=v;$('uploadButton').disabled=v||!linked||!state.id||!state.uploadConfigured}
 function call(fn){var args=Array.prototype.slice.call(arguments,1);return new Promise(function(resolve,reject){
  if(!linked){reject(new Error('This is a demonstration, not connected to Google Calendar.'));return}
- var runner=google.script.run.withSuccessHandler(resolve).withFailureHandler(reject);
- runner[fn].apply(runner,args);
+ // A missing callback must not leave the editor controls disabled indefinitely.
+ // A timed-out write may still succeed; inspect the source before retrying.
+ var settled=false;
+ var delay=/^(editorSaveEvent|editorUploadFile|editorDeleteEvent)$/.test(fn)?120000:45000;
+ var timer=setTimeout(function(){
+  if(settled)return;settled=true;
+  reject(new Error(fn+' did not respond in time. The operation may still have completed; inspect Google Calendar/Drive and reload before retrying.'));
+ },delay);
+ function finish(callback,value){if(settled)return;settled=true;clearTimeout(timer);callback(value)}
+ try{
+  var runner=google.script.run.withSuccessHandler(function(value){finish(resolve,value)})
+   .withFailureHandler(function(error){finish(reject,error)});
+  runner[fn].apply(runner,args);
+ }catch(error){finish(reject,error)}
 })}
 function sample(){var s=today();return [
  {id:'demo-1',title:'Sunday Eucharist',start:s+'T09:30:00',category:'worship'},
@@ -322,13 +343,31 @@ function resetDraftImage(){
  $('uploadEventId').value=state.id||'';
  $('uploadEditScope').value=state.scope||'occurrence';
  $('imageRole').value='header';
- $('uploadStatus').textContent=state.id?'Choose a file to attach after saving changes.':'Save this event before uploading.';
+ $('uploadStatus').textContent=linked&&!state.uploadConfigured
+  ? 'Image uploads are unavailable until EDITOR_UPLOAD_FOLDER_ID is configured and deployed.'
+  : 'Select a file and press Save event to save and upload together.';
 }
 function mediaUrl(item){
  if(item && item.fileId && /^[A-Za-z0-9_-]{10,}$/.test(item.fileId))
   return 'https://drive.google.com/thumbnail?id='+encodeURIComponent(item.fileId)+'&sz=w700';
  if(item && /^https:\/\//i.test(item.fileUrl||''))return item.fileUrl;
  return '';
+}
+function focusNumbers(){
+ const parts=String(state.imageFocus||'50,50').split(',').map(Number);
+ return [Math.min(100,Math.max(0,parts[0]||0)),Math.min(100,Math.max(0,parts[1]||0))];
+}
+function setImageFocus(x,y){
+ const clamp=function(n){return Math.max(0,Math.min(100,Math.round(n)))};
+ state.imageFocus=clamp(x)+','+clamp(y);
+ state.dirty=true;
+ renderImageFocus();
+}
+function renderImageFocus(){
+ const xy=focusNumbers();
+ $('imageFocusX').value=xy[0];$('imageFocusY').value=xy[1];
+ $('imageFocusXValue').textContent=xy[0]+'%';$('imageFocusYValue').textContent=xy[1]+'%';
+ $('previewHeaderImage').style.objectPosition=xy[0]+'% '+xy[1]+'%';
 }
 function refreshImagePreview(){
  const images=state.attachments.filter(a=>/^image\//i.test(a.mimeType||''));
@@ -341,6 +380,7 @@ function refreshImagePreview(){
  const src=draftHeader?state.draftImageUrl:mediaUrl(header);
  if(src){img.src=src;img.hidden=false;$('art').classList.add('has-photo')}
  else{img.removeAttribute('src');img.hidden=true;$('art').classList.remove('has-photo')}
+ $('imageFocusControls').hidden=!src;renderImageFocus();
  const gallery=$('previewGallery');gallery.replaceChildren();
  const others=images.filter(a=>a!==header);
  if(others.length||draftGallery){
@@ -371,7 +411,7 @@ function attachmentList(items){
   if(isImage&&item.fileId&&item!==selected){
    const button=create('button','','Use as header');button.type='button';
    button.addEventListener('click',function(){
-    state.headerImageId=item.fileId;state.dirty=true;attachmentList(state.attachments);preview();
+    state.headerImageId=item.fileId;state.imageFocus='50,50';state.dirty=true;attachmentList(state.attachments);preview();
     $('headerImageHint').textContent='Header change is unsaved. Press Save event to apply it.';
    });
    row.append(button);
@@ -439,7 +479,7 @@ function repeatPanel(){
 function newEntry(date){
  state.id='';state.revision='';state.active=null;state.scope='occurrence';state.changed=false;state.dirty=false;
  HTMLFormElement.prototype.reset.call($('eventForm'));
- $('description').replaceChildren();state.headerImageId='';resetDraftImage();attachmentList([]);
+ $('description').replaceChildren();state.headerImageId='';state.imageFocus='50,50';resetDraftImage();attachmentList([]);
  $('title').value='';$('category').value='general';$('repeat').value='none';
  $('startDate').value=$('endDate').value=date||today();$('startTime').value='10:00';$('endTime').value='11:00';
  $('scopeBox').hidden=true;$('repeat').disabled=false;
@@ -452,7 +492,7 @@ function newEntry(date){
 function adjustAllDay(){var off=$('allDay').checked;$('timeFields').hidden=off;$('startTime').disabled=off;$('endTime').disabled=off}
 function values(){var v={};fields.forEach(function(id){v[id]=$(id).value});v.allDay=$('allDay').checked;v.id=state.id;
  v.editScope=state.id?state.scope:'';v.revision=state.revision;v.descriptionChanged=state.changed;
- v.description=richHTML();v.headerImageId=state.headerImageId;v.featured=$('featured').checked;
+ v.description=richHTML();v.headerImageId=state.headerImageId;v.featured=$('featured').checked;v.imageFocus=state.imageFocus;
  v.customRepeat={unit:$('repeatUnit').value,interval:Number($('repeatInterval').value),
   days:Array.from(document.querySelectorAll('[name=repeatDay]:checked')).map(function(el){return el.value}),
   ends:$('repeatEnds').value,count:Number($('repeatCount').value),until:$('repeatUntil').value};
@@ -519,7 +559,7 @@ function put(e){
  fields.forEach(function(id){if(e[id]!==undefined)$(id).value=e[id]});
  $('description').innerHTML=safeRich(e.description||'');$('allDay').checked=!!e.allDay;
  $('featured').checked=e.featured===true;
- state.headerImageId=e.headerImageId||'';
+ state.headerImageId=e.headerImageId||'';state.imageFocus=e.imageFocus||'50,50';
  resetDraftImage();attachmentList(e.attachments||[]);
  $('scopeBox').hidden=!e.isRecurring;
  var radio=document.querySelector('input[name=scope][value='+state.scope+']');if(radio)radio.checked=true;
@@ -544,7 +584,7 @@ async function openEvent(id,scope){
 }
 async function load(){
  pending(true);$('connection').textContent=linked?'Connecting to Google…':'Preview · no Google connection';
- try{if(linked)await call('editorBootstrap');await range();pending(false);
+ try{if(linked){var info=await call('editorBootstrap');state.uploadConfigured=!!info.capabilities?.imageUpload;}await range();pending(false);
   $('connection').textContent=linked?'Google Calendar · editor':'Demonstration · read-only';
  }catch(err){status(err.message||String(err),true);pending(false);$('connection').textContent='Calendar access unavailable'}
 }
@@ -562,13 +602,42 @@ async function shift(direction){
 }
 async function setMode(m){state.mode=m;try{await range()}catch(e){status(e.message||String(e),true)}}
 async function save(ev){
- ev.preventDefault();if(!linked)return;var v=values();
+ ev.preventDefault();if(!linked||state.busy)return;
+ var v=values(),file=$('uploadAttachment').files[0];
+ if(file){
+  if(!state.uploadConfigured){
+   var problem='Cannot save the selected file: the parish Drive upload folder is not configured. Set EDITOR_UPLOAD_FOLDER_ID in Code.gs, then deploy a new version.';
+   status(problem,true);$('uploadStatus').textContent=problem;return;
+  }
+  if(file.size>8*1024*1024){status('Selected file exceeds the 8 MB limit.',true);return}
+  if(!confirm('Save this event and upload "'+file.name+'" to the public parish Drive folder?'))return;
+ }
  if(state.active&&state.active.isRecurring&&state.scope==='series'
-  && !confirm('Change the ENTIRE recurring series? This can affect future dates.'))return;
- pending(true);status('Saving to Google Calendar…');
- try{await call('editorSaveEvent',v);await range();state.dirty=false;resetDraftImage();$('editorDialog').close();
-  status('Saved. Public embeds update on their next sync.')}
- catch(e){status(e.message||String(e),true);pending(false)}
+   && !confirm('Change the ENTIRE recurring series? This can affect future dates.'))return;
+ var saved=null,uploaded=false;
+ pending(true);status('Saving event to Google Calendar…');
+ try{
+  saved=await call('editorSaveEvent',v);
+  if(!saved||!saved.id)throw new Error('Calendar did not return a saved event ID. Check Calendar before retrying.');
+  state.id=saved.id;state.revision=saved.revision||state.revision;
+  state.dirty=false;state.changed=false;
+  if(file){
+   $('uploadEventId').value=state.id;$('uploadEditScope').value=state.scope;
+   $('uploadStatus').textContent='Calendar saved; uploading file to Google Drive…';
+   status('Event saved. Uploading file…');
+   await call('editorUploadFile',$('uploadForm'));
+   uploaded=true;
+  }
+  var refreshWarning='';
+  try{await range()}catch(err){refreshWarning=' Calendar refresh failed; use Refresh to reload.'}
+  resetDraftImage();$('editorDialog').close();
+  status('Event '+(uploaded?'and file ':'')+'saved.'+refreshWarning+' Public embeds update on their next sync.',!!refreshWarning);
+ }catch(err){
+  var msg=err&&err.message||String(err);
+  if(saved&&file&&!uploaded)msg='Event details saved but file upload failed: '+msg+' The file is still selected. Check Drive before retrying Upload attachment.';
+  $('uploadStatus').textContent=msg;
+  status(msg,true);
+ }finally{pending(false)}
 }
 async function remove(){
  if(!linked||!state.id)return;
@@ -610,10 +679,33 @@ document.querySelectorAll('[data-format]').forEach(function(button){
   state.changed=true;state.dirty=true;preview();
  });
 });
+// Drag the image within the frame; sliders provide precise keyboard-accessible positioning.
+(function(){
+ const img=$('previewHeaderImage');let start=null;
+ img.addEventListener('pointerdown',function(ev){
+  if(img.hidden||ev.button!==0||!img.naturalWidth||!img.naturalHeight)return;
+  start={x:ev.clientX,y:ev.clientY,focus:focusNumbers()};
+  img.setPointerCapture(ev.pointerId);img.classList.add('is-dragging');
+ });
+ img.addEventListener('pointermove',function(ev){
+  if(!start)return;
+  const frame=$('art').getBoundingClientRect();
+  const scale=Math.max(frame.width/img.naturalWidth,frame.height/img.naturalHeight);
+  const excessX=img.naturalWidth*scale-frame.width,excessY=img.naturalHeight*scale-frame.height;
+  setImageFocus(excessX>1?start.focus[0]-(ev.clientX-start.x)*100/excessX:start.focus[0],
+    excessY>1?start.focus[1]-(ev.clientY-start.y)*100/excessY:start.focus[1]);
+ });
+ function end(){start=null;img.classList.remove('is-dragging')}
+ img.addEventListener('pointerup',end);img.addEventListener('pointercancel',end);
+ $('imageFocusX').addEventListener('input',function(){setImageFocus(Number(this.value),focusNumbers()[1])});
+ $('imageFocusY').addEventListener('input',function(){setImageFocus(focusNumbers()[0],Number(this.value))});
+ $('resetImageFocus').addEventListener('click',function(){setImageFocus(50,50)});
+})();
 $('uploadForm').addEventListener('submit',async function(ev){
  ev.preventDefault();
- if(!linked||!state.id)return;
- if(state.dirty){$('uploadStatus').textContent='Save your event changes before uploading a file.';return}
+ if(!linked||!state.id||state.busy)return;
+ if(!state.uploadConfigured){$('uploadStatus').textContent='Upload unavailable: configure EDITOR_UPLOAD_FOLDER_ID then deploy.';return}
+ if(state.dirty){$('uploadStatus').textContent='Save event changes first, or save and upload the file together.';return}
  var file=$('uploadAttachment').files[0];
  if(!file)return;
  if(file.size>8*1024*1024){$('uploadStatus').textContent='File must be smaller than 8 MB.';return}
@@ -625,7 +717,8 @@ $('uploadForm').addEventListener('submit',async function(ev){
   $('uploadAttachment').value='';
   var loaded=await call('editorGetEvent',state.id,state.scope);
   put(loaded);$('uploadStatus').textContent='File uploaded and attached to this event.';
- }catch(err){$('uploadStatus').textContent=err.message||String(err);pending(false)}
+ }catch(err){$('uploadStatus').textContent=err.message||String(err);status('Attachment upload error: '+(err.message||String(err)),true)}
+ finally{pending(false)}
 });
 $('uploadAttachment').addEventListener('change',function(){
  if(state.draftImageUrl)URL.revokeObjectURL(state.draftImageUrl);
@@ -633,9 +726,10 @@ $('uploadAttachment').addEventListener('change',function(){
  const file=this.files[0];
  if(file&&file.type.startsWith('image/'))state.draftImageUrl=URL.createObjectURL(file);
  if(file&&!file.type.startsWith('image/'))$('imageRole').value='gallery';
+ if(file&&file.type.startsWith('image/')&&$('imageRole').value==='header'){state.imageFocus='50,50';state.dirty=true}
  refreshImagePreview();
  $('uploadStatus').textContent=file
-  ? (state.id?'Selected file only. Click Upload attachment to attach it.':'Draft selection only. Save the event first to upload.')
+  ? (state.uploadConfigured?'Selected file will upload when you Save event.':'Upload unavailable until the parish Drive folder is configured.')
   : 'No file selected.';
 });
 $('imageRole').addEventListener('change',refreshImagePreview);

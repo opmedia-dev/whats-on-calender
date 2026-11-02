@@ -99,6 +99,8 @@ legacy events** without an explicit choice.
 - **Save the new event first**, then upload images from the editor using the
   `Image placement` selector: **Use as event header** or **Add to
   listing/gallery**. PDF/Word/Excel/text files remain under Downloads.
+- **When an image is selected in the editor**, Save event now saves the calendar data and uploads the selected image together. The operation reports separate calendar/save/upload results, preserves the selected file on failure, and restores controls even if refresh fails. Drive upload requires `EDITOR_UPLOAD_FOLDER_ID` to be set in the Apps Script source and a new web-app deployment version.
+- **Reposition an image** in the editor's card preview by dragging it or using the horizontal/vertical sliders; the crop centre is stored as `woImageFocus` (two 0–100 percentages). The public banner, listing and regular-event cards reproduce the crop. The full image in event detail remains unchanged.
 - For an existing event with several images, select **Use as header** beside
   any image in the attachment list, then press **Save event**. The selection is
   stored in Google Calendar's shared `woHeaderImageId` property, referencing

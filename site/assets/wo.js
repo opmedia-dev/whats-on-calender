@@ -556,7 +556,7 @@ export function renderCard(e, { showRecurrence = false, clock, summary = false, 
   return h('a', { class: `wo-card${img ? '' : ' no-image'}`, href, target },
     h('div', { class: 'wo-card-media' },
       img
-        ? h('img', { src: img.small || img.src, alt: '', loading: 'lazy', width: img.width, height: img.height })
+        ? h('img', { src: img.small || img.src, alt: '', loading: 'lazy', width: img.width, height: img.height, style: `object-position:${/^\d{1,3}% \d{1,3}%$/.test(img.position || '') ? img.position : '50% 50%'}` })
         : h('div', { class: 'wo-card-placeholder', 'aria-hidden': 'true' }, icon('calendar')),
       // A recurring card still represents a specific next occurrence.
       // Show its date badge as well as the repeat pattern: otherwise the
