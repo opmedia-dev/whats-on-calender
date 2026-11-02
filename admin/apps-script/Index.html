@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>What's On | Event Manager</title>
+<style>
+:root{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:#292529;background:#f7f6f4;--accent:#7a1424;--line:#e8e2df;--muted:#716b6f}
+*{box-sizing:border-box}body{margin:0}button,input,select,textarea{font:inherit}button{cursor:pointer}button:disabled{opacity:.48;cursor:not-allowed}
+:focus-visible{outline:3px solid #b65f6e;outline-offset:2px}
+header{background:#fff;border-bottom:1px solid var(--line);padding:16px max(20px,calc((100vw - 1320px)/2))}
+.brand{display:flex;align-items:center;gap:14px;justify-content:space-between}.brand strong{color:var(--accent);font-size:18px}.brand small{display:block;font-size:12px;color:var(--muted)}
+#connection{border-radius:20px;background:#f6eded;color:var(--accent);padding:7px 11px;font-size:12px}
+main{max-width:1360px;padding:22px 20px 60px;margin:auto}
+h1{font-size:27px;letter-spacing:-.04em;margin:0 0 4px}h2{font-size:17px;margin:0;letter-spacing:-.02em}
+.sub{color:var(--muted);font-size:12px}.heading{display:flex;justify-content:space-between;align-items:center;gap:15px;flex-wrap:wrap;margin-bottom:21px}
+.tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.btn{background:white;border:1px solid #dcd3d2;border-radius:7px;font-size:13px;font-weight:650;padding:9px 13px;color:#2d292d}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:white}.btn.danger{color:#a73a4a}
+.panel{border:1px solid var(--line);border-radius:12px;background:#fff;min-width:0;overflow:hidden}
+.panel-heading{padding:17px 20px 13px;border-bottom:1px solid #f0ebe8}
+.panel-heading p{color:var(--muted);font-size:12px;margin:5px 0 0}.panel-body{padding:18px 20px 21px}
+.cal-panel{margin-bottom:22px}.cal-head{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:12px}
+#calTitle{font-size:19px;font-weight:750;color:var(--accent)}.view-switch{background:#f4f1ef;padding:3px;border-radius:7px;display:flex;gap:2px}
+.view-switch button{border:0;background:transparent;border-radius:5px;padding:7px 12px;font-size:12px}
+.view-switch button[aria-pressed=true]{background:white;box-shadow:0 1px 4px #0002;color:var(--accent);font-weight:700}
+.weekheads,.month-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr))}
+.weekheads{font-size:11px;color:var(--muted);text-align:center;padding:6px 0 10px}
+.month-grid{border:1px solid var(--line);border-radius:8px;overflow:hidden;gap:1px;background:var(--line)}
+.cal-day{min-height:108px;background:white;padding:5px;min-width:0}.cal-day.off{background:#faf9f8}.cal-day.today{background:#fdf3f4}
+.date-btn{border:0;background:transparent;color:#3a3438;font-size:12px;font-weight:750;padding:4px 6px;border-radius:5px}
+.date-btn:hover,.date-btn:focus-visible{background:#f2e5e7}.cal-day.today .date-btn{background:var(--accent);color:white}
+.event-pill{display:block;width:100%;text-align:left;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:#f8efef;color:#662d35;border:0;border-left:3px solid var(--accent);border-radius:3px;padding:4px;margin:2px 0}
+.event-pill[data-category=community]{background:#f9f0e1;color:#775332;border-color:#bb8c50}
+.event-pill[data-category=music]{background:#f2eff8;color:#5a426c;border-color:#8e78a8}
+.event-pill[data-category=families]{background:#edf4eb;color:#41674d;border-color:#759975}
+.event-pill[data-category=heritage]{background:#edf0ef;color:#46635d;border-color:#6e918a}
+.event-pill[data-category=fundraising]{background:#f8eceb;color:#7e3640;border-color:#ad6571}
+.more{font-size:10px;color:var(--muted);margin:3px 4px}.week-list{display:grid;gap:7px}
+.week-day{display:grid;grid-template-columns:120px minmax(0,1fr);gap:14px;padding:13px;border:1px solid var(--line);border-radius:7px}
+.week-day.today{background:#fdf5f5}.week-day .date-btn{text-align:left;align-self:start}
+.week-events{display:grid;gap:4px}.week-events .event-pill{padding:8px;font-size:12px;margin:0}.week-none{font-size:12px;color:#91898e;padding:7px}
+.layout{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);gap:22px;align-items:start}
+input:not([type=checkbox]),select,textarea{border:1px solid #ded7d4;border-radius:7px;width:100%;padding:10px 11px;background:#fff;font-size:13px;color:#312e31;min-width:0}
+textarea{resize:vertical;min-height:100px;line-height:1.5}
+.field{margin-bottom:15px;min-width:0}.field label{display:block;font-size:12px;font-weight:700;margin-bottom:6px}
+.field small,.muted{font-size:11.5px;color:var(--muted)}
+.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}.check{display:flex;align-items:center;gap:8px;font-size:13px;margin:0 0 16px}
+#scopeBox{border:1px solid #e7dadd;background:#faf5f5;padding:11px;margin:0 0 17px;border-radius:7px}
+#scopeBox legend{font-size:12px;font-weight:700;color:var(--accent)}
+#scopeBox label{font-size:12px;margin-right:18px}
+#scopeBox input{accent-color:var(--accent)}
+.browser{background:#fbfaf8;border:1px solid var(--line);padding:12px;border-radius:8px;margin-bottom:18px}
+.browser-top{display:flex;justify-content:space-between;align-items:center;font-size:12px;margin-bottom:8px}
+#eventList{display:grid;gap:2px;max-height:110px;overflow:auto;margin-top:7px}
+.list-choice{width:100%;display:flex;justify-content:space-between;gap:12px;align-items:center;text-align:left;background:transparent;border:1px solid transparent;border-radius:5px;font-size:12px;padding:7px}
+.list-choice:hover,.list-choice.active{border-color:#e1d2d1;background:white}.list-choice small{color:var(--muted)}
+.status{color:var(--muted);font-size:12px;min-height:18px;margin:12px 0 0}.status.error{color:#aa3344}
+.warning{background:#fff7e9;color:#855c1e;border-radius:6px;padding:9px;font-size:11.5px}
+.form-actions{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:18px}
+.preview{position:sticky;top:20px}.preview-card{border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.preview-art{min-height:255px;background:#f7f0e8;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:25px 30px;color:#6b3c42}
+.preview-art[data-type=worship]{background:#f3ede8;color:#691f30}.preview-art[data-type=community]{background:#f7f0e4;color:#765032}
+.preview-art[data-type=music]{background:#f0edf5;color:#614575}.preview-art[data-type=families]{background:#eaf2e9;color:#41634a}
+.preview-art[data-type=heritage]{background:#edf2ef;color:#53685e}.preview-art[data-type=fundraising]{background:#f8eaea;color:#813c49}
+.preview-art:before{content:'';width:44px;height:1px;background:currentColor}
+#artCategory{text-transform:uppercase;letter-spacing:.14em;font-weight:750;font-size:10px}
+#artTitle{font:normal clamp(22px,2.5vw,31px)/1.18 Georgia,serif;overflow-wrap:anywhere}
+#artDate{font-size:12px}.preview-info{padding:19px}.preview-info h3{color:var(--accent);margin:0 0 8px;font-size:17px}
+.preview-info p{margin:0 0 7px;font-size:13px;color:#625c61}
+#previewDescription{background:#faf9f7;border-radius:8px;padding:14px;margin-top:14px;white-space:pre-wrap;overflow-wrap:anywhere;max-height:140px;overflow:auto;color:#635d61;font-size:12.5px}
+.help{font-size:11.5px;color:var(--muted);line-height:1.5;margin-top:12px}
+[hidden]{display:none!important}
+@media(max-width:930px){.layout{grid-template-columns:1fr}.preview{position:static}}
+@media(max-width:600px){main{padding:17px 12px 40px}header{padding:13px 12px}.panel-heading,.panel-body{padding:15px}.two{grid-template-columns:1fr;gap:0}
+.cal-day{min-height:65px;padding:3px}.cal-day .event-pill{font-size:0;line-height:0;height:7px;padding:0;margin:3px 0;border-left-width:2px}.cal-day .date-btn{font-size:11px;padding:4px}.more{font-size:9px}.week-day{grid-template-columns:75px minmax(0,1fr);gap:5px;padding:9px}
+}
+</style>
+</head>
+<body>
+<header><div class="brand"><div><strong>What's On — Event Manager</strong><small>St John the Baptist, Old Malden</small></div><span id="connection">Connecting…</span></div></header>
+<main>
+<div class="heading"><div><h1>Manage events</h1><p class="sub">Month/week calendar, event editor and live website preview.</p></div>
+<div class="tools"><button id="newEvent" class="btn" type="button">+ New event</button><button id="refresh" class="btn" type="button">Refresh</button></div></div>
+<section class="panel cal-panel">
+ <div class="panel-body">
+  <div class="cal-head"><strong id="calTitle">Calendar</strong><div class="tools">
+   <button id="prev" class="btn" type="button" aria-label="Previous period">‹</button><button id="today" class="btn" type="button">Today</button><button id="next" class="btn" type="button" aria-label="Next period">›</button>
+   <span class="view-switch" role="group" aria-label="Calendar view">
+    <button id="month" aria-pressed="true" type="button">Month</button><button id="week" aria-pressed="false" type="button">Week</button>
+   </span>
+  </div></div>
+  <div id="calendar" aria-live="polite">Loading calendar…</div>
+  <p class="help">Select a day to create an event, or select an existing event to edit it.</p>
+ </div>
+</section>
+<div class="layout">
+ <section class="panel">
+  <div class="panel-heading"><h2>Event details</h2><p>Updates save to the existing parish Google Calendar.</p></div>
+  <div class="panel-body">
+   <div class="browser">
+    <div class="browser-top"><strong>Events in view</strong><span id="eventCount" class="muted"></span></div>
+    <input id="eventSearch" type="search" placeholder="Find an event" aria-label="Find an event">
+    <div id="eventList">Loading…</div>
+   </div>
+   <form id="eventForm">
+    <fieldset id="scopeBox" hidden><legend>Recurring event: editing scope</legend>
+     <label><input type="radio" name="scope" value="occurrence" checked> This date only</label>
+     <label><input type="radio" name="scope" value="series"> Entire series</label>
+     <p class="muted">Changing an entire series may affect many future dates.</p>
+    </fieldset>
+    <div class="field"><label for="title">Event title</label><input id="title" required maxlength="180" placeholder="e.g. Community Coffee Morning"></div>
+    <div class="two">
+     <div class="field"><label for="category">Event category</label><select id="category">
+      <option value="general">General</option><option value="worship">Worship & services</option><option value="community">Community</option>
+      <option value="music">Music</option><option value="families">Children & families</option>
+      <option value="heritage">Heritage & talks</option><option value="fundraising">Fundraising</option>
+     </select><small id="categoryHint">Used for the category placeholder preview.</small></div>
+     <div class="field"><label for="repeat">Repeats</label><select id="repeat">
+      <option value="none">Does not repeat</option><option value="weekly">Weekly</option>
+      <option value="monthly">Monthly</option><option value="keep" hidden>Keep custom pattern</option>
+     </select><small id="repeatHint">Weekly and monthly patterns supported.</small></div>
+    </div>
+    <div class="two">
+     <div class="field"><label for="startDate">Start date</label><input id="startDate" required type="date"></div>
+     <div class="field"><label for="endDate">End date</label><input id="endDate" required type="date"></div>
+    </div>
+    <label class="check"><input id="allDay" type="checkbox"> All-day event</label>
+    <div class="two" id="timeFields">
+     <div class="field"><label for="startTime">Start time</label><input id="startTime" type="time" required></div>
+     <div class="field"><label for="endTime">End time</label><input id="endTime" type="time" required></div>
+    </div>
+    <div class="field"><label for="location">Location</label><input id="location" maxlength="1000" placeholder="Church, hall or another venue"></div>
+    <div class="field"><label for="description">Description</label><textarea id="description" rows="4" placeholder="Event details for visitors…"></textarea>
+      <p class="warning" id="descriptionWarning" hidden>Google Calendar contains formatted text for this event. Changing its description here will replace that formatting. Leaving it unchanged preserves the original description.</p>
+    </div>
+    <div class="form-actions">
+     <div class="tools"><button type="submit" id="save" class="btn primary">Save event</button><button type="button" id="delete" class="btn danger" disabled>Delete…</button></div>
+     <button type="button" id="reset" class="btn">Reset</button>
+    </div>
+    <p id="status" class="status" role="status" aria-live="polite"></p>
+   </form>
+  </div>
+ </section>
+ <aside class="panel preview" aria-label="Live website preview">
+  <div class="panel-heading"><h2>Live website preview</h2><p>Updates immediately as you edit. No changes published until Save.</p></div>
+  <div class="panel-body">
+   <div class="preview-card">
+    <div id="art" class="preview-art" data-type="general">
+     <span id="artCategory">General</span><div id="artTitle">Your event title</div><span id="artDate">Date to be confirmed</span>
+    </div>
+    <div class="preview-info"><h3 id="pvTitle">Your event title</h3><p id="pvDate">Select an event date</p><p id="pvLocation" hidden></p></div>
+   </div>
+   <div id="previewDescription">Your event description will appear here.</div>
+   <p class="help">Category-placeholder concept. The existing public embeds are unchanged until their separate publishing update.</p>
+  </div>
+ </aside>
+</div>
+</main>
+<script>
+(function(){
+'use strict';
+var $=function(id){return document.getElementById(id)};
+var labels={general:'General',worship:'Worship & services',community:'Community',music:'Music',families:'Children & families',heritage:'Heritage & talks',fundraising:'Fundraising'};
+var fields=['title','category','repeat','startDate','endDate','startTime','endTime','location','description'];
+var linked=(typeof google!=='undefined' && google.script && google.script.run);
+var state={events:[],date:new Date(),mode:'month',busy:false,id:'',revision:'',scope:'occurrence',active:null,changed:false};
+function key(d){return d.toISOString().slice(0,10)}
+function fromDate(s){return new Date(s+'T12:00:00Z')}
+function add(s,n){var d=fromDate(s);d.setUTCDate(d.getUTCDate()+n);return key(d)}
+function today(){return new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/London',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())}
+function pretty(s,opts){return new Intl.DateTimeFormat('en-GB',opts).format(fromDate(s))}
+function startWeek(s){var d=fromDate(s);return add(s,-((d.getUTCDay()+6)%7))}
+function status(t,bad){$('status').textContent=t;$('status').classList.toggle('error',!!bad)}
+function pending(v){state.busy=v;$('save').disabled=v||!linked;$('delete').disabled=v||!linked||!state.id;$('newEvent').disabled=v;$('refresh').disabled=v}
+function call(fn){var args=Array.prototype.slice.call(arguments,1);return new Promise(function(resolve,reject){
+ if(!linked){reject(new Error('This is a demonstration, not connected to Google Calendar.'));return}
+ var runner=google.script.run.withSuccessHandler(resolve).withFailureHandler(reject);
+ runner[fn].apply(runner,args);
+})}
+function sample(){var s=today();return [
+ {id:'demo-1',title:'Sunday Eucharist',start:s+'T09:30:00',category:'worship'},
+ {id:'demo-2',title:'Coffee Morning',start:s+'T11:00:00',category:'community'},
+ {id:'demo-3',title:'Choir Practice',start:add(s,3)+'T19:00:00',category:'music'}
+]}
+function create(tag,cls,text){var el=document.createElement(tag);if(cls)el.className=cls;if(text!==undefined)el.textContent=text;return el}
+function eventDay(e){var s=e.start.slice(0,10);return s}
+function eventsAt(day){return state.events.filter(function(e){return eventDay(e)===day})}
+function eventTime(e){return e.allDay?'All day':(e.start.slice(11,16)||'')}
+function newEntry(date){
+ state.id='';state.revision='';state.active=null;state.scope='occurrence';state.changed=false;
+ $('eventForm').reset();$('title').value='';$('category').value='general';$('repeat').value='none';
+ $('startDate').value=$('endDate').value=date||today();$('startTime').value='10:00';$('endTime').value='11:00';
+ $('scopeBox').hidden=true;$('descriptionWarning').hidden=true;$('repeat').disabled=false;
+ $('repeat').querySelector('[value=keep]').hidden=true;
+ $('categoryHint').textContent='Choose an event type; no special calendar tags required.';
+ adjustAllDay();preview();listEvents();pending(false);
+ status(linked?'New event — not saved.':'Demonstration mode — Save and Delete disabled.');
+}
+function adjustAllDay(){var off=$('allDay').checked;$('timeFields').hidden=off;$('startTime').disabled=off;$('endTime').disabled=off}
+function values(){var v={};fields.forEach(function(id){v[id]=$(id).value});v.allDay=$('allDay').checked;v.id=state.id;
+ v.editScope=state.id?state.scope:'';v.revision=state.revision;v.descriptionChanged=state.changed;return v}
+function preview(){
+ var v=values(),name=v.title.trim()||'Your event title';
+ var when=v.startDate?pretty(v.startDate,{timeZone:'UTC',day:'numeric',month:'short',year:'numeric'}):'Choose date';
+ var time=v.allDay?'All day':v.startTime+'–'+v.endTime;
+ $('art').dataset.type=v.category;$('artCategory').textContent=labels[v.category]||'General';
+ $('artTitle').textContent=name;$('artDate').textContent=when;
+ $('pvTitle').textContent=name;$('pvDate').textContent=when+' · '+time;
+ $('pvLocation').textContent=v.location;$('pvLocation').hidden=!v.location.trim();
+ $('previewDescription').textContent=v.description.trim()||'Your event description will appear here.';
+}
+function eventButton(e,cls){var b=create('button',cls,(eventTime(e)?eventTime(e)+'  ':'')+e.title);
+ b.type='button';b.title=e.title;b.dataset.category=e.category||'general';
+ b.addEventListener('click',function(){openEvent(e.id)});return b}
+function calendar(){
+ var container=$('calendar');container.replaceChildren();
+ $('month').setAttribute('aria-pressed',String(state.mode==='month'));
+ $('week').setAttribute('aria-pressed',String(state.mode==='week'));
+ var focus=key(state.date),start=state.mode==='month'?focus.slice(0,7)+'-01':startWeek(focus);
+ var heading=state.mode==='month'
+  ?pretty(start,{timeZone:'UTC',month:'long',year:'numeric'})
+  :pretty(start,{timeZone:'UTC',day:'numeric',month:'short'})+' – '+pretty(add(start,6),{timeZone:'UTC',day:'numeric',month:'short',year:'numeric'});
+ $('calTitle').textContent=heading;
+ if(state.mode==='month'){
+  var days=create('div','weekheads');['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].forEach(function(n){days.append(create('span','',n))});
+  container.append(days);
+  var first=startWeek(start),lastDay=Number(start.slice(8));
+  var grid=create('div','month-grid');
+  for(var i=0;i<42;i++){
+   var date=add(first,i),day=create('div','cal-day');
+   if(date.slice(0,7)!==start.slice(0,7))day.classList.add('off');
+   if(date===today())day.classList.add('today');
+   var label=create('button','date-btn',String(Number(date.slice(8))));label.type='button';label.title='Create event on '+date;
+   (function(d){label.addEventListener('click',function(){newEntry(d)})})(date);day.append(label);
+   var entries=eventsAt(date);
+   entries.slice(0,3).forEach(function(e){day.append(eventButton(e,'event-pill'))});
+   if(entries.length>3)day.append(create('div','more','+'+(entries.length-3)+' more'));
+   grid.append(day);
+  }
+  container.append(grid);
+ }else{
+  var week=create('div','week-list');
+  for(var j=0;j<7;j++){
+   var d=add(start,j),row=create('div','week-day');if(d===today())row.classList.add('today');
+   var action=create('button','date-btn',pretty(d,{timeZone:'UTC',weekday:'short',day:'numeric',month:'short'}));
+   action.type='button';(function(date){action.addEventListener('click',function(){newEntry(date)})})(d);
+   var items=create('div','week-events'),found=eventsAt(d);
+   if(found.length){found.forEach(function(e){items.append(eventButton(e,'event-pill'))})}
+   else items.append(create('span','week-none','No events'));
+   row.append(action,items);week.append(row);
+  }
+  container.append(week);
+ }
+}
+function listEvents(){
+ var host=$('eventList'),q=$('eventSearch').value.trim().toLowerCase();
+ host.replaceChildren();var items=state.events.filter(function(e){return e.title.toLowerCase().includes(q)}).slice(0,50);
+ if(!items.length){host.append(create('div','muted','No matching events'));return}
+ items.forEach(function(e){var r=create('button','list-choice');r.type='button';if(e.id===state.id)r.classList.add('active');
+  r.append(create('span','',e.title),create('small','',eventDay(e)));r.addEventListener('click',function(){openEvent(e.id)});host.append(r)});
+}
+function put(e){
+ state.id=e.selectedId||e.id;state.revision=e.revision;state.scope=e.editScope||'occurrence';state.active=e;state.changed=false;
+ fields.forEach(function(id){if(e[id]!==undefined)$(id).value=e[id]});
+ $('description').value=plain(e.description||'');$('allDay').checked=!!e.allDay;
+ $('scopeBox').hidden=!e.isRecurring;
+ var radio=document.querySelector('input[name=scope][value='+state.scope+']');if(radio)radio.checked=true;
+ $('repeat').querySelector('[value=keep]').hidden=e.repeat!=='keep';$('repeat').value=e.repeat||'none';
+ $('repeat').disabled=!!e.isInstance && state.scope==='occurrence';
+ $('repeatHint').textContent=e.repeat==='keep'?'Complex recurrence preserved unless deliberately changed.':'Weekly and monthly patterns supported.';
+ $('categoryHint').textContent=e.categorySource==='suggested'?'Suggested from title; choose a category to save it.':'Category stored on event.';
+ $('descriptionWarning').hidden=!e.hasFormattedDescription;
+ adjustAllDay();preview();listEvents();pending(false);status('Loaded from calendar — not yet changed.');
+}
+function plain(s){if(!/<[a-z][^>]*>/i.test(s))return s;var d=new DOMParser().parseFromString(s,'text/html');
+ d.querySelectorAll('script,style,iframe').forEach(function(el){el.remove()});return d.body.textContent||''}
+async function openEvent(id,scope){
+ if(state.busy)return;pending(true);status('Opening event…');
+ try{
+  if(linked){put(await call('editorGetEvent',id,scope||'occurrence'))}
+  else{var e=state.events.find(function(v){return v.id===id});var d=eventDay(e);
+   put({id:e.id,selectedId:e.id,title:e.title,category:e.category,categorySource:'suggested',
+    startDate:d,endDate:d,startTime:'10:00',endTime:'11:00',repeat:'none',revision:'demo',
+    description:'Demonstration event. This editor is not connected to Google Calendar.',
+    location:'St John the Baptist, Old Malden',allDay:false,isRecurring:false})}
+ }catch(err){status(err.message||String(err),true);pending(false)}
+}
+async function load(){
+ pending(true);$('connection').textContent=linked?'Connecting to Google…':'Preview · no Google connection';
+ try{if(linked)await call('editorBootstrap');await range();newEntry(today());
+  $('connection').textContent=linked?'Google Calendar · editor':'Demonstration · read-only';
+ }catch(err){status(err.message||String(err),true);pending(false);$('connection').textContent='Calendar access unavailable'}
+}
+async function range(){
+ var focus=key(state.date),first=state.mode==='month'?focus.slice(0,7)+'-01':startWeek(focus);
+ var begin=startWeek(first),end=state.mode==='month'?add(begin,41):add(begin,6);
+ $('calendar').textContent='Loading calendar…';
+ state.events=linked?await call('editorListEvents',begin,end):sample();
+ calendar();listEvents();$('eventCount').textContent=state.events.length+' shown';
+}
+async function shift(direction){
+ var d=new Date(state.date);
+ if(state.mode==='month')d.setUTCMonth(d.getUTCMonth()+direction);else d.setUTCDate(d.getUTCDate()+7*direction);
+ state.date=d;try{await range()}catch(e){status(e.message||String(e),true)}
+}
+async function setMode(m){state.mode=m;try{await range()}catch(e){status(e.message||String(e),true)}}
+async function save(ev){
+ ev.preventDefault();if(!linked)return;var v=values();
+ if(state.active&&state.active.isRecurring&&state.scope==='series'
+  && !confirm('Change the ENTIRE recurring series? This can affect future dates.'))return;
+ pending(true);status('Saving to Google Calendar…');
+ try{await call('editorSaveEvent',v);await range();newEntry(v.startDate);
+  status('Saved. Public embeds update on their next sync.')}
+ catch(e){status(e.message||String(e),true);pending(false)}
+}
+async function remove(){
+ if(!linked||!state.id)return;
+ var target=state.active&&state.active.isRecurring?(state.scope==='series'?'entire series':'one occurrence'):'event';
+ if(!confirm('Delete this '+target+' permanently from Google Calendar?'))return;
+ pending(true);status('Deleting…');
+ try{await call('editorDeleteEvent',state.id,state.scope,state.revision);await range();newEntry(today());status('Deleted from calendar.')}
+ catch(e){status(e.message||String(e),true);pending(false)}
+}
+$('prev').addEventListener('click',function(){shift(-1)});
+$('next').addEventListener('click',function(){shift(1)});
+$('today').addEventListener('click',function(){state.date=fromDate(today());range()});
+$('month').addEventListener('click',function(){setMode('month')});
+$('week').addEventListener('click',function(){setMode('week')});
+$('newEvent').addEventListener('click',function(){newEntry(today())});
+$('refresh').addEventListener('click',load);
+$('eventSearch').addEventListener('input',listEvents);
+$('eventForm').addEventListener('submit',save);
+$('delete').addEventListener('click',remove);
+$('reset').addEventListener('click',function(){state.id?openEvent(state.id,state.scope):newEntry(today())});
+document.querySelectorAll('input[name=scope]').forEach(function(el){el.addEventListener('change',function(){if(el.checked&&state.id)openEvent(state.id,el.value)})});
+fields.forEach(function(id){$(id).addEventListener('input',function(){if(id==='description')state.changed=true;preview()})});
+$('allDay').addEventListener('change',function(){adjustAllDay();preview()});
+load();
+})();
+</script></body></html>
