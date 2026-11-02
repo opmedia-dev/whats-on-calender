@@ -43,7 +43,7 @@
     import { init, loadEvents, params, param, num, flag, h, dayKey, isUpcoming, nextPerSeries, renderCard, renderPager, routeDetails, scrollHostToTop, showError, emptyState } from './assets/wo.js?v=monthly-highlights-20261102';
     import { shiftMonth, isValidMonth, clampMonth, eventsInMonth } from './assets/month-selection.js';
 
-    await init();
+    const initialisation = init(); // Start the host handshake while event data loads.
     const cardsEl = document.getElementById('cards');
     const pagerEl = document.getElementById('pager');
     const regularEl = document.getElementById('regular');
@@ -59,7 +59,7 @@
     const summaries = flag('summary', true);
 
     try {
-      const { events, range } = await loadEvents();
+      const [, { events, range }] = await Promise.all([initialisation, loadEvents()]);
       const now = new Date();
       const upcoming = events.filter((e) => isUpcoming(e, now));
       const series = nextPerSeries(upcoming);
