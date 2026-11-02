@@ -114,7 +114,7 @@
     try {
       const { events } = await loadEvents();
       const now = new Date();
-      const days = horizonDays(param('days')); // Defaults to 90 days. Explicit ?days=14 remains a 14-day restriction.
+      const days = horizonDays(param('days')); // Defaults to 400 days; old embeds with ?days=14 remain restricted until updated.
       // Event slots show editorial selections only, not every event with artwork.
       let upcoming = nextPerSeries(events.filter((e) => isUpcoming(e, now) && e.featured === true));
       upcoming = upcoming.filter((e) => e.startDate - now < days * 86400000);
