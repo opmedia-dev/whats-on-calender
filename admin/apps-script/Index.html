@@ -328,7 +328,7 @@ function mediaUrl(item){
 }
 function refreshImagePreview(){
  const images=state.attachments.filter(a=>/^image\//i.test(a.mimeType||''));
- const header=images.find(a=>a.fileId&&a.fileId===state.headerImageId)||images[0]||null;
+ const header=state.headerImageId==='none'?null:(images.find(a=>a.fileId&&a.fileId===state.headerImageId)||images[0]||null);
  const file=$('uploadAttachment').files[0];
  const draftImage=Boolean(file&&file.type.startsWith('image/'));
  const draftHeader=draftImage&&$('imageRole').value==='header';
@@ -355,7 +355,7 @@ function attachmentList(items){
  state.attachments=Array.isArray(items)?items.map(a=>({...a})):[];
  const box=$('attachmentList');box.replaceChildren();
  const images=state.attachments.filter(a=>/^image\//i.test(a.mimeType||''));
- const selected=images.find(a=>a.fileId&&a.fileId===state.headerImageId)||images[0]||null;
+ const selected=state.headerImageId==='none'?null:(images.find(a=>a.fileId&&a.fileId===state.headerImageId)||images[0]||null);
  if(!state.attachments.length)box.append(create('span','muted','No attachments yet'));
  state.attachments.forEach(function(item){
   const isImage=/^image\//i.test(item.mimeType||'');
@@ -374,6 +374,15 @@ function attachmentList(items){
   }
   box.append(row);
  });
+ if(images.length){
+  const none=create('button','','Listing images only — no header');
+  none.type='button';
+  none.disabled=state.headerImageId==='none';
+  none.addEventListener('click',function(){
+   state.headerImageId='none';state.dirty=true;attachmentList(state.attachments);preview();
+  });
+  box.append(none);
+ }
  $('headerImageHint').textContent=selected
   ? (state.headerImageId?'Selected header: ':'Automatically selected header: ')+(selected.title||'Image')
   : 'No header image: a category placeholder will be used.';
