@@ -104,6 +104,8 @@ event cards remain a separate release.
    *Make available to public*, "See all event details").
 5. Run the workflow once (Actions → Build and deploy What's On → Run workflow).
 
+The GitHub Actions workflow is **scheduled** every 15 minutes (at :00, :15, :30 and :45 UTC), but GitHub can delay or skip scheduled starts; the display's countdown predicts the **next scheduled opportunity**, not the time a deployment is guaranteed. The public embed management page and the private Event Manager both show the countdown, UK local time and a link to the actual **Build and deploy What's On** workflow history. Scheduled runs appear under that existing workflow with event type `schedule`; there is no separate 'automatic refresh' workflow. The private editor publishing workflow is manual and unrelated.
+
 The sync runs every 15 minutes. It only rebuilds when an event, series or attachment has changed,
 or once a day so "upcoming" stays current. Downloaded attachments are kept in the Actions cache.
 GitHub pauses scheduled workflows after 60 days without activity; the workflow re-enables itself
