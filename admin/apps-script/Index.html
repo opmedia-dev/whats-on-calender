@@ -602,13 +602,42 @@ async function shift(direction){
 }
 async function setMode(m){state.mode=m;try{await range()}catch(e){status(e.message||String(e),true)}}
 async function save(ev){
- ev.preventDefault();if(!linked)return;var v=values();
+ ev.preventDefault();if(!linked||state.busy)return;
+ var v=values(),file=$('uploadAttachment').files[0];
+ if(file){
+  if(!state.uploadConfigured){
+   var problem='Cannot save the selected file: the parish Drive upload folder is not configured. Set EDITOR_UPLOAD_FOLDER_ID in Code.gs, then deploy a new version.';
+   status(problem,true);$('uploadStatus').textContent=problem;return;
+  }
+  if(file.size>8*1024*1024){status('Selected file exceeds the 8 MB limit.',true);return}
+  if(!confirm('Save this event and upload "'+file.name+'" to the public parish Drive folder?'))return;
+ }
  if(state.active&&state.active.isRecurring&&state.scope==='series'
-  && !confirm('Change the ENTIRE recurring series? This can affect future dates.'))return;
- pending(true);status('Saving to Google Calendar…');
- try{await call('editorSaveEvent',v);await range();state.dirty=false;resetDraftImage();$('editorDialog').close();
-  status('Saved. Public embeds update on their next sync.')}
- catch(e){status(e.message||String(e),true);pending(false)}
+   && !confirm('Change the ENTIRE recurring series? This can affect future dates.'))return;
+ var saved=null,uploaded=false;
+ pending(true);status('Saving event to Google Calendar…');
+ try{
+  saved=await call('editorSaveEvent',v);
+  if(!saved||!saved.id)throw new Error('Calendar did not return a saved event ID. Check Calendar before retrying.');
+  state.id=saved.id;state.revision=saved.revision||state.revision;
+  state.dirty=false;state.changed=false;
+  if(file){
+   $('uploadEventId').value=state.id;$('uploadEditScope').value=state.scope;
+   $('uploadStatus').textContent='Calendar saved; uploading file to Google Drive…';
+   status('Event saved. Uploading file…');
+   await call('editorUploadFile',$('uploadForm'));
+   uploaded=true;
+  }
+  var refreshWarning='';
+  try{await range()}catch(err){refreshWarning=' Calendar refresh failed; use Refresh to reload.'}
+  resetDraftImage();$('editorDialog').close();
+  status('Event '+(uploaded?'and file ':'')+'saved.'+refreshWarning+' Public embeds update on their next sync.',!!refreshWarning);
+ }catch(err){
+  var msg=err&&err.message||String(err);
+  if(saved&&file&&!uploaded)msg='Event details saved but file upload failed: '+msg+' The file is still selected. Check Drive before retrying Upload attachment.';
+  $('uploadStatus').textContent=msg;
+  status(msg,true);
+ }finally{pending(false)}
 }
 async function remove(){
  if(!linked||!state.id)return;
