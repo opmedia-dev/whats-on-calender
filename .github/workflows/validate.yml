@@ -36,6 +36,7 @@ jobs:
       - name: Check generated preview pages
         run: |
           test -s _site/index.html
+          test -s _site/admin-demo.html
           test -s _site/timetable.html
           test -s _site/mailing-hero.html
           test -s _site/assets/mailing-hero.js
