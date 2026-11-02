@@ -16,16 +16,30 @@ const xmlTag = (block, name) => {
 const plain = (value) => decodeEntities(value.replace(/<\/?(?:style|script)\b[^>]*>[\s\S]*?<\/\s*(?:style|script)>/gi, '')
   .replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim());
 
-// Choose the first usable image in campaign HTML, including genuine parish
-// logos. The earlier 140px/90px minimum accidentally skipped ordinary logos
-// and selected the second illustration instead. Only discard obvious tiny
-// icons/tracking pixels and unsafe image URLs. Never inject newsletter HTML.
+// The first substantial image in St John's Mailchimp template is its
+// recurring masthead/logo, *not* the first editorial illustration. The public
+// feed uses this exact asset at the start of all ten inspected issues.
+// Skip only this known masthead (and obviously labelled logo/masthead assets),
+// then choose the first remaining usable content image in document order.
+// Do not impose large size thresholds: actual article illustrations can be
+// just 92px wide. Newsletter HTML is never injected into our site.
+const PARISH_MASTHEAD_ASSET = '/d0fc454c51d7e9daa986cd29a/images/bb22fe35-e559-23bb-c7d2-18f3dee7c289.jpg';
+
+function isMailingMasthead(url, tag) {
+  if (url.pathname === PARISH_MASTHEAD_ASSET) return true;
+  const alt = tag.match(/\balt\s*=\s*(["'])(.*?)\1/i)?.[2] || '';
+  const title = tag.match(/\btitle\s*=\s*(["'])(.*?)\1/i)?.[2] || '';
+  const filename = url.pathname.split('/').pop() || '';
+  return /(?:^|[\s_.-])(?:logo|masthead|brandmark|letterhead)(?:[\s_.-]|$)/i.test(
+    [decodeEntities(alt), decodeEntities(title), filename].join(' '),
+  );
+}
 export function mailingImageFromHtml(html = '') {
   for (const match of String(html).matchAll(/<img\b[^>]*>/gi)) {
     const tag = match[0];
     const width = Number(tag.match(/\bwidth\s*=\s*["']?(\d+)/i)?.[1] || 0);
     const height = Number(tag.match(/\bheight\s*=\s*["']?(\d+)/i)?.[1] || 0);
-    // A valid logo may be 100 × 60. Reject only icon/tracking dimensions.
+    // Content illustrations can be narrow; reject only icons/tracking dimensions.
     if ((width && width <= 24) || (height && height <= 24)) continue;
     const sources = [
       tag.match(/\sdata-src\s*=\s*(["'])(.*?)\1/i)?.[2],
@@ -38,6 +52,7 @@ export function mailingImageFromHtml(html = '') {
         if (url.protocol !== 'https:') continue;
         if (/(?:\/track\/|\/open\/|pixel|spacer|tracking)(?:[/.?_-]|$)/i.test(url.pathname)) continue;
         if (/\.svg(?:$|\?)/i.test(url.pathname)) continue;
+        if (isMailingMasthead(url, tag)) continue;
         return url.href;
       } catch { /* Try another image source. */ }
     }
