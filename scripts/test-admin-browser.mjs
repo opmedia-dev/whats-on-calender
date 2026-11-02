@@ -260,7 +260,7 @@ try {
   assert.equal(await linkedPage.locator('#startDate').isDisabled(),true,
     'selected reference date is not editable in all-series scope');
   assert.match(await linkedPage.locator('#seriesDateHint').textContent(),/2026-01-05/);
-  assert.equal(await linkedPage.locator('#attachment-remove').count(),0);
+  assert.equal(await linkedPage.locator('.attachment-remove').count(),1);
   await linkedPage.locator('.attachment-remove').first().click();
   assert.equal(await linkedPage.locator('#appConfirmDialog').isVisible(),true);
   assert.match(await linkedPage.locator('#appConfirmMessage').textContent(),/original stays in Google Drive/);
