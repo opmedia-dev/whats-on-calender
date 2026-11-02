@@ -138,6 +138,35 @@ textarea{resize:vertical;min-height:100px;line-height:1.5}
       <option value="monthly">Monthly</option><option value="custom">Custom…</option><option value="keep" hidden>Keep existing advanced pattern</option>
      </select><small id="repeatHint">Custom intervals, weekdays and end conditions.</small></div>
     </div>
+    <div id="customRepeat" class="repeat-config" hidden>
+     <div class="repeat-row">
+      <div class="field"><label for="repeatInterval">Repeat every</label><input id="repeatInterval" type="number" min="1" max="99" value="1"></div>
+      <div class="field"><label for="repeatUnit">Unit</label><select id="repeatUnit">
+       <option value="DAILY">Days</option><option value="WEEKLY" selected>Weeks</option>
+       <option value="MONTHLY">Months</option><option value="YEARLY">Years</option>
+      </select></div>
+     </div>
+     <div id="repeatWeekdays">
+      <label>Repeat on</label>
+      <div class="weekday-choices" role="group" aria-label="Repeat on weekdays">
+       <label><input type="checkbox" name="repeatDay" value="MO">Mon</label>
+       <label><input type="checkbox" name="repeatDay" value="TU">Tue</label>
+       <label><input type="checkbox" name="repeatDay" value="WE">Wed</label>
+       <label><input type="checkbox" name="repeatDay" value="TH">Thu</label>
+       <label><input type="checkbox" name="repeatDay" value="FR">Fri</label>
+       <label><input type="checkbox" name="repeatDay" value="SA">Sat</label>
+       <label><input type="checkbox" name="repeatDay" value="SU">Sun</label>
+      </div>
+     </div>
+     <div class="repeat-row">
+      <div class="field"><label for="repeatEnds">Ends</label><select id="repeatEnds">
+       <option value="never">Never</option><option value="until">On a date</option><option value="count">After a number of occurrences</option>
+      </select></div>
+      <div class="field" id="repeatUntilField" hidden><label for="repeatUntil">Last date</label><input id="repeatUntil" type="date"></div>
+      <div class="field" id="repeatCountField" hidden><label for="repeatCount">Occurrences</label><input id="repeatCount" type="number" min="1" max="999" value="10"></div>
+     </div>
+     <p class="help">For example: every 2 weeks on Tuesday and Thursday, ending after 12 occurrences. Existing complex rules can be kept unchanged.</p>
+    </div>
     <div class="two">
      <div class="field"><label for="startDate">Start date</label><input id="startDate" required type="date"></div>
      <div class="field"><label for="endDate">End date</label><input id="endDate" required type="date"></div>
