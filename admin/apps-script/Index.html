@@ -207,12 +207,22 @@ textarea{resize:vertical;min-height:100px;line-height:1.5}
 .app-notice[hidden]{display:none!important}
 @media(max-width:600px){.app-notice{right:12px;bottom:12px;left:12px;max-width:none;width:auto}}
 input[aria-invalid=true],select[aria-invalid=true]{border-color:#ba4254!important;box-shadow:0 0 0 1px #ba4254}
+.editor-refresh-status{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px;font-size:12px;line-height:1.65;color:var(--muted);margin:9px 0 0}
+.editor-refresh-status strong{font-variant-numeric:tabular-nums;color:var(--accent);font-size:13px}
+.editor-refresh-status a{color:var(--accent);font-weight:650;text-decoration:underline;text-underline-offset:2px}
+.editor-refresh-status .refresh-note{flex-basis:100%;font-size:11px;color:var(--muted)}
 </style>
 </head>
 <body>
 <header><div class="brand"><div><strong>What's On — Event Manager</strong><small>St John the Baptist, Old Malden</small></div><span id="connection">Connecting…</span></div></header>
 <main>
-<div class="heading"><div><h1>Manage events</h1><p class="sub">Month/week calendar, event editor and live website preview.</p></div>
+<div class="heading"><div><h1>Manage events</h1><p class="sub">Month/week calendar, event editor and live website preview.</p>
+<p class="editor-refresh-status">
+ <span>Next scheduled website check in <strong id="refresh-countdown" role="timer" aria-live="off">calculating…</strong></span>
+ <span>· Expected <strong id="refresh-time">—</strong> UK time</span>
+ <span>· <a id="refresh-history" href="https://github.com/opmedia-dev/whats-on-calender/actions/workflows/deploy.yml" target="_blank" rel="noopener noreferrer">Refresh history / run now</a></span>
+ <span class="refresh-note">Checks are scheduled every 15 minutes; GitHub Actions may start late. Publishing happens only when changes are detected.</span>
+</p></div>
 <div class="tools"><button id="newEvent" class="btn" type="button">+ New event</button><button id="refresh" class="btn" type="button">Refresh</button></div></div>
 <section class="panel cal-panel">
  <div class="panel-body">
@@ -418,6 +428,18 @@ var $=function(id){return document.getElementById(id)};
 var labels={general:'General',worship:'Worship & services',community:'Community',music:'Music',families:'Children & families',heritage:'Heritage & talks',fundraising:'Fundraising'};
 var fields=['title','category','repeat','startDate','endDate','startTime','endTime','location'];
 var linked=(typeof google!=='undefined' && google.script && google.script.run);
+function updateRefreshCountdown(){
+ // GitHub cron */15 * * * * (UTC), independent of the editor's manual Refresh.
+ const now=Date.now();
+ const next=(Math.floor(now/(15*60000))+1)*15*60000;
+ const remaining=Math.max(0,Math.ceil((next-now)/1000));
+ $('refresh-countdown').textContent=Math.floor(remaining/60)+'m '+String(remaining%60).padStart(2,'0')+'s';
+ $('refresh-time').textContent=new Intl.DateTimeFormat('en-GB',{
+  timeZone:'Europe/London',hour:'2-digit',minute:'2-digit',hour12:false,
+ }).format(new Date(next));
+}
+updateRefreshCountdown();
+setInterval(updateRefreshCountdown,1000);
 var state={events:[],date:new Date(),mode:'month',busy:false,id:'',revision:'',scope:'occurrence',active:null,changed:false,dirty:false,attachments:[],headerImageId:'',draftImageUrl:'',imageFocus:'50,50',uploadConfigured:false,expandedDays:new Set()};
 function key(d){return d.toISOString().slice(0,10)}
 function fromDate(s){return new Date(s+'T12:00:00Z')}

@@ -20,6 +20,12 @@
     .row a { color: var(--wo-accent); }
     ol li, ul li { margin: .3rem 0; } code { background: #eef; padding: 0 .25rem; border-radius: 3px; }
     .muted { color: #666; font-size: .9rem; }
+    .refresh-status { border: 1px solid #e2d5d8; background: #fffbfc; }
+    .refresh-row { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+    .refresh-clock { color: var(--wo-accent); font-size: clamp(1.35rem, 3vw, 1.7rem); font-weight: 750; font-variant-numeric: tabular-nums; }
+    .refresh-status p { margin: 8px 0; }
+    .refresh-status .muted { line-height: 1.5; }
+    .refresh-status a { color: var(--wo-accent); font-weight: 650; }
   </style>
 </head>
 <body>
@@ -27,6 +33,14 @@
     <h1>What's On embeds</h1>
     <p>Choose each embed's loading behaviour before copying it to Duda. <strong>Eager</strong> begins loading immediately; <strong>lazy</strong> waits until the embed approaches the screen. Existing Duda embeds keep their old loading setting until you replace their HTML.</p>
     <p>Copy these into a Duda <strong>HTML widget</strong>. Events published: <strong id="count">…</strong> <span class="muted" id="generated"></span></p>
+
+    <section class="panel refresh-status" aria-labelledby="refresh-heading">
+      <h2 id="refresh-heading">Next scheduled refresh check</h2>
+      <p class="refresh-row"><strong id="refresh-countdown" class="refresh-clock" role="timer" aria-live="off">Calculating…</strong><span>until the next scheduled Calendar and Mailchimp check</span></p>
+      <p>Next expected check: <strong id="refresh-time">—</strong> UK time</p>
+      <p class="muted">Scheduled every 15 minutes. GitHub Actions can start late, and the website is redeployed only when a change is detected.</p>
+      <p><a id="refresh-history" href="https://github.com/opmedia-dev/whats-on-calender/actions/workflows/deploy.yml" target="_blank" rel="noopener noreferrer">View refresh history or run a manual check</a></p>
+    </section>
 
     <section class="panel">
       <h2>Settings</h2>
@@ -267,6 +281,18 @@ if(d.type==='event'&&deep){var u=new URL(location.href);if(d.id)u.searchParams.s
       setTimeout(() => { b.textContent = 'Copy code'; }, 1500);
     }));
     update();
+  </script>
+  <script type="module">
+    import { nextRefreshStatus } from './assets/refresh-schedule.js';
+    const countdown = document.getElementById('refresh-countdown');
+    const nextTime = document.getElementById('refresh-time');
+    function updateRefreshCountdown() {
+      const status = nextRefreshStatus();
+      countdown.textContent = status.countdown;
+      nextTime.textContent = status.localTime;
+    }
+    updateRefreshCountdown();
+    setInterval(updateRefreshCountdown, 1000);
   </script>
 </body>
 </html>
