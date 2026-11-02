@@ -73,6 +73,27 @@ textarea{resize:vertical;min-height:100px;line-height:1.5}
 @media(max-width:600px){main{padding:17px 12px 40px}header{padding:13px 12px}.panel-heading,.panel-body{padding:15px}.two{grid-template-columns:1fr;gap:0}
 .cal-day{min-height:65px;padding:3px}.cal-day .event-pill{font-size:0;line-height:0;height:7px;padding:0;margin:3px 0;border-left-width:2px}.cal-day .date-btn{font-size:11px;padding:4px}.more{font-size:9px}.week-day{grid-template-columns:75px minmax(0,1fr);gap:5px;padding:9px}
 }
+
+/* The calendar is the main screen; event details open in a modal. */
+.cal-panel{margin-bottom:0}
+.editor-dialog{border:0;border-radius:13px;padding:0;width:min(1170px,calc(100vw - 32px));max-width:1170px;max-height:92dvh;overflow:auto;background:#fff;box-shadow:0 22px 70px #160e153d}
+.editor-dialog::backdrop{background:rgba(30,21,27,.56)}
+.dialog-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px 19px;border-bottom:1px solid var(--line);background:#fbfaf9;position:sticky;top:0;z-index:4}
+.dialog-bar h2{font-size:18px;color:var(--accent)}.dialog-bar p{font-size:11px;color:var(--muted);margin:4px 0 0}
+.dialog-close{border:1px solid #dacfd0;background:#fff;border-radius:7px;padding:7px 11px;color:#514349;font-size:13px}
+.editor-dialog .layout{display:grid;grid-template-columns:minmax(0,1.06fr) minmax(0,.94fr);gap:0;align-items:stretch}
+.editor-dialog .panel{border:0;border-radius:0}
+.editor-dialog .layout>.panel:first-child{border-right:1px solid var(--line)}
+.editor-dialog .preview{position:sticky;top:65px;align-self:start}
+.repeat-config{border:1px solid #e6d9dc;background:#fcf8f7;border-radius:8px;padding:12px;margin:0 0 16px}
+.repeat-config .repeat-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.repeat-config label{font-size:12px;font-weight:650;display:block;margin-bottom:6px}
+.repeat-config .weekday-choices{display:flex;flex-wrap:wrap;gap:7px;margin:7px 0 13px}
+.weekday-choices label{font-size:12px;margin:0;display:flex;align-items:center;gap:5px;padding:7px;background:white;border:1px solid #e4dadd;border-radius:5px}
+.weekday-choices input{width:15px;accent-color:var(--accent)}
+.editor-dialog .preview-art{min-height:210px}
+@media(max-width:930px){.editor-dialog .layout{grid-template-columns:1fr}.editor-dialog .layout>.panel:first-child{border-right:0;border-bottom:1px solid var(--line)}.editor-dialog .preview{position:static}}
+@media(max-width:600px){.editor-dialog{width:calc(100vw - 12px);max-height:96dvh;border-radius:9px}.dialog-bar{padding:12px 15px}.repeat-config .repeat-row{grid-template-columns:1fr;gap:4px}}
 </style>
 </head>
 <body>
@@ -92,15 +113,13 @@ textarea{resize:vertical;min-height:100px;line-height:1.5}
   <p class="help">Select a day to create an event, or select an existing event to edit it.</p>
  </div>
 </section>
+</main>
+<dialog id="editorDialog" class="editor-dialog" aria-labelledby="dialogTitle">
+ <div class="dialog-bar"><div><h2 id="dialogTitle">Event details</h2><p>Changes are not published until you save.</p></div><button id="closeEditor" type="button" class="dialog-close" aria-label="Close event editor">✕ Close</button></div>
 <div class="layout">
  <section class="panel">
   <div class="panel-heading"><h2>Event details</h2><p>Updates save to the existing parish Google Calendar.</p></div>
   <div class="panel-body">
-   <div class="browser">
-    <div class="browser-top"><strong>Events in view</strong><span id="eventCount" class="muted"></span></div>
-    <input id="eventSearch" type="search" placeholder="Find an event" aria-label="Find an event">
-    <div id="eventList">Loading…</div>
-   </div>
    <form id="eventForm">
     <fieldset id="scopeBox" hidden><legend>Recurring event: editing scope</legend>
      <label><input type="radio" name="scope" value="occurrence" checked> This date only</label>
@@ -116,8 +135,8 @@ textarea{resize:vertical;min-height:100px;line-height:1.5}
      </select><small id="categoryHint">Used for the category placeholder preview.</small></div>
      <div class="field"><label for="repeat">Repeats</label><select id="repeat">
       <option value="none">Does not repeat</option><option value="weekly">Weekly</option>
-      <option value="monthly">Monthly</option><option value="keep" hidden>Keep custom pattern</option>
-     </select><small id="repeatHint">Weekly and monthly patterns supported.</small></div>
+      <option value="monthly">Monthly</option><option value="custom">Custom…</option><option value="keep" hidden>Keep existing advanced pattern</option>
+     </select><small id="repeatHint">Custom intervals, weekdays and end conditions.</small></div>
     </div>
     <div class="two">
      <div class="field"><label for="startDate">Start date</label><input id="startDate" required type="date"></div>
@@ -134,7 +153,7 @@ textarea{resize:vertical;min-height:100px;line-height:1.5}
     </div>
     <div class="form-actions">
      <div class="tools"><button type="submit" id="save" class="btn primary">Save event</button><button type="button" id="delete" class="btn danger" disabled>Delete…</button></div>
-     <button type="button" id="reset" class="btn">Reset</button>
+     <button type="button" id="resetChanges" class="btn">Reset changes</button>
     </div>
     <p id="status" class="status" role="status" aria-live="polite"></p>
    </form>
@@ -154,7 +173,7 @@ textarea{resize:vertical;min-height:100px;line-height:1.5}
   </div>
  </aside>
 </div>
-</main>
+</dialog>
 <script>
 (function(){
 'use strict';
