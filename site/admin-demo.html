@@ -73,6 +73,41 @@ textarea{resize:vertical;min-height:100px;line-height:1.5}
 @media(max-width:600px){main{padding:17px 12px 40px}header{padding:13px 12px}.panel-heading,.panel-body{padding:15px}.two{grid-template-columns:1fr;gap:0}
 .cal-day{min-height:65px;padding:3px}.cal-day .event-pill{font-size:0;line-height:0;height:7px;padding:0;margin:3px 0;border-left-width:2px}.cal-day .date-btn{font-size:11px;padding:4px}.more{font-size:9px}.week-day{grid-template-columns:75px minmax(0,1fr);gap:5px;padding:9px}
 }
+
+/* The calendar is the main screen; event details open in a modal. */
+.cal-panel{margin-bottom:0}
+.editor-dialog{border:0;border-radius:13px;padding:0;width:min(1170px,calc(100vw - 32px));max-width:1170px;max-height:92dvh;overflow:auto;background:#fff;box-shadow:0 22px 70px #160e153d}
+.editor-dialog::backdrop{background:rgba(30,21,27,.56)}
+.dialog-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px 19px;border-bottom:1px solid var(--line);background:#fbfaf9;position:sticky;top:0;z-index:4}
+.dialog-bar h2{font-size:18px;color:var(--accent)}.dialog-bar p{font-size:11px;color:var(--muted);margin:4px 0 0}
+.dialog-close{border:1px solid #dacfd0;background:#fff;border-radius:7px;padding:7px 11px;color:#514349;font-size:13px}
+.editor-dialog .layout{display:grid;grid-template-columns:minmax(0,1.06fr) minmax(0,.94fr);gap:0;align-items:stretch}
+.editor-dialog .panel{border:0;border-radius:0}
+.editor-dialog .layout>.panel:first-child{border-right:1px solid var(--line)}
+.editor-dialog .preview{position:sticky;top:65px;align-self:start}
+.repeat-config{border:1px solid #e6d9dc;background:#fcf8f7;border-radius:8px;padding:12px;margin:0 0 16px}
+.repeat-config .repeat-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.repeat-config label{font-size:12px;font-weight:650;display:block;margin-bottom:6px}
+.repeat-config .weekday-choices{display:flex;flex-wrap:wrap;gap:7px;margin:7px 0 13px}
+.weekday-choices label{font-size:12px;margin:0;display:flex;align-items:center;gap:5px;padding:7px;background:white;border:1px solid #e4dadd;border-radius:5px}
+.weekday-choices input{width:15px;accent-color:var(--accent)}
+.editor-dialog .preview-art{min-height:210px}
+@media(max-width:930px){.editor-dialog .layout{grid-template-columns:1fr}.editor-dialog .layout>.panel:first-child{border-right:0;border-bottom:1px solid var(--line)}.editor-dialog .preview{position:static}}
+@media(max-width:600px){.editor-dialog{width:calc(100vw - 12px);max-height:96dvh;border-radius:9px}.dialog-bar{padding:12px 15px}.repeat-config .repeat-row{grid-template-columns:1fr;gap:4px}}
+
+.formatbar{display:flex;flex-wrap:wrap;gap:4px;border:1px solid #ded7d4;border-radius:7px 7px 0 0;background:#f8f5f3;padding:6px}
+.formatbar button{border:1px solid transparent;background:transparent;border-radius:4px;padding:5px 10px;font-size:12px}
+.formatbar button:hover{border-color:#dccdd0;background:white}
+.rich-editor{border:1px solid #ded7d4;border-top:0;border-radius:0 0 7px 7px;min-height:128px;max-height:320px;overflow:auto;padding:12px;font-size:13px;line-height:1.55;background:white;outline-offset:2px}
+.rich-editor:empty::before{content:attr(data-placeholder);color:#989095}
+.rich-editor p{margin:0 0 8px}.rich-editor ul,.rich-editor ol{padding-left:22px}
+.attachment-list{display:grid;gap:5px;margin:7px 0 10px}
+.attachment-item{display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:6px;background:#faf8f6;font-size:12px;overflow-wrap:anywhere}
+.attachment-item a{color:var(--accent);font-weight:650}
+.upload-form{padding:13px 0 0;border-top:1px solid var(--line)}
+.upload-form label{font-size:12px;font-weight:650;display:block;margin-bottom:7px}
+.upload-form input[type=file]{font-size:12px;border:0;padding:7px 0;max-width:100%}
+.upload-form .tools{align-items:center}
 </style>
 </head>
 <body>
@@ -92,15 +127,13 @@ textarea{resize:vertical;min-height:100px;line-height:1.5}
   <p class="help">Select a day to create an event, or select an existing event to edit it.</p>
  </div>
 </section>
+</main>
+<dialog id="editorDialog" class="editor-dialog" aria-labelledby="dialogTitle">
+ <div class="dialog-bar"><div><h2 id="dialogTitle">Event details</h2><p>Changes are not published until you save.</p></div><button id="closeEditor" type="button" class="dialog-close" aria-label="Close event editor">✕ Close</button></div>
 <div class="layout">
  <section class="panel">
   <div class="panel-heading"><h2>Event details</h2><p>Updates save to the existing parish Google Calendar.</p></div>
   <div class="panel-body">
-   <div class="browser">
-    <div class="browser-top"><strong>Events in view</strong><span id="eventCount" class="muted"></span></div>
-    <input id="eventSearch" type="search" placeholder="Find an event" aria-label="Find an event">
-    <div id="eventList">Loading…</div>
-   </div>
    <form id="eventForm">
     <fieldset id="scopeBox" hidden><legend>Recurring event: editing scope</legend>
      <label><input type="radio" name="scope" value="occurrence" checked> This date only</label>
@@ -116,8 +149,37 @@ textarea{resize:vertical;min-height:100px;line-height:1.5}
      </select><small id="categoryHint">Used for the category placeholder preview.</small></div>
      <div class="field"><label for="repeat">Repeats</label><select id="repeat">
       <option value="none">Does not repeat</option><option value="weekly">Weekly</option>
-      <option value="monthly">Monthly</option><option value="keep" hidden>Keep custom pattern</option>
-     </select><small id="repeatHint">Weekly and monthly patterns supported.</small></div>
+      <option value="monthly">Monthly</option><option value="custom">Custom…</option><option value="keep" hidden>Keep existing advanced pattern</option>
+     </select><small id="repeatHint">Custom intervals, weekdays and end conditions.</small></div>
+    </div>
+    <div id="customRepeat" class="repeat-config" hidden>
+     <div class="repeat-row">
+      <div class="field"><label for="repeatInterval">Repeat every</label><input id="repeatInterval" type="number" min="1" max="99" value="1"></div>
+      <div class="field"><label for="repeatUnit">Unit</label><select id="repeatUnit">
+       <option value="DAILY">Days</option><option value="WEEKLY" selected>Weeks</option>
+       <option value="MONTHLY">Months</option><option value="YEARLY">Years</option>
+      </select></div>
+     </div>
+     <div id="repeatWeekdays">
+      <label>Repeat on</label>
+      <div class="weekday-choices" role="group" aria-label="Repeat on weekdays">
+       <label><input type="checkbox" name="repeatDay" value="MO">Mon</label>
+       <label><input type="checkbox" name="repeatDay" value="TU">Tue</label>
+       <label><input type="checkbox" name="repeatDay" value="WE">Wed</label>
+       <label><input type="checkbox" name="repeatDay" value="TH">Thu</label>
+       <label><input type="checkbox" name="repeatDay" value="FR">Fri</label>
+       <label><input type="checkbox" name="repeatDay" value="SA">Sat</label>
+       <label><input type="checkbox" name="repeatDay" value="SU">Sun</label>
+      </div>
+     </div>
+     <div class="repeat-row">
+      <div class="field"><label for="repeatEnds">Ends</label><select id="repeatEnds">
+       <option value="never">Never</option><option value="until">On a date</option><option value="count">After a number of occurrences</option>
+      </select></div>
+      <div class="field" id="repeatUntilField" hidden><label for="repeatUntil">Last date</label><input id="repeatUntil" type="date"></div>
+      <div class="field" id="repeatCountField" hidden><label for="repeatCount">Occurrences</label><input id="repeatCount" type="number" min="1" max="999" value="10"></div>
+     </div>
+     <p class="help">For example: every 2 weeks on Tuesday and Thursday, ending after 12 occurrences. Existing complex rules can be kept unchanged.</p>
     </div>
     <div class="two">
      <div class="field"><label for="startDate">Start date</label><input id="startDate" required type="date"></div>
@@ -129,14 +191,37 @@ textarea{resize:vertical;min-height:100px;line-height:1.5}
      <div class="field"><label for="endTime">End time</label><input id="endTime" type="time" required></div>
     </div>
     <div class="field"><label for="location">Location</label><input id="location" maxlength="1000" placeholder="Church, hall or another venue"></div>
-    <div class="field"><label for="description">Description</label><textarea id="description" rows="4" placeholder="Event details for visitors…"></textarea>
-      <p class="warning" id="descriptionWarning" hidden>Google Calendar contains formatted text for this event. Changing its description here will replace that formatting. Leaving it unchanged preserves the original description.</p>
+    <div class="field"><label id="descriptionLabel" for="description">Description</label>
+     <div class="formatbar" role="toolbar" aria-label="Text formatting">
+      <button type="button" data-format="bold" aria-label="Bold"><strong>B</strong></button>
+      <button type="button" data-format="italic" aria-label="Italic"><em>I</em></button>
+      <button type="button" data-format="insertUnorderedList">• List</button>
+      <button type="button" data-format="insertOrderedList">1. List</button>
+      <button type="button" data-format="createLink">Link</button>
+     </div>
+     <div id="description" class="rich-editor" contenteditable="true" role="textbox" aria-labelledby="descriptionLabel" aria-multiline="true" data-placeholder="Event details for visitors…"></div>
+     <p class="help">Use the toolbar for bold, italic, lists and links. Formatting is retained in Google Calendar.</p>
+    </div>
+    <div class="field attachments-field">
+     <label>Images, PDFs and attachments</label>
+     <div id="attachmentList" class="attachment-list"><span class="muted">No attachments yet</span></div>
+     <p class="help">Attachments are stored in the parish Google Drive folder. Files attached to public events will be publicly viewable.</p>
     </div>
     <div class="form-actions">
      <div class="tools"><button type="submit" id="save" class="btn primary">Save event</button><button type="button" id="delete" class="btn danger" disabled>Delete…</button></div>
-     <button type="button" id="reset" class="btn">Reset</button>
+     <button type="button" id="resetChanges" class="btn">Reset changes</button>
     </div>
     <p id="status" class="status" role="status" aria-live="polite"></p>
+   </form>
+   <form id="uploadForm" class="upload-form" enctype="multipart/form-data">
+    <input type="hidden" name="eventId" id="uploadEventId">
+    <input type="hidden" name="editScope" id="uploadEditScope" value="occurrence">
+    <label for="uploadAttachment">Add an image, PDF or document (maximum 8 MB)</label>
+    <div class="tools">
+     <input type="file" name="attachment" id="uploadAttachment" accept="image/jpeg,image/png,image/webp,image/gif,application/pdf,.doc,.docx,.xls,.xlsx,.txt">
+     <button type="submit" id="uploadButton" class="btn" disabled>Upload attachment</button>
+    </div>
+    <p id="uploadStatus" class="status" role="status" aria-live="polite">Save this event before uploading a file.</p>
    </form>
   </div>
  </section>
@@ -154,15 +239,15 @@ textarea{resize:vertical;min-height:100px;line-height:1.5}
   </div>
  </aside>
 </div>
-</main>
+</dialog>
 <script>
 (function(){
 'use strict';
 var $=function(id){return document.getElementById(id)};
 var labels={general:'General',worship:'Worship & services',community:'Community',music:'Music',families:'Children & families',heritage:'Heritage & talks',fundraising:'Fundraising'};
-var fields=['title','category','repeat','startDate','endDate','startTime','endTime','location','description'];
+var fields=['title','category','repeat','startDate','endDate','startTime','endTime','location'];
 var linked=(typeof google!=='undefined' && google.script && google.script.run);
-var state={events:[],date:new Date(),mode:'month',busy:false,id:'',revision:'',scope:'occurrence',active:null,changed:false};
+var state={events:[],date:new Date(),mode:'month',busy:false,id:'',revision:'',scope:'occurrence',active:null,changed:false,dirty:false};
 function key(d){return d.toISOString().slice(0,10)}
 function fromDate(s){return new Date(s+'T12:00:00Z')}
 function add(s,n){var d=fromDate(s);d.setUTCDate(d.getUTCDate()+n);return key(d)}
@@ -170,7 +255,7 @@ function today(){return new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/London
 function pretty(s,opts){return new Intl.DateTimeFormat('en-GB',opts).format(fromDate(s))}
 function startWeek(s){var d=fromDate(s);return add(s,-((d.getUTCDay()+6)%7))}
 function status(t,bad){$('status').textContent=t;$('status').classList.toggle('error',!!bad)}
-function pending(v){state.busy=v;$('save').disabled=v||!linked;$('delete').disabled=v||!linked||!state.id;$('newEvent').disabled=v;$('refresh').disabled=v}
+function pending(v){state.busy=v;$('save').disabled=v||!linked;$('delete').disabled=v||!linked||!state.id;$('newEvent').disabled=v;$('refresh').disabled=v;$('uploadButton').disabled=v||!linked||!state.id}
 function call(fn){var args=Array.prototype.slice.call(arguments,1);return new Promise(function(resolve,reject){
  if(!linked){reject(new Error('This is a demonstration, not connected to Google Calendar.'));return}
  var runner=google.script.run.withSuccessHandler(resolve).withFailureHandler(reject);
@@ -181,23 +266,105 @@ function sample(){var s=today();return [
  {id:'demo-2',title:'Coffee Morning',start:s+'T11:00:00',category:'community'},
  {id:'demo-3',title:'Choir Practice',start:add(s,3)+'T19:00:00',category:'music'}
 ]}
+function safeRich(html){
+ var parsed=new DOMParser().parseFromString(String(html||''),'text/html');
+ var host=document.createElement('div');
+ var allowed=['p','div','strong','b','em','i','ul','ol','li','br','a','blockquote'];
+ function copyNode(node,parent){
+  if(node.nodeType===3){parent.appendChild(document.createTextNode(node.nodeValue));return}
+  if(node.nodeType!==1)return;
+  var tag=node.tagName.toLowerCase();
+  if(['script','style','iframe','object','embed','svg','img','form','input','button'].includes(tag))return;
+  var destination=allowed.includes(tag)?document.createElement(tag):parent;
+  if(tag==='a'&&destination!==parent){
+   var href=node.getAttribute('href')||'';
+   if(/^(?:https?:\/\/|mailto:)/i.test(href)){
+    destination.setAttribute('href',href);destination.setAttribute('target','_blank');destination.setAttribute('rel','noopener noreferrer');
+   }
+  }
+  Array.from(node.childNodes).forEach(function(child){copyNode(child,destination)});
+  if(destination!==parent)parent.append(destination);
+ }
+ Array.from(parsed.body.childNodes).forEach(function(n){copyNode(n,host)});
+ return host.innerHTML;
+}
+function richHTML(){return safeRich($('description').innerHTML)}
+function attachmentList(items){
+ var box=$('attachmentList');box.replaceChildren();
+ if(!items||!items.length){box.append(create('span','muted','No attachments yet'));return}
+ items.forEach(function(item){
+  var row=create('div','attachment-item');
+  var a=create('a','',item.title||'Attached file');
+  if(/^https:\/\//i.test(item.fileUrl||'')){
+   a.href=item.fileUrl;a.target='_blank';a.rel='noopener noreferrer';
+  }else a.removeAttribute('href');
+  row.append(create('span','',item.mimeType==='application/pdf'?'PDF':'File'),a);box.append(row);
+ });
+}
 function create(tag,cls,text){var el=document.createElement(tag);if(cls)el.className=cls;if(text!==undefined)el.textContent=text;return el}
 function eventDay(e){var s=e.start.slice(0,10);return s}
 function eventsAt(day){return state.events.filter(function(e){return eventDay(e)===day})}
 function eventTime(e){return e.allDay?'All day':(e.start.slice(11,16)||'')}
+function showEditor(title){
+ $('dialogTitle').textContent=title;
+ if(!$('editorDialog').open)$('editorDialog').showModal();
+}
+function closeEditor(){
+ if(state.dirty && !confirm('Discard your unsaved event changes?'))return;
+ state.dirty=false;$('editorDialog').close();
+}
+function weekOf(date){
+ var d=fromDate(date||today());
+ return ['SU','MO','TU','WE','TH','FR','SA'][d.getUTCDay()];
+}
+function customDefaults(){
+ $('repeatInterval').value='1';$('repeatUnit').value='WEEKLY';$('repeatEnds').value='never';
+ $('repeatCount').value='10';$('repeatUntil').value='';
+ document.querySelectorAll('[name=repeatDay]').forEach(function(el){el.checked=el.value===weekOf($('startDate').value)});
+}
+function customPopulate(spec){
+ customDefaults();
+ if(!spec)return;
+ $('repeatInterval').value=spec.interval||1;
+ $('repeatUnit').value=spec.unit||'WEEKLY';
+ $('repeatEnds').value=spec.ends||'never';
+ $('repeatCount').value=spec.count||10;
+ $('repeatUntil').value=spec.until||'';
+ document.querySelectorAll('[name=repeatDay]').forEach(function(el){
+  el.checked=(spec.days||[]).includes(el.value)
+ });
+ if(spec.unit==='WEEKLY' && !(spec.days||[]).length){
+  document.querySelectorAll('[name=repeatDay]').forEach(function(el){el.checked=el.value===weekOf($('startDate').value)});
+ }
+}
+function repeatPanel(){
+ var isCustom=$('repeat').value==='custom'&&!$('repeat').disabled;
+ $('customRepeat').hidden=!isCustom;
+ $('repeatWeekdays').hidden=$('repeatUnit').value!=='WEEKLY';
+ $('repeatUntilField').hidden=$('repeatEnds').value!=='until';
+ $('repeatCountField').hidden=$('repeatEnds').value!=='count';
+}
 function newEntry(date){
- state.id='';state.revision='';state.active=null;state.scope='occurrence';state.changed=false;
- $('eventForm').reset();$('title').value='';$('category').value='general';$('repeat').value='none';
+ state.id='';state.revision='';state.active=null;state.scope='occurrence';state.changed=false;state.dirty=false;
+ HTMLFormElement.prototype.reset.call($('eventForm'));
+ $('description').replaceChildren();attachmentList([]);$('uploadAttachment').value='';$('uploadStatus').textContent='Save this event before uploading a file.';
+ $('title').value='';$('category').value='general';$('repeat').value='none';
  $('startDate').value=$('endDate').value=date||today();$('startTime').value='10:00';$('endTime').value='11:00';
  $('scopeBox').hidden=true;$('descriptionWarning').hidden=true;$('repeat').disabled=false;
  $('repeat').querySelector('[value=keep]').hidden=true;
  $('categoryHint').textContent='Choose an event type; no special calendar tags required.';
- adjustAllDay();preview();listEvents();pending(false);
- status(linked?'New event — not saved.':'Demonstration mode — Save and Delete disabled.');
+ customDefaults();repeatPanel();adjustAllDay();preview();pending(false);
+ status(linked?'New event — not saved.':'Demonstration only — Save and Delete are disabled.');
+ showEditor('New event');
 }
 function adjustAllDay(){var off=$('allDay').checked;$('timeFields').hidden=off;$('startTime').disabled=off;$('endTime').disabled=off}
 function values(){var v={};fields.forEach(function(id){v[id]=$(id).value});v.allDay=$('allDay').checked;v.id=state.id;
- v.editScope=state.id?state.scope:'';v.revision=state.revision;v.descriptionChanged=state.changed;return v}
+ v.editScope=state.id?state.scope:'';v.revision=state.revision;v.descriptionChanged=state.changed;
+ v.description=richHTML();
+ v.customRepeat={unit:$('repeatUnit').value,interval:Number($('repeatInterval').value),
+  days:Array.from(document.querySelectorAll('[name=repeatDay]:checked')).map(function(el){return el.value}),
+  ends:$('repeatEnds').value,count:Number($('repeatCount').value),until:$('repeatUntil').value};
+ return v}
 function preview(){
  var v=values(),name=v.title.trim()||'Your event title';
  var when=v.startDate?pretty(v.startDate,{timeZone:'UTC',day:'numeric',month:'short',year:'numeric'}):'Choose date';
@@ -205,8 +372,10 @@ function preview(){
  $('art').dataset.type=v.category;$('artCategory').textContent=labels[v.category]||'General';
  $('artTitle').textContent=name;$('artDate').textContent=when;
  $('pvTitle').textContent=name;$('pvDate').textContent=when+' · '+time;
+ if(v.repeat==='custom')$('pvDate').textContent+=' · Every '+v.customRepeat.interval+' '+v.customRepeat.unit.toLowerCase();
+ else if(v.repeat==='weekly'||v.repeat==='monthly')$('pvDate').textContent+=' · '+v.repeat;
  $('pvLocation').textContent=v.location;$('pvLocation').hidden=!v.location.trim();
- $('previewDescription').textContent=v.description.trim()||'Your event description will appear here.';
+ $('previewDescription').innerHTML=v.description.trim()||'Your event description will appear here.';
 }
 function eventButton(e,cls){var b=create('button',cls,(eventTime(e)?eventTime(e)+'  ':'')+e.title);
  b.type='button';b.title=e.title;b.dataset.category=e.category||'general';
@@ -251,33 +420,27 @@ function calendar(){
   container.append(week);
  }
 }
-function listEvents(){
- var host=$('eventList'),q=$('eventSearch').value.trim().toLowerCase();
- host.replaceChildren();var items=state.events.filter(function(e){return e.title.toLowerCase().includes(q)}).slice(0,50);
- if(!items.length){host.append(create('div','muted','No matching events'));return}
- items.forEach(function(e){var r=create('button','list-choice');r.type='button';if(e.id===state.id)r.classList.add('active');
-  r.append(create('span','',e.title),create('small','',eventDay(e)));r.addEventListener('click',function(){openEvent(e.id)});host.append(r)});
-}
 function put(e){
  state.id=e.selectedId||e.id;state.revision=e.revision;state.scope=e.editScope||'occurrence';state.active=e;state.changed=false;
  fields.forEach(function(id){if(e[id]!==undefined)$(id).value=e[id]});
- $('description').value=plain(e.description||'');$('allDay').checked=!!e.allDay;
+ $('description').innerHTML=safeRich(e.description||'');$('allDay').checked=!!e.allDay;
+ attachmentList(e.attachments||[]);$('uploadEventId').value=state.id;$('uploadEditScope').value=state.scope;
+ $('uploadStatus').textContent='Choose a file below. Save any event changes before uploading.';
  $('scopeBox').hidden=!e.isRecurring;
  var radio=document.querySelector('input[name=scope][value='+state.scope+']');if(radio)radio.checked=true;
  $('repeat').querySelector('[value=keep]').hidden=e.repeat!=='keep';$('repeat').value=e.repeat||'none';
- $('repeat').disabled=!!e.isInstance && state.scope==='occurrence';
+ $('repeat').disabled=!!e.isRecurring && state.scope==='occurrence';
+ customPopulate(e.customRepeat);repeatPanel();
  $('repeatHint').textContent=e.repeat==='keep'?'Complex recurrence preserved unless deliberately changed.':'Weekly and monthly patterns supported.';
  $('categoryHint').textContent=e.categorySource==='suggested'?'Suggested from title; choose a category to save it.':'Category stored on event.';
  $('descriptionWarning').hidden=!e.hasFormattedDescription;
- adjustAllDay();preview();listEvents();pending(false);status('Loaded from calendar — not yet changed.');
+ adjustAllDay();preview();pending(false);state.dirty=false;showEditor('Edit event');status('Loaded from calendar — not yet changed.');
 }
-function plain(s){if(!/<[a-z][^>]*>/i.test(s))return s;var d=new DOMParser().parseFromString(s,'text/html');
- d.querySelectorAll('script,style,iframe').forEach(function(el){el.remove()});return d.body.textContent||''}
 async function openEvent(id,scope){
  if(state.busy)return;pending(true);status('Opening event…');
  try{
   if(linked){put(await call('editorGetEvent',id,scope||'occurrence'))}
-  else{var e=state.events.find(function(v){return v.id===id});var d=eventDay(e);
+  else{var e=state.events.find(function(v){return v.id===id});if(!e)throw Error('Event not found');var d=eventDay(e);
    put({id:e.id,selectedId:e.id,title:e.title,category:e.category,categorySource:'suggested',
     startDate:d,endDate:d,startTime:'10:00',endTime:'11:00',repeat:'none',revision:'demo',
     description:'Demonstration event. This editor is not connected to Google Calendar.',
@@ -286,7 +449,7 @@ async function openEvent(id,scope){
 }
 async function load(){
  pending(true);$('connection').textContent=linked?'Connecting to Google…':'Preview · no Google connection';
- try{if(linked)await call('editorBootstrap');await range();newEntry(today());
+ try{if(linked)await call('editorBootstrap');await range();pending(false);
   $('connection').textContent=linked?'Google Calendar · editor':'Demonstration · read-only';
  }catch(err){status(err.message||String(err),true);pending(false);$('connection').textContent='Calendar access unavailable'}
 }
@@ -295,7 +458,7 @@ async function range(){
  var begin=startWeek(first),end=state.mode==='month'?add(begin,41):add(begin,6);
  $('calendar').textContent='Loading calendar…';
  state.events=linked?await call('editorListEvents',begin,end):sample();
- calendar();listEvents();$('eventCount').textContent=state.events.length+' shown';
+ calendar();
 }
 async function shift(direction){
  var d=state.mode==='month'?fromDate(key(state.date).slice(0,7)+'-01'):new Date(state.date);
@@ -308,7 +471,7 @@ async function save(ev){
  if(state.active&&state.active.isRecurring&&state.scope==='series'
   && !confirm('Change the ENTIRE recurring series? This can affect future dates.'))return;
  pending(true);status('Saving to Google Calendar…');
- try{await call('editorSaveEvent',v);await range();newEntry(v.startDate);
+ try{await call('editorSaveEvent',v);await range();state.dirty=false;$('editorDialog').close();
   status('Saved. Public embeds update on their next sync.')}
  catch(e){status(e.message||String(e),true);pending(false)}
 }
@@ -317,7 +480,7 @@ async function remove(){
  var target=state.active&&state.active.isRecurring?(state.scope==='series'?'entire series':'one occurrence'):'event';
  if(!confirm('Delete this '+target+' permanently from Google Calendar?'))return;
  pending(true);status('Deleting…');
- try{await call('editorDeleteEvent',state.id,state.scope,state.revision);await range();newEntry(today());status('Deleted from calendar.')}
+ try{await call('editorDeleteEvent',state.id,state.scope,state.revision);await range();state.dirty=false;$('editorDialog').close();status('Deleted from calendar.')}
  catch(e){status(e.message||String(e),true);pending(false)}
 }
 $('prev').addEventListener('click',function(){shift(-1)});
@@ -327,13 +490,56 @@ $('month').addEventListener('click',function(){setMode('month')});
 $('week').addEventListener('click',function(){setMode('week')});
 $('newEvent').addEventListener('click',function(){newEntry(today())});
 $('refresh').addEventListener('click',load);
-$('eventSearch').addEventListener('input',listEvents);
+
 $('eventForm').addEventListener('submit',save);
 $('delete').addEventListener('click',remove);
-$('reset').addEventListener('click',function(){state.id?openEvent(state.id,state.scope):newEntry(today())});
+$('resetChanges').addEventListener('click',function(){if(state.id){state.dirty=false;openEvent(state.id,state.scope)}else newEntry($('startDate').value||today())});
 document.querySelectorAll('input[name=scope]').forEach(function(el){el.addEventListener('change',function(){if(el.checked&&state.id)openEvent(state.id,el.value)})});
-fields.forEach(function(id){$(id).addEventListener('input',function(){if(id==='description')state.changed=true;preview()})});
-$('allDay').addEventListener('change',function(){adjustAllDay();preview()});
+fields.forEach(function(id){$(id).addEventListener('input',function(){state.dirty=true;if(id==='repeat')repeatPanel();preview()})});
+$('description').addEventListener('input',function(){state.changed=true;state.dirty=true;preview()});
+$('description').addEventListener('paste',function(e){
+ e.preventDefault();var text=(e.clipboardData||window.clipboardData).getData('text/plain');
+ document.execCommand('insertText',false,text);
+});
+document.querySelectorAll('[data-format]').forEach(function(button){
+ button.addEventListener('mousedown',function(e){e.preventDefault()});
+ button.addEventListener('click',function(){
+  $('description').focus();
+  var action=button.dataset.format;
+  if(action==='createLink'){
+   var href=prompt('Enter a web link (https://) or email address (mailto:)');
+   if(!href)return;
+   if(!/^(?:https:\/\/|mailto:)/i.test(href)){status('Links must use https:// or mailto:',true);return}
+   document.execCommand('createLink',false,href);
+  }else document.execCommand(action,false,null);
+  state.changed=true;state.dirty=true;preview();
+ });
+});
+$('uploadForm').addEventListener('submit',async function(ev){
+ ev.preventDefault();
+ if(!linked||!state.id)return;
+ if(state.dirty){$('uploadStatus').textContent='Save your event changes before uploading a file.';return}
+ var file=$('uploadAttachment').files[0];
+ if(!file)return;
+ if(file.size>8*1024*1024){$('uploadStatus').textContent='File must be smaller than 8 MB.';return}
+ if(!confirm('This file will be publicly accessible from the event. Upload it to the parish Drive folder?'))return;
+ $('uploadEventId').value=state.id;$('uploadEditScope').value=state.scope;
+ pending(true);$('uploadStatus').textContent='Uploading to Google Drive and attaching to the event…';
+ try{
+  await call('editorUploadFile',$('uploadForm'));
+  $('uploadAttachment').value='';
+  var loaded=await call('editorGetEvent',state.id,state.scope);
+  put(loaded);$('uploadStatus').textContent='File uploaded and attached to this event.';
+ }catch(err){$('uploadStatus').textContent=err.message||String(err);pending(false)}
+});
+$('allDay').addEventListener('change',function(){state.dirty=true;adjustAllDay();preview()});
+['repeatInterval','repeatUnit','repeatEnds','repeatUntil','repeatCount'].forEach(function(id){
+ $(id).addEventListener('input',function(){state.dirty=true;repeatPanel();preview()})
+});
+document.querySelectorAll('[name=repeatDay]').forEach(function(el){el.addEventListener('change',function(){state.dirty=true;preview()})});
+$('closeEditor').addEventListener('click',closeEditor);
+$('editorDialog').addEventListener('cancel',function(event){if(state.dirty){event.preventDefault();closeEditor()}});
+$('editorDialog').addEventListener('click',function(event){if(event.target===$('editorDialog'))closeEditor()});
 load();
 })();
 </script></body></html>
