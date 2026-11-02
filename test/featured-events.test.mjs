@@ -48,7 +48,7 @@ test('editor reads, writes, and changes featured checkbox state', () => {
   const source = src('admin/apps-script/Code.gs');
   assert.match(source, /FEATURED_KEY = 'woFeatured'/);
   assert.match(source, /featured: featuredOf_\(e, master\)/);
-  assert.match(source, /\[FEATURED_KEY\]: form\.featured === true \? 'true' : 'false'/);
+  assert.match(source, /\[FEATURED_KEY\]: form\.visibility === 'private'/);
   for (const file of ['admin/apps-script/Index.html', 'site/admin-demo.html']) {
     const editor = src(file);
     assert.match(editor, /v\.featured=\$\('featured'\)\.checked/);
