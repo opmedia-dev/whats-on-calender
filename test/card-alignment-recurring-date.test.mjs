@@ -60,6 +60,17 @@ test('dated cards in week/month filters still display dates', () => {
   assert.equal(textOf(badge), '2Nov');
 });
 
+test('event card renders the saved image focal position', () => {
+  const event = entry('focus-test',2);
+  event.info.image.position = '82% 17%';
+  const card = renderCard(event);
+  const image = findAll(card, node => node.tag === 'img')[0];
+  assert.equal(image.attributes.style, 'object-position:82% 17%');
+  event.info.image.position = 'junk';
+  const fallback = findAll(renderCard(event), node => node.tag === 'img')[0];
+  assert.equal(fallback.attributes.style,'object-position:50% 50%');
+});
+
 test('magazine card uses event card image/body/title/meta structure', () => {
   const html = fs.readFileSync(path.join(import.meta.dirname,'../site/banner.html'),'utf8');
   const css = fs.readFileSync(path.join(import.meta.dirname,'../site/assets/wo.css'),'utf8');
