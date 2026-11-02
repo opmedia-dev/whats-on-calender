@@ -23,6 +23,13 @@
     import { horizonDays, autoplaySeconds, mayAutoAdvance, eventSlots } from './assets/banner-config.js';
 
     const initialisation = init(); // Start the host handshake while event data loads.
+    // Mailing and calendar requests are independent; start them together.
+    const mailingPreload = flag('mailing', true)
+      ? loadMailings().catch((error) => {
+          console.warn('Weekly mailings unavailable, continuing with events:', error);
+          return { preview: false, mailings: [] };
+        })
+      : Promise.resolve({ preview: false, mailings: [] });
     const cardsEl = document.getElementById('cards');
     const pagerEl = document.getElementById('pager');
     const banner = document.getElementById('banner');
@@ -124,12 +131,7 @@
       // magazine is the other fixed publication, normally in column four.
       // The separate mailing archive remains available at mailings.html; no
       // redundant archive button is added below the carousel.
-      const mailingData = flag('mailing', true)
-        ? await loadMailings().catch((error) => {
-          console.warn('Weekly mailings unavailable, continuing with events:', error);
-          return { preview: false, mailings: [] };
-        })
-        : { preview: false, mailings: [] };
+      const mailingData = await mailingPreload;
       const latest = mailingData.mailings[0];
       if (latest) {
         const fixedMailing = h('aside', {
