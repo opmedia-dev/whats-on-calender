@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import fs from 'node:fs';
 import path from 'node:path';
-import { loadMagazineIssue } from '../site/assets/magazine.js';
+import { loadMagazineIssue, magazineDestination } from '../site/assets/magazine.js';
 
 const preview = 'https://opmedia-dev.github.io/flipbook/preview.html';
 const sampleIssues = [
@@ -60,4 +60,37 @@ test('banner uses magazine tile rather than oversized nested flipbook iframe', (
   assert.match(html, /target: '_blank'/);
   assert.doesNotMatch(html, /h\('iframe'/);
   assert.match(css, /\.wo-magazine-cover\s*\{[^}]*aspect-ratio:/);
+});
+
+test('configured parish archive overrides GitHub Pages magazine card destination', () => {
+ const source = 'https://opmedia-dev.github.io/flipbook/preview.html?compact=1&tools=none';
+ const archive = 'https://www.stjohnsoldmalden.org.uk/magazine-archive?from=homepage';
+ const destination=magazineDestination(source,archive,'7a1424');
+ assert.deepEqual(destination,{href:archive,usesArchive:true});
+ const fallback=magazineDestination(source,'','7a1424');
+ assert.equal(fallback.usesArchive,false);
+ assert.equal(new URL(fallback.href).pathname,'/flipbook/preview.html');
+ assert.equal(new URL(fallback.href).searchParams.has('tools'),false);
+ assert.equal(new URL(fallback.href).searchParams.get('accent'),'7a1424');
+});
+
+test('reject unsafe or malformed archive destinations and preserve hosted reader fallback', () => {
+ for(const invalid of ['javascript:alert(1)','http://example.com/archive','/relative-link','not a url']) {
+   const destination=magazineDestination(preview, invalid);
+   assert.equal(destination.usesArchive,false);
+   assert.equal(destination.href,preview);
+ }
+ const banner=fs.readFileSync(path.join(import.meta.dirname,'../site/banner.html'),'utf8');
+ assert.match(banner,/const destination = magazineDestination\(/);
+ assert.match(banner,/href: destination\.href/);
+ assert.match(banner,/destination\.usesArchive \? 'View magazine archive' : 'Read magazine'/);
+});
+
+test('external scheduled dispatch preserves change-detection rather than forced rebuilds', () => {
+ const workflow=fs.readFileSync(path.join(import.meta.dirname,'../.github/workflows/deploy.yml'),'utf8');
+ assert.match(workflow,/options: \[manual, external-cron\]/);
+ assert.match(workflow,/SOURCE: \$\{\{ inputs\.source \|\| '' \}\}/);
+ assert.match(workflow,/if \[ "\$EVENT" = 'schedule' \] \|\| \[ "\$SOURCE" = 'external-cron' \]; then/);
+ assert.match(workflow,/github\.event_name == 'schedule' \|\| inputs\.source == 'external-cron'/);
+ assert.match(workflow,/cron: '\*\/15 \* \* \* \*'/);
 });
