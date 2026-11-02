@@ -103,6 +103,36 @@ test('a calendar event category can be saved without altering an unchanged HTML 
   assert.throws(() => context.editorSaveEvent({ ...payload, category: 'unknown' }), /valid event category/);
 });
 
+test('custom recurrence supports selected weekdays, intervals and termination', () => {
+  const { context, events } = setup();
+  const payload = {
+    title:'Coffee Morning',startDate:'2026-11-03',endDate:'2026-11-03',
+    startTime:'10:00',endTime:'11:00',category:'community',allDay:false,
+    repeat:'custom',customRepeat:{unit:'WEEKLY',interval:2,days:['TU','TH'],
+      ends:'count',count:12},
+  };
+  context.editorSaveEvent(payload);
+  assert.equal(events[0].body.recurrence[0],'RRULE:FREQ=WEEKLY;INTERVAL=2;BYDAY=TU,TH;COUNT=12');
+  context.editorSaveEvent({...payload,customRepeat:{unit:'MONTHLY',interval:3,days:[],
+    ends:'until',until:'2027-03-01'}});
+  assert.match(events[1].body.recurrence[0],/^RRULE:FREQ=MONTHLY;INTERVAL=3;UNTIL=20270301T235959Z$/);
+  assert.throws(()=>context.editorSaveEvent({...payload,customRepeat:{unit:'WEEKLY',
+    interval:0,days:['TU'],ends:'never'}}),/Repeat interval/);
+  assert.throws(()=>context.editorSaveEvent({...payload,customRepeat:{unit:'WEEKLY',
+    interval:1,days:[],ends:'never'}}),/Choose at least one weekday/);
+});
+
+test('editor exposes a signed-in attachment handler while preserving existing attachments', () => {
+  assert.match(backend, /function editorUploadFile\(form\)/);
+  assert.match(backend, /editorAccess_\(\)/);
+  assert.match(backend, /attachmentsFor_\(record.target\)/);
+  assert.match(backend, /supportsAttachments: true/);
+  assert.match(backend, /Drive\.Files\.create/);
+  assert.match(backend, /Drive\.Permissions\.create/);
+  assert.match(backend, /MAX_EVENT_UPLOAD_BYTES = 8 \* 1024 \* 1024/);
+  assert.match(frontend, /editorUploadFile/);
+});
+
 test('new events write to the Calendar API with weekly recurrence and time-zone', () => {
   const { context, events } = setup();
   const result = context.editorSaveEvent({
@@ -122,7 +152,16 @@ test('frontend contains month/week controls, side-by-side form/preview and a saf
   assert.match(frontend, /id="week"/);
   assert.match(frontend, /id="calendar"/);
   assert.match(frontend, /class="layout"/);
-  assert.match(frontend, /grid-template-columns:minmax\(0,1\.05fr\) minmax\(0,\.95fr\)/);
+  assert.match(frontend, /<dialog id="editorDialog"/);
+  assert.match(frontend, /editor-dialog \.layout\{display:grid;grid-template-columns:minmax\(0,1\.06fr\) minmax\(0,\.94fr\)/);
+  assert.doesNotMatch(frontend, /Events in view|id="eventSearch"|id="eventList"/);
+  assert.match(frontend, /id="resetChanges"/);
+  assert.match(frontend, /HTMLFormElement\.prototype\.reset\.call/);
+  assert.match(frontend, /id="customRepeat"/);
+  assert.match(frontend, /id="repeatInterval"/);
+  assert.match(frontend, /id="repeatEnds"/);
+  assert.match(frontend, /id="description" class="rich-editor" contenteditable="true"/);
+  assert.match(frontend, /id="uploadForm"/);
   assert.match(frontend, /@media\(max-width:930px\)/);
   assert.match(frontend, /id="category"/);
   assert.match(frontend, /id="artTitle"/);
@@ -139,6 +178,7 @@ test('Google OAuth stays user-bound, with no write credentials in the GitHub Pag
   assert.deepEqual(manifest.oauthScopes, [
     'https://www.googleapis.com/auth/calendar.events',
     'https://www.googleapis.com/auth/calendar.calendarlist.readonly',
+    'https://www.googleapis.com/auth/drive',
   ]);
   assert.doesNotMatch(published, /ScriptApp\.getOAuthToken|GOOGLE_API_KEY|client_secret|access_token/);
 });
