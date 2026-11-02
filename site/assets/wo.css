@@ -185,7 +185,8 @@ button { font: inherit; color: inherit; }
 .wo-month-navigation{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin:0 0 20px}
 .wo-month-navigation h3{font-family:var(--wo-heading-font);color:var(--wo-title);font-size:clamp(1.25rem,2.8vw,1.65rem);font-weight:800;margin:0}
 .wo-month-navigation[hidden]{display:none}
-#highlights-section .wo-cards{margin-top:12px;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr))}
+#highlights-section .wo-cards{display:flex;flex-wrap:wrap;gap:22px;margin-top:12px;align-items:stretch}
+#highlights-section .wo-card{flex:0 1 340px;max-width:340px;min-width:0;width:100%}
 @media(max-width:640px){.wo-month-navigation{align-items:flex-start}.wo-month-navigation .wo-cal-nav{width:100%;justify-content:space-between}}
 
 .wo-cards { display: grid; gap: 22px; grid-template-columns: repeat(var(--wo-cols, 3), minmax(0, 1fr)); }
