@@ -80,10 +80,34 @@ function localEvent_(e) {
   const endDate = allDay ? addDay_(e.end.date, -1) : localDate_(e.end.dateTime);
   const recurrence = e.recurrence || [];
   const rawRule = recurrence.find(r => /^RRULE:/i.test(r)) || '';
+  const rule = {};
+  rawRule.replace(/^RRULE:/i, '').split(';').forEach(part => {
+    const pos = part.indexOf('=');
+    if (pos > 0) rule[part.slice(0, pos).toUpperCase()] = part.slice(pos + 1);
+  });
+  const simple = rawRule && recurrence.length === 1 &&
+    Object.keys(rule).every(k => ['FREQ','INTERVAL','BYDAY','COUNT','UNTIL'].includes(k)) &&
+    ['DAILY','WEEKLY','MONTHLY','YEARLY'].includes(rule.FREQ) &&
+    (!rule.BYDAY || (rule.FREQ === 'WEEKLY' && /^(?:MO|TU|WE|TH|FR|SA|SU)(?:,(?:MO|TU|WE|TH|FR|SA|SU))*$/.test(rule.BYDAY)));
   let repeat = 'none';
-  if (/^RRULE:FREQ=WEEKLY(?:;INTERVAL=1)?(?:;BYDAY=[A-Z]{2})?$/.test(rawRule) && recurrence.length === 1) repeat = 'weekly';
-  else if (/^RRULE:FREQ=MONTHLY(?:;INTERVAL=1)?$/.test(rawRule) && recurrence.length === 1) repeat = 'monthly';
-  else if (recurrence.length) repeat = 'keep';
+  let customRepeat = { unit: 'WEEKLY', interval: 1, days: [], ends: 'never', count: 10, until: '' };
+  if (rawRule && !simple) repeat = 'keep';
+  else if (simple) {
+    const interval = Number(rule.INTERVAL || 1);
+    const ends = rule.COUNT ? 'count' : rule.UNTIL ? 'until' : 'never';
+    customRepeat = {
+      unit: rule.FREQ,
+      interval,
+      days: rule.BYDAY ? rule.BYDAY.split(',') : [],
+      ends,
+      count: Number(rule.COUNT || 10),
+      until: rule.UNTIL ? rule.UNTIL.slice(0,4) + '-' + rule.UNTIL.slice(4,6) + '-' + rule.UNTIL.slice(6,8) : '',
+    };
+    if (interval === 1 && !rule.COUNT && !rule.UNTIL && rule.FREQ === 'WEEKLY' &&
+        (!rule.BYDAY || rule.BYDAY.split(',').length === 1)) repeat = 'weekly';
+    else if (interval === 1 && !rule.COUNT && !rule.UNTIL && rule.FREQ === 'MONTHLY' && !rule.BYDAY) repeat = 'monthly';
+    else repeat = 'custom';
+  }
   const category = categoryOf_(e);
   return {
     id: e.id, seriesId: e.recurringEventId || e.id,
@@ -92,7 +116,7 @@ function localEvent_(e) {
     startDate, endDate, startTime: allDay ? '09:00' : localClock_(e.start.dateTime),
     endTime: allDay ? '10:00' : localClock_(e.end.dateTime),
     allDay, category: category.id, categorySource: category.source,
-    repeat, isRecurring: Boolean(e.recurringEventId || recurrence.length),
+    repeat, customRepeat, isRecurring: Boolean(e.recurringEventId || recurrence.length),
     revision: e.etag || '', visibility: e.visibility || 'default',
     hasFormattedDescription: /<\/?(?:p|div|span|strong|b|a|br|ul|ol|li)\b/i.test(e.description || ''),
     descriptionOriginal: e.description || '',
@@ -183,6 +207,51 @@ function clock_(s, label) {
   return v;
 }
 
+function buildRecurrence_(form, repeat, startDate, allDay) {
+  if (repeat === 'keep') return null;
+  if (repeat === 'none') return [];
+  let unit, interval, days, ends, count, until;
+  if (repeat === 'weekly' || repeat === 'monthly') {
+    unit = repeat.toUpperCase(); interval = 1; days = [];
+    ends = 'never';
+  } else if (repeat === 'custom') {
+    const custom = form.customRepeat || {};
+    unit = String(custom.unit || '');
+    interval = Number(custom.interval);
+    days = Array.isArray(custom.days) ? custom.days : [];
+    ends = String(custom.ends || 'never');
+    count = Number(custom.count);
+    until = String(custom.until || '');
+    if (!['DAILY','WEEKLY','MONTHLY','YEARLY'].includes(unit)) throw new Error('Choose a valid repeat frequency.');
+    if (!Number.isInteger(interval) || interval < 1 || interval > 99) throw new Error('Repeat interval must be from 1 to 99.');
+    if (unit === 'WEEKLY') {
+      if (!days.length) throw new Error('Choose at least one weekday for a custom weekly repeat.');
+      if (days.length > 7 || new Set(days).size !== days.length ||
+          days.some(day => !['MO','TU','WE','TH','FR','SA','SU'].includes(day))) {
+        throw new Error('Select valid, distinct weekdays.');
+      }
+    } else if (days.length) throw new Error('Weekdays can only be set for weekly repeats.');
+    if (!['never','count','until'].includes(ends)) throw new Error('Choose a valid repeat ending.');
+  } else throw new Error('Invalid recurrence.');
+  const daysOfWeek = ['SU','MO','TU','WE','TH','FR','SA'];
+  if (unit === 'WEEKLY' && !days.length) {
+    days = [daysOfWeek[new Date(startDate + 'T12:00:00Z').getUTCDay()]];
+  }
+  let rule = 'RRULE:FREQ=' + unit;
+  if (interval > 1) rule += ';INTERVAL=' + interval;
+  if (unit === 'WEEKLY') rule += ';BYDAY=' + days.join(',');
+  if (ends === 'count') {
+    if (!Number.isInteger(count) || count < 1 || count > 999) throw new Error('Repeat count must be from 1 to 999.');
+    rule += ';COUNT=' + count;
+  } else if (ends === 'until') {
+    const date = isoDate_(until, 'Repeat until');
+    if (date < startDate) throw new Error('Repeat end must not precede event start.');
+    const compact = date.replace(/-/g, '');
+    rule += ';UNTIL=' + (allDay ? compact : compact + 'T235959Z');
+  }
+  return [rule];
+}
+
 function normalise_(form) {
   if (!form || typeof form !== 'object') throw new Error('Event details required.');
   const title = String(form.title || '').trim();
@@ -197,7 +266,7 @@ function normalise_(form) {
     throw new Error('End time must be after the start time.');
   }
   const repeat = String(form.repeat || 'none');
-  if (['none', 'weekly', 'monthly', 'keep'].indexOf(repeat) < 0) throw new Error('Invalid recurrence.');
+  if (['none', 'weekly', 'monthly', 'custom', 'keep'].indexOf(repeat) < 0) throw new Error('Invalid recurrence.');
   const description = String(form.description || '');
   if (description.length > 30000) throw new Error('Description is too long.');
   const location = String(form.location || '').trim();
@@ -215,14 +284,8 @@ function normalise_(form) {
   // Don't degrade HTML-rich calendar descriptions when the editor has not
   // changed that field. Omit it from PATCH instead of resaving plain text.
   if (!form.id || form.descriptionChanged === true) body.description = description;
-  if (repeat === 'weekly') {
-    const day = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'][new Date(startDate + 'T12:00:00Z').getUTCDay()];
-    body.recurrence = ['RRULE:FREQ=WEEKLY;BYDAY=' + day];
-  } else if (repeat === 'monthly') {
-    body.recurrence = ['RRULE:FREQ=MONTHLY'];
-  } else if (repeat === 'none') {
-    body.recurrence = [];
-  }
+  const recurrence = buildRecurrence_(form, repeat, startDate, allDay);
+  if (recurrence !== null) body.recurrence = recurrence;
   return { body, repeat };
 }
 
