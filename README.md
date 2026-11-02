@@ -104,6 +104,8 @@ event cards remain a separate release.
    *Make available to public*, "See all event details").
 5. Run the workflow once (Actions → Build and deploy What's On → Run workflow).
 
+For reliable 15-minute refresh triggering, see [external scheduler setup](docs/external-refresh-scheduler.md). It uses the existing **Build and deploy** workflow, not a new workflow, and preserves change detection for automatic API dispatch. Configuration of a restricted GitHub token and independent scheduler is a separate, explicit account setup step; it is **not enabled** by merging this documentation.
+
 The sync runs every 15 minutes. It only rebuilds when an event, series or attachment has changed,
 or once a day so "upcoming" stays current. Downloaded attachments are kept in the Actions cache.
 GitHub pauses scheduled workflows after 60 days without activity; the workflow re-enables itself
@@ -203,7 +205,7 @@ under the list), `emptyText`.
 - `mailing=0` hides the fixed latest sent weekly mailing card. With both publications enabled, only two event cards rotate at a time. The mailing archive is a separate optional embed; no archive button is shown beneath the carousel.
 - `style=plain` (no colour band), `ratio=4:3`
 - `moreLink` + `moreText` ("See all events" link beside the pager; defaults to `link`, `moreText=0` hides it)
-- `flipbook=1`, `flipbookUrl`, `flipbookLink` (archive page passed to the full reader), `flipbookTitle` ("Latest magazine"). The banner shows a **cover card** using the latest issue image/title from the flipbook's `issues.json`. Clicking it opens the full interactive reader in a separate tab. Magazine width is automatically matched to the event cards; old `flipbookWidth` and `flipbookHeight` options are ignored.
+- `flipbook=1`, `flipbookUrl`, `flipbookLink` (the **parish website archive destination**), `flipbookTitle` ("Latest magazine"). The banner shows a **cover card** using the latest issue image/title from the flipbook's `issues.json`. Clicking the card opens the configured HTTPS `flipbookLink` archive on the parish website in a separate tab; when it is absent or invalid, it falls back to the hosted full reader. Magazine width is automatically matched to the event cards; old `flipbookWidth` and `flipbookHeight` options are ignored.
 
 `whats-on.html`:
 
