@@ -147,7 +147,7 @@ function localEvent_(e, master) {
     endTime: allDay ? '10:00' : localClock_(e.end.dateTime),
     allDay, category: category.id, categorySource: category.source,
     repeat, customRepeat, isRecurring: Boolean(e.recurringEventId || recurrence.length),
-    revision: e.etag || '', visibility: e.visibility || master?.visibility || 'default',
+    revision: e.etag || '', visibility: master?.visibility === 'private' ? 'private' : (e.visibility || master?.visibility || 'default'),
     hasFormattedDescription: /<\/?(?:p|div|span|strong|b|a|br|ul|ol|li)\b/i.test(e.description || ''),
     descriptionOriginal: e.description || '',
     attachments: attachmentsFor_(e),
@@ -593,6 +593,16 @@ function editorDeleteEvent(id, scope, revision) {
     const record = fetchTarget_(id, scope);
     if (record.target.etag !== revision) {
       throw new Error('This event has changed. Reload before deleting.');
+    }
+    if (scope === 'following') {
+      const plan = followingPlan_(record);
+      if (!plan.first) {
+        const revised = Calendar.Events.patch({ recurrence: [plan.trimmed] },
+          EDITOR_CALENDAR_ID, plan.master.id, { sendUpdates: 'none' });
+        return { deleted: true, id: record.target.id, scope:'following', remainingSeriesId:revised.id };
+      }
+      Calendar.Events.remove(EDITOR_CALENDAR_ID, plan.master.id, { sendUpdates:'none' });
+      return { deleted:true, id:plan.master.id, scope:'following' };
     }
     Calendar.Events.remove(EDITOR_CALENDAR_ID, record.target.id,
       { sendUpdates: 'none' });
