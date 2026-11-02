@@ -44,6 +44,7 @@ textarea{resize:vertical;min-height:100px;line-height:1.5}
 .field{margin-bottom:15px;min-width:0}.field label{display:block;font-size:12px;font-weight:700;margin-bottom:6px}
 .field small,.muted{font-size:11.5px;color:var(--muted)}
 .two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}.check{display:flex;align-items:center;gap:8px;font-size:13px;margin:0 0 16px}
+.featured-setting{padding:12px 14px;margin:0 0 16px;border:1px solid #e6d9dc;border-radius:8px;background:#fcf8f7}.featured-setting .check{margin:0 0 5px}.featured-setting .help{margin:0 0 0 23px}
 #scopeBox{border:1px solid #e7dadd;background:#faf5f5;padding:11px;margin:0 0 17px;border-radius:7px}
 #scopeBox legend{font-size:12px;font-weight:700;color:var(--accent)}
 #scopeBox label{font-size:12px;margin-right:18px}
@@ -203,6 +204,9 @@ textarea{resize:vertical;min-height:100px;line-height:1.5}
      <div class="field"><label for="endTime">End time</label><input id="endTime" type="time" required></div>
     </div>
     <div class="field"><label for="location">Location</label><input id="location" maxlength="1000" placeholder="Church, hall or another venue"></div>
+     <div class="featured-setting"><label class="check" for="featured"><input id="featured" type="checkbox"> <strong>Feature this event</strong></label>
+      <p class="help">Show this event in the homepage banner and What's On Highlights. Other events remain in the calendar and full listings. For recurring events, choose whether this applies to one date or the whole series.</p>
+     </div>
     <div class="field"><label id="descriptionLabel" for="description">Description</label>
      <div class="formatbar" role="toolbar" aria-label="Text formatting">
       <button type="button" data-format="bold" aria-label="Bold"><strong>B</strong></button>
@@ -448,7 +452,7 @@ function newEntry(date){
 function adjustAllDay(){var off=$('allDay').checked;$('timeFields').hidden=off;$('startTime').disabled=off;$('endTime').disabled=off}
 function values(){var v={};fields.forEach(function(id){v[id]=$(id).value});v.allDay=$('allDay').checked;v.id=state.id;
  v.editScope=state.id?state.scope:'';v.revision=state.revision;v.descriptionChanged=state.changed;
- v.description=richHTML();v.headerImageId=state.headerImageId;
+ v.description=richHTML();v.headerImageId=state.headerImageId;v.featured=$('featured').checked;
  v.customRepeat={unit:$('repeatUnit').value,interval:Number($('repeatInterval').value),
   days:Array.from(document.querySelectorAll('[name=repeatDay]:checked')).map(function(el){return el.value}),
   ends:$('repeatEnds').value,count:Number($('repeatCount').value),until:$('repeatUntil').value};
@@ -460,6 +464,7 @@ function preview(){
  $('art').dataset.type=v.category;$('artCategory').textContent=labels[v.category]||'General';
  $('artTitle').textContent=name;$('artDate').textContent=when;
  $('pvTitle').textContent=name;$('pvDate').textContent=when+' · '+time;
+ if(v.featured)$('pvDate').textContent+=' · Featured';
  if(v.repeat==='custom')$('pvDate').textContent+=' · Every '+v.customRepeat.interval+' '+v.customRepeat.unit.toLowerCase();
  else if(v.repeat==='weekly'||v.repeat==='monthly')$('pvDate').textContent+=' · '+v.repeat;
  $('pvLocation').textContent=v.location;$('pvLocation').hidden=!v.location.trim();
@@ -513,6 +518,7 @@ function put(e){
  state.id=e.selectedId||e.id;state.revision=e.revision;state.scope=e.editScope||'occurrence';state.active=e;state.changed=false;
  fields.forEach(function(id){if(e[id]!==undefined)$(id).value=e[id]});
  $('description').innerHTML=safeRich(e.description||'');$('allDay').checked=!!e.allDay;
+ $('featured').checked=e.featured===true;
  state.headerImageId=e.headerImageId||'';
  resetDraftImage();attachmentList(e.attachments||[]);
  $('scopeBox').hidden=!e.isRecurring;
@@ -634,6 +640,7 @@ $('uploadAttachment').addEventListener('change',function(){
 });
 $('imageRole').addEventListener('change',refreshImagePreview);
 $('allDay').addEventListener('change',function(){state.dirty=true;adjustAllDay();preview()});
+$('featured').addEventListener('change',function(){state.dirty=true;preview()});
 ['repeatInterval','repeatUnit','repeatEnds','repeatUntil','repeatCount'].forEach(function(id){
  $(id).addEventListener('input',function(){state.dirty=true;repeatPanel();preview()})
 });
