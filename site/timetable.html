@@ -15,10 +15,10 @@
     import { init, loadEvents, param, num, flag, h, icon, eventHref, dayKey, addDays, isUpcoming, renderAgendaDay, routeDetails, showError, emptyState } from './assets/wo.js';
     import { heroWeek } from './assets/hero-timetable.js';
 
-    await init();
+    const initialisation = init(); // Start the host handshake while event data loads.
     const list = document.getElementById('list');
     try {
-      const { events } = await loadEvents();
+      const [, { events }] = await Promise.all([initialisation, loadEvents()]);
       const now = new Date();
       const today = dayKey(now);
       const last = addDays(today, num('days', 7) - 1);
