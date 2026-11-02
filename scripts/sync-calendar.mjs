@@ -21,6 +21,7 @@ import sharp from 'sharp';
 import { describeRecurrence } from './lib/recurrence.mjs';
 import { processDescription } from './lib/description.mjs';
 import { eventCategory } from './lib/event-category.mjs';
+import { prepareCalendarOutput } from './lib/output-data.mjs';
 
 const root = path.resolve(import.meta.dirname, '..');
 const config = JSON.parse(fs.readFileSync(path.join(root, 'config.json'), 'utf8'));
@@ -145,8 +146,8 @@ if (siteUrl && process.env.FORCE !== 'true') {
   } catch { /* not deployed yet */ }
 }
 
-fs.rmSync(dataDir, { recursive: true, force: true });
-fs.mkdirSync(path.join(dataDir, 'media'), { recursive: true });
+// Rebuild event output only; the earlier Mailchimp sync writes beside it.
+prepareCalendarOutput(dataDir);
 fs.mkdirSync(cacheDir, { recursive: true });
 
 const IMAGE_TYPES = /^image\/(jpeg|png|gif|webp|avif|heic|heif|tiff|bmp)$/i;
