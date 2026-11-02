@@ -108,6 +108,18 @@ textarea{resize:vertical;min-height:100px;line-height:1.5}
 .upload-form label{font-size:12px;font-weight:650;display:block;margin-bottom:7px}
 .upload-form input[type=file]{font-size:12px;border:0;padding:7px 0;max-width:100%}
 .upload-form .tools{align-items:center}
+
+/* Distinct header and listing/gallery image roles */
+.attachment-item{flex-wrap:wrap}
+.attachment-item button{margin-left:auto;padding:5px 9px;border:1px solid #d4c5c6;border-radius:5px;background:white;color:var(--accent);font-size:11px}
+.attachment-item .image-role{font-size:11px;font-weight:750;color:#655d60}
+.preview-art.has-photo{position:relative;padding:0;min-height:210px;background:#ebe7e3}
+.preview-art.has-photo:before,.preview-art.has-photo>#artCategory,.preview-art.has-photo>#artTitle,.preview-art.has-photo>#artDate{display:none}
+.preview-art #previewHeaderImage{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.preview-art #previewHeaderImage[hidden]{display:none}
+.preview-gallery{display:flex;gap:7px;flex-wrap:wrap;padding:10px 12px;background:#f9f7f5;border-top:1px solid var(--line)}
+.preview-gallery img{width:76px;height:59px;object-fit:cover;border-radius:5px;border:1px solid #ddd4d1}
+.preview-gallery .gallery-label{width:100%;font-size:11px;color:var(--muted);font-weight:700}
 </style>
 </head>
 <body>
@@ -203,9 +215,10 @@ textarea{resize:vertical;min-height:100px;line-height:1.5}
      <p class="help">Use the toolbar for bold, italic, lists and links. Formatting is retained in Google Calendar.</p>
     </div>
     <div class="field attachments-field">
-     <label>Images, PDFs and attachments</label>
+     <label>Event images and attachments</label>
+     <p class="help">Choose one image as the header for event cards. Other images appear in the event gallery; PDFs and documents appear under Downloads.</p>
      <div id="attachmentList" class="attachment-list"><span class="muted">No attachments yet</span></div>
-     <p class="help">Attachments are stored in the parish Google Drive folder. Files attached to public events will be publicly viewable.</p>
+     <p id="headerImageHint" class="help">No image selected. The first attached image will be used automatically.</p>
     </div>
     <div class="form-actions">
      <div class="tools"><button type="submit" id="save" class="btn primary">Save event</button><button type="button" id="delete" class="btn danger" disabled>Delete…</button></div>
@@ -216,6 +229,13 @@ textarea{resize:vertical;min-height:100px;line-height:1.5}
    <form id="uploadForm" class="upload-form" enctype="multipart/form-data">
     <input type="hidden" name="eventId" id="uploadEventId">
     <input type="hidden" name="editScope" id="uploadEditScope" value="occurrence">
+    <div class="field"><label for="imageRole">Image placement</label>
+     <select id="imageRole" name="imageRole">
+      <option value="header">Use as event header</option>
+      <option value="gallery">Add to listing/gallery</option>
+     </select>
+     <p class="help">For PDFs and documents, the placement is always Downloads.</p>
+    </div>
     <label for="uploadAttachment">Add an image, PDF or document (maximum 8 MB)</label>
     <div class="tools">
      <input type="file" name="attachment" id="uploadAttachment" accept="image/jpeg,image/png,image/webp,image/gif,application/pdf,.doc,.docx,.xls,.xlsx,.txt">
@@ -230,8 +250,10 @@ textarea{resize:vertical;min-height:100px;line-height:1.5}
   <div class="panel-body">
    <div class="preview-card">
     <div id="art" class="preview-art" data-type="general">
+     <img id="previewHeaderImage" alt="" hidden>
      <span id="artCategory">General</span><div id="artTitle">Your event title</div><span id="artDate">Date to be confirmed</span>
     </div>
+    <div id="previewGallery" class="preview-gallery" hidden></div>
     <div class="preview-info"><h3 id="pvTitle">Your event title</h3><p id="pvDate">Select an event date</p><p id="pvLocation" hidden></p></div>
    </div>
    <div id="previewDescription">Your event description will appear here.</div>
@@ -247,7 +269,7 @@ var $=function(id){return document.getElementById(id)};
 var labels={general:'General',worship:'Worship & services',community:'Community',music:'Music',families:'Children & families',heritage:'Heritage & talks',fundraising:'Fundraising'};
 var fields=['title','category','repeat','startDate','endDate','startTime','endTime','location'];
 var linked=(typeof google!=='undefined' && google.script && google.script.run);
-var state={events:[],date:new Date(),mode:'month',busy:false,id:'',revision:'',scope:'occurrence',active:null,changed:false,dirty:false};
+var state={events:[],date:new Date(),mode:'month',busy:false,id:'',revision:'',scope:'occurrence',active:null,changed:false,dirty:false,attachments:[],headerImageId:'',draftImageUrl:''};
 function key(d){return d.toISOString().slice(0,10)}
 function fromDate(s){return new Date(s+'T12:00:00Z')}
 function add(s,n){var d=fromDate(s);d.setUTCDate(d.getUTCDate()+n);return key(d)}
@@ -289,17 +311,82 @@ function safeRich(html){
  return host.innerHTML;
 }
 function richHTML(){return safeRich($('description').innerHTML)}
+function resetDraftImage(){
+ if(state.draftImageUrl)URL.revokeObjectURL(state.draftImageUrl);
+ state.draftImageUrl='';
+ $('uploadForm').reset();
+ $('uploadEventId').value=state.id||'';
+ $('uploadEditScope').value=state.scope||'occurrence';
+ $('imageRole').value='header';
+ $('uploadStatus').textContent=state.id?'Choose a file to attach after saving changes.':'Save this event before uploading.';
+}
+function mediaUrl(item){
+ if(item && item.fileId && /^[A-Za-z0-9_-]{10,}$/.test(item.fileId))
+  return 'https://drive.google.com/thumbnail?id='+encodeURIComponent(item.fileId)+'&sz=w700';
+ if(item && /^https:\/\//i.test(item.fileUrl||''))return item.fileUrl;
+ return '';
+}
+function refreshImagePreview(){
+ const images=state.attachments.filter(a=>/^image\//i.test(a.mimeType||''));
+ const header=state.headerImageId==='none'?null:(images.find(a=>a.fileId&&a.fileId===state.headerImageId)||images[0]||null);
+ const file=$('uploadAttachment').files[0];
+ const draftImage=Boolean(file&&file.type.startsWith('image/'));
+ const draftHeader=draftImage&&$('imageRole').value==='header';
+ const draftGallery=draftImage&&$('imageRole').value==='gallery';
+ const img=$('previewHeaderImage');
+ const src=draftHeader?state.draftImageUrl:mediaUrl(header);
+ if(src){img.src=src;img.hidden=false;$('art').classList.add('has-photo')}
+ else{img.removeAttribute('src');img.hidden=true;$('art').classList.remove('has-photo')}
+ const gallery=$('previewGallery');gallery.replaceChildren();
+ const others=images.filter(a=>a!==header);
+ if(others.length||draftGallery){
+  gallery.append(create('span','gallery-label','Additional images in the event listing'));
+  others.forEach(function(item){
+   const url=mediaUrl(item);
+   if(url){const el=create('img','');el.src=url;el.alt=item.title||'Event image';gallery.append(el)}
+  });
+  if(draftGallery&&state.draftImageUrl){
+   const el=create('img','');el.src=state.draftImageUrl;el.alt='Draft image not uploaded';gallery.append(el);
+  }
+ }
+ gallery.hidden=!others.length&&!draftGallery;
+}
 function attachmentList(items){
- var box=$('attachmentList');box.replaceChildren();
- if(!items||!items.length){box.append(create('span','muted','No attachments yet'));return}
- items.forEach(function(item){
-  var row=create('div','attachment-item');
-  var a=create('a','',item.title||'Attached file');
-  if(/^https:\/\//i.test(item.fileUrl||'')){
-   a.href=item.fileUrl;a.target='_blank';a.rel='noopener noreferrer';
-  }else a.removeAttribute('href');
-  row.append(create('span','',item.mimeType==='application/pdf'?'PDF':'File'),a);box.append(row);
+ state.attachments=Array.isArray(items)?items.map(a=>({...a})):[];
+ const box=$('attachmentList');box.replaceChildren();
+ const images=state.attachments.filter(a=>/^image\//i.test(a.mimeType||''));
+ const selected=state.headerImageId==='none'?null:(images.find(a=>a.fileId&&a.fileId===state.headerImageId)||images[0]||null);
+ if(!state.attachments.length)box.append(create('span','muted','No attachments yet'));
+ state.attachments.forEach(function(item){
+  const isImage=/^image\//i.test(item.mimeType||'');
+  const row=create('div','attachment-item');
+  const link=create('a','',item.title||'Attached file');
+  if(/^https:\/\//i.test(item.fileUrl||'')){link.href=item.fileUrl;link.target='_blank';link.rel='noopener noreferrer'}
+  const badge=create('span','image-role',isImage?(item===selected?'Header image':'Listing image'):(item.mimeType==='application/pdf'?'PDF download':'Download'));
+  row.append(badge,link);
+  if(isImage&&item.fileId&&item!==selected){
+   const button=create('button','','Use as header');button.type='button';
+   button.addEventListener('click',function(){
+    state.headerImageId=item.fileId;state.dirty=true;attachmentList(state.attachments);preview();
+    $('headerImageHint').textContent='Header change is unsaved. Press Save event to apply it.';
+   });
+   row.append(button);
+  }
+  box.append(row);
  });
+ if(images.length){
+  const none=create('button','','Listing images only — no header');
+  none.type='button';
+  none.disabled=state.headerImageId==='none';
+  none.addEventListener('click',function(){
+   state.headerImageId='none';state.dirty=true;attachmentList(state.attachments);preview();
+  });
+  box.append(none);
+ }
+ $('headerImageHint').textContent=selected
+  ? (state.headerImageId?'Selected header: ':'Automatically selected header: ')+(selected.title||'Image')
+  : 'No header image: a category placeholder will be used.';
+ refreshImagePreview();
 }
 function create(tag,cls,text){var el=document.createElement(tag);if(cls)el.className=cls;if(text!==undefined)el.textContent=text;return el}
 function eventDay(e){var s=e.start.slice(0,10);return s}
@@ -311,7 +398,7 @@ function showEditor(title){
 }
 function closeEditor(){
  if(state.dirty && !confirm('Discard your unsaved event changes?'))return;
- state.dirty=false;$('editorDialog').close();
+ state.dirty=false;resetDraftImage();$('editorDialog').close();
 }
 function weekOf(date){
  var d=fromDate(date||today());
@@ -347,7 +434,7 @@ function repeatPanel(){
 function newEntry(date){
  state.id='';state.revision='';state.active=null;state.scope='occurrence';state.changed=false;state.dirty=false;
  HTMLFormElement.prototype.reset.call($('eventForm'));
- $('description').replaceChildren();attachmentList([]);$('uploadAttachment').value='';$('uploadStatus').textContent='Save this event before uploading a file.';
+ $('description').replaceChildren();state.headerImageId='';resetDraftImage();attachmentList([]);
  $('title').value='';$('category').value='general';$('repeat').value='none';
  $('startDate').value=$('endDate').value=date||today();$('startTime').value='10:00';$('endTime').value='11:00';
  $('scopeBox').hidden=true;$('repeat').disabled=false;
@@ -360,7 +447,7 @@ function newEntry(date){
 function adjustAllDay(){var off=$('allDay').checked;$('timeFields').hidden=off;$('startTime').disabled=off;$('endTime').disabled=off}
 function values(){var v={};fields.forEach(function(id){v[id]=$(id).value});v.allDay=$('allDay').checked;v.id=state.id;
  v.editScope=state.id?state.scope:'';v.revision=state.revision;v.descriptionChanged=state.changed;
- v.description=richHTML();
+ v.description=richHTML();v.headerImageId=state.headerImageId;
  v.customRepeat={unit:$('repeatUnit').value,interval:Number($('repeatInterval').value),
   days:Array.from(document.querySelectorAll('[name=repeatDay]:checked')).map(function(el){return el.value}),
   ends:$('repeatEnds').value,count:Number($('repeatCount').value),until:$('repeatUntil').value};
@@ -376,6 +463,7 @@ function preview(){
  else if(v.repeat==='weekly'||v.repeat==='monthly')$('pvDate').textContent+=' · '+v.repeat;
  $('pvLocation').textContent=v.location;$('pvLocation').hidden=!v.location.trim();
  $('previewDescription').innerHTML=v.description.trim()||'Your event description will appear here.';
+ refreshImagePreview();
 }
 function eventButton(e,cls){var b=create('button',cls,(eventTime(e)?eventTime(e)+'  ':'')+e.title);
  b.type='button';b.title=e.title;b.dataset.category=e.category||'general';
@@ -424,8 +512,8 @@ function put(e){
  state.id=e.selectedId||e.id;state.revision=e.revision;state.scope=e.editScope||'occurrence';state.active=e;state.changed=false;
  fields.forEach(function(id){if(e[id]!==undefined)$(id).value=e[id]});
  $('description').innerHTML=safeRich(e.description||'');$('allDay').checked=!!e.allDay;
- attachmentList(e.attachments||[]);$('uploadEventId').value=state.id;$('uploadEditScope').value=state.scope;
- $('uploadStatus').textContent='Choose a file below. Save any event changes before uploading.';
+ state.headerImageId=e.headerImageId||'';
+ resetDraftImage();attachmentList(e.attachments||[]);
  $('scopeBox').hidden=!e.isRecurring;
  var radio=document.querySelector('input[name=scope][value='+state.scope+']');if(radio)radio.checked=true;
  $('repeat').querySelector('[value=keep]').hidden=e.repeat!=='keep';$('repeat').value=e.repeat||'none';
@@ -471,7 +559,7 @@ async function save(ev){
  if(state.active&&state.active.isRecurring&&state.scope==='series'
   && !confirm('Change the ENTIRE recurring series? This can affect future dates.'))return;
  pending(true);status('Saving to Google Calendar…');
- try{await call('editorSaveEvent',v);await range();state.dirty=false;$('editorDialog').close();
+ try{await call('editorSaveEvent',v);await range();state.dirty=false;resetDraftImage();$('editorDialog').close();
   status('Saved. Public embeds update on their next sync.')}
  catch(e){status(e.message||String(e),true);pending(false)}
 }
@@ -480,7 +568,7 @@ async function remove(){
  var target=state.active&&state.active.isRecurring?(state.scope==='series'?'entire series':'one occurrence'):'event';
  if(!confirm('Delete this '+target+' permanently from Google Calendar?'))return;
  pending(true);status('Deleting…');
- try{await call('editorDeleteEvent',state.id,state.scope,state.revision);await range();state.dirty=false;$('editorDialog').close();status('Deleted from calendar.')}
+ try{await call('editorDeleteEvent',state.id,state.scope,state.revision);await range();state.dirty=false;resetDraftImage();$('editorDialog').close();status('Deleted from calendar.')}
  catch(e){status(e.message||String(e),true);pending(false)}
 }
 $('prev').addEventListener('click',function(){shift(-1)});
@@ -532,6 +620,18 @@ $('uploadForm').addEventListener('submit',async function(ev){
   put(loaded);$('uploadStatus').textContent='File uploaded and attached to this event.';
  }catch(err){$('uploadStatus').textContent=err.message||String(err);pending(false)}
 });
+$('uploadAttachment').addEventListener('change',function(){
+ if(state.draftImageUrl)URL.revokeObjectURL(state.draftImageUrl);
+ state.draftImageUrl='';
+ const file=this.files[0];
+ if(file&&file.type.startsWith('image/'))state.draftImageUrl=URL.createObjectURL(file);
+ if(file&&!file.type.startsWith('image/'))$('imageRole').value='gallery';
+ refreshImagePreview();
+ $('uploadStatus').textContent=file
+  ? (state.id?'Selected file only. Click Upload attachment to attach it.':'Draft selection only. Save the event first to upload.')
+  : 'No file selected.';
+});
+$('imageRole').addEventListener('change',refreshImagePreview);
 $('allDay').addEventListener('change',function(){state.dirty=true;adjustAllDay();preview()});
 ['repeatInterval','repeatUnit','repeatEnds','repeatUntil','repeatCount'].forEach(function(id){
  $(id).addEventListener('input',function(){state.dirty=true;repeatPanel();preview()})
