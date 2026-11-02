@@ -181,6 +181,7 @@ textarea{resize:vertical;min-height:100px;line-height:1.5}
 .app-notice button{border:0;background:transparent;color:inherit;font-size:19px;line-height:1;cursor:pointer;padding:0 3px}
 .app-notice[hidden]{display:none!important}
 @media(max-width:600px){.app-notice{right:12px;bottom:12px;left:12px;max-width:none;width:auto}}
+input[aria-invalid=true],select[aria-invalid=true]{border-color:#ba4254!important;box-shadow:0 0 0 1px #ba4254}
 </style>
 </head>
 <body>
@@ -207,7 +208,7 @@ textarea{resize:vertical;min-height:100px;line-height:1.5}
  <section class="panel">
   <div class="panel-heading"><h2>Event details</h2><p>Updates save to the existing parish Google Calendar.</p></div>
   <div class="panel-body">
-   <form id="eventForm">
+   <form id="eventForm" novalidate>
     <fieldset id="scopeBox" hidden><legend>Recurring event: editing scope</legend>
      <div class="scope-options">
       <label class="scope-option"><input type="radio" name="scope" value="occurrence" checked><span>This event only</span></label>
@@ -417,6 +418,25 @@ function status(t,bad){
  $('status').textContent=t;$('status').classList.toggle('error',!!bad);
  if(bad)notify(t,'error');
  else if(/^(?:Event (?:and file )?saved\.|Deleted from calendar\.|File uploaded and attached)/i.test(t))notify(t,'success');
+}
+function validateEditor(){
+ const required=[['title','Enter an event title.'],['startDate','Choose a start date.'],['endDate','Choose an end date.']];
+ if(!$('allDay').checked)required.push(['startTime','Choose a start time.'],['endTime','Choose an end time.']);
+ for(const [id,message] of required){
+  if(!$(id).value.trim()){
+   $(id).setAttribute('aria-invalid','true');
+   $(id).focus();status(message,true);return false;
+  }
+  $(id).removeAttribute('aria-invalid');
+ }
+ const start=$('startDate').value+($('allDay').checked?'':'T'+$('startTime').value);
+ const end=$('endDate').value+($('allDay').checked?'':'T'+$('endTime').value);
+ if(end<start){
+  $('endDate').setAttribute('aria-invalid','true');
+  $('endDate').focus();status('The end date and time must be after the start.',true);return false;
+ }
+ $('endDate').removeAttribute('aria-invalid');
+ return true;
 }
 function askAction(options){
  const dialog=$('appConfirmDialog'),form=$('appConfirmForm');
@@ -845,6 +865,7 @@ async function shift(direction){
 async function setMode(m){state.mode=m;try{await range()}catch(e){status(e.message||String(e),true)}}
 async function save(ev){
  ev.preventDefault();if(!linked||state.busy)return;
+ if(!validateEditor())return;
  var v=values(),file=$('uploadAttachment').files[0];
  if(file){
   if(!state.uploadConfigured){
