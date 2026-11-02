@@ -125,6 +125,8 @@ Open <https://opmedia-dev.github.io/whats-on-calender/>, enter your What's On pa
 configure **each embed** independently before copying its HTML snippet into a Duda
 **HTML** widget. The visual embed generator provides these controls without hand-editing URLs:
 
+- **Iframe loading (per embed):** the generator provides an **Eager / Lazy** dropdown for all six embeds. Homepage timetable hero, mailing hero and featured banner default to **Eager** (load immediately); weekly mailing archive, What's On and the monthly calendar default to **Lazy** (load when near the viewport). Change What's On/calendar to Eager when they appear at the top of a page. Loading affects the *outer Duda iframe*, not how often calendar data syncs.
+- **Existing Duda HTML widgets do not automatically change their iframe loading:** to apply a new selection, copy and replace that embed's complete generated HTML snippet (iframe **and** message listener) after deployment. Other public site code improvements apply to existing embed URLs without replacement.
 - **Shared:** brand colours, font families, corner radius, 12/24-hour clock and excluded titles.
 - **Hero timetable:** seven full-width horizontal day rows at the 593×434px desktop size, using a narrow date rail and compact time + event title lines (no thumbnail images or locations). The iframe defaults to **434px**. Empty days are a single subtle line instead of an oversized card. Rows expand naturally on phones; unusually busy days use a counted link to the full agenda rather than silently clipping events.
 - **Homepage banner:** heading, featured-only events, cards per page, maximum events,
