@@ -13,6 +13,20 @@ const EDITOR_ZONE = 'Europe/London';
 const CATEGORY_KEY = 'woCategory';
 const CATEGORIES = ['general', 'worship', 'community', 'music', 'families', 'heritage', 'fundraising'];
 const WRITE_ROLES = ['writer', 'owner'];
+// Set to a dedicated parish-controlled Google Drive folder before enabling uploads.
+// Editors need permission to add files to that folder. File links are made public
+// because the public What's On website displays event posters and downloads.
+const EDITOR_UPLOAD_FOLDER_ID = '';
+const MAX_EVENT_UPLOAD_BYTES = 8 * 1024 * 1024;
+const ACCEPTED_UPLOAD_TYPES = [
+  'image/jpeg', 'image/png', 'image/webp', 'image/gif',
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'text/plain',
+];
 
 function doGet() {
   return HtmlService.createHtmlOutputFromFile('Index')
@@ -120,6 +134,7 @@ function localEvent_(e) {
     revision: e.etag || '', visibility: e.visibility || 'default',
     hasFormattedDescription: /<\/?(?:p|div|span|strong|b|a|br|ul|ol|li)\b/i.test(e.description || ''),
     descriptionOriginal: e.description || '',
+    attachments: attachmentsFor_(e),
   };
 }
 
@@ -321,6 +336,57 @@ function editorSaveEvent(form) {
   } finally {
     lock.releaseLock();
   }
+}
+
+function attachmentsFor_(event) {
+  return (event.attachments || []).map(a => ({
+    fileId: a.fileId || '', fileUrl: a.fileUrl || '',
+    title: a.title || 'Attached file', mimeType: a.mimeType || '',
+  }));
+}
+
+// Called only after the event exists. Attachment uploads are never made from
+// GitHub Pages or a URL-only public endpoint. Apps Script turns <input type=file>
+// into a Blob in a signed-in request.
+function editorUploadFile(form) {
+  editorAccess_();
+  if (!EDITOR_UPLOAD_FOLDER_ID) {
+    throw new Error('Parish upload folder is not configured yet. Ask the administrator to complete Drive setup.');
+  }
+  if (!form || !form.eventId || !form.attachment) throw new Error('Select an event and a file first.');
+  const id = String(form.eventId);
+  const scope = String(form.editScope || 'occurrence');
+  const blob = form.attachment;
+  const name = String(blob.getName() || '').trim().replace(/[\\\/\u0000-\u001f]/g, '_').slice(0, 170);
+  const mimeType = String(blob.getContentType() || '').toLowerCase();
+  const bytes = blob.getBytes().length;
+  if (!name) throw new Error('Attachment needs a filename.');
+  if (!ACCEPTED_UPLOAD_TYPES.includes(mimeType)) throw new Error('This file type is not supported for event attachments.');
+  if (!bytes || bytes > MAX_EVENT_UPLOAD_BYTES) throw new Error('Attachments must be smaller than 8 MB.');
+
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(15000)) throw new Error('Another calendar update is in progress. Try again.');
+  try {
+    const record = fetchTarget_(id, scope);
+    const existing = attachmentsFor_(record.target);
+    if (existing.length >= 25) throw new Error('Google Calendar allows at most 25 attachments per event.');
+    // Validate the destination folder (and user's Drive permissions) before
+    // creating a file. Only event editors already granted Drive access can upload.
+    Drive.Files.get(EDITOR_UPLOAD_FOLDER_ID, { fields: 'id,name,mimeType' });
+    const file = Drive.Files.create({
+      name: name, mimeType: mimeType, parents: [EDITOR_UPLOAD_FOLDER_ID],
+    }, blob, { fields: 'id,name,mimeType,webViewLink' });
+    // The already public event publisher needs files readable by visitors.
+    // Users are informed in the editor and can upload only published-safe files.
+    Drive.Permissions.create({ role: 'reader', type: 'anyone' }, file.id, { fields: 'id' });
+    const attachment = {
+      fileUrl: file.webViewLink || 'https://drive.google.com/file/d/' + encodeURIComponent(file.id) + '/view',
+      title: file.name || name, mimeType: file.mimeType || mimeType,
+    };
+    const updated = Calendar.Events.patch({ attachments: existing.concat([attachment]) },
+      EDITOR_CALENDAR_ID, record.target.id, { sendUpdates: 'none', supportsAttachments: true });
+    return { uploaded: true, name: attachment.title, eventId: updated.id, attachmentCount: existing.length + 1 };
+  } finally { lock.releaseLock(); }
 }
 
 function editorDeleteEvent(id, scope, revision) {
