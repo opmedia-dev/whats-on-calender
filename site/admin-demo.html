@@ -162,6 +162,25 @@ textarea{resize:vertical;min-height:100px;line-height:1.5}
 .preview-gallery{display:flex;gap:7px;flex-wrap:wrap;padding:10px 12px;background:#f9f7f5;border-top:1px solid var(--line)}
 .preview-gallery img{width:76px;height:59px;object-fit:cover;border-radius:5px;border:1px solid #ddd4d1}
 .preview-gallery .gallery-label{width:100%;font-size:11px;color:var(--muted);font-weight:700}
+.app-confirm-dialog{border:1px solid #e5d7da;border-radius:12px;padding:0;width:min(440px,calc(100vw - 32px));max-width:440px;max-height:90dvh;overflow:auto;background:#fff;box-shadow:0 24px 80px #220c1940;color:#302b2d}
+.app-confirm-dialog::backdrop{background:rgba(30,21,27,.58)}
+.app-confirm-dialog form{padding:0;margin:0}
+.app-confirm-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:16px 19px 12px;border-bottom:1px solid #ece4e4}
+.app-confirm-head h2{font-size:17px;font-weight:750;color:var(--accent);margin:0}
+.app-confirm-x{border:0;border-radius:5px;background:transparent;color:#6b565c;font-size:24px;line-height:1;padding:3px 8px}
+.app-confirm-dialog #appConfirmMessage{font-size:13px;line-height:1.6;margin:0;padding:16px 19px;color:#51454b}
+.app-confirm-dialog #appConfirmInputRow{padding:0 19px;margin:0 0 12px}
+.app-confirm-dialog #appConfirmInputError{color:#aa3344;display:block;min-height:1em;padding-top:5px}
+.app-confirm-actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;padding:13px 19px 18px}
+.app-confirm-actions .btn.danger{background:#a92e42;color:#fff;border-color:#a92e42}
+.app-notice{position:fixed;right:clamp(12px,3vw,30px);bottom:18px;z-index:10000;display:flex;align-items:flex-start;gap:11px;max-width:min(460px,calc(100vw - 24px));width:max-content;padding:13px 14px;background:#fff;border:1px solid #c9dfcd;border-left:4px solid #32794b;border-radius:9px;box-shadow:0 10px 35px #281d2528;color:#264d32}
+.app-notice[data-kind=error]{border-color:#ebcbd2;border-left-color:#b3364c;color:#773241}
+.app-notice[data-kind=warning]{border-color:#eadbbb;border-left-color:#be7e23;color:#815d2a}
+.app-notice p{font-size:12.5px;line-height:1.5;margin:0;flex:1;max-width:370px;overflow-wrap:anywhere}
+.app-notice-icon{font-size:15px;font-weight:800}
+.app-notice button{border:0;background:transparent;color:inherit;font-size:19px;line-height:1;cursor:pointer;padding:0 3px}
+.app-notice[hidden]{display:none!important}
+@media(max-width:600px){.app-notice{right:12px;bottom:12px;left:12px;max-width:none;width:auto}}
 </style>
 </head>
 <body>
