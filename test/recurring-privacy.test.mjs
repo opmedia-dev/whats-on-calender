@@ -150,7 +150,7 @@ test('all-series editing shows the clicked occurrence date but never moves the m
  assert.equal(update.body.end.dateTime,'2026-11-01T13:30:00');
  assert.equal(update.body.recurrence[0],'RRULE:FREQ=WEEKLY;BYDAY=SU');
  assert.throws(()=>context.editorSaveEvent({...form,editScope:'series',revision:master.etag,
-  startDate:'2026-11-16'}),/reference only/);
+  startDate:'2026-11-16',endDate:'2026-11-16'}),/reference only/);
  assert.equal(calls.filter(c=>c.method==='patch').length,1,'reject date drift before mutation');
 });
 
