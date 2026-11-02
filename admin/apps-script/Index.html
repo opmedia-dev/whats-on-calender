@@ -241,35 +241,63 @@ textarea{resize:vertical;min-height:100px;line-height:1.5}
     </div>
     <div class="field attachments-field">
      <label>Event images and attachments</label>
-     <p class="help">Choose one image as the header for event cards. Other images appear in the event gallery; PDFs and documents appear under Downloads.</p>
+     <p class="help">Select a header image for event cards. Other images appear in the gallery; documents appear under Downloads.</p>
      <div id="attachmentList" class="attachment-list"><span class="muted">No attachments yet</span></div>
      <p id="headerImageHint" class="help">No image selected. The first attached image will be used automatically.</p>
+     <div id="imageFocusControls" class="crop-editor" hidden>
+      <div class="crop-editor-header"><strong>Position header image</strong><small>Drag the picture in the preview for fine adjustments, or choose a quick position.</small></div>
+      <div class="crop-position-row">
+       <div class="crop-pad" role="group" aria-label="Header image position">
+       <button type="button" data-focus="0,0" title="Top left" aria-label="Top left" aria-pressed="false">↖</button>
+       <button type="button" data-focus="50,0" title="Top centre" aria-label="Top centre" aria-pressed="false">↑</button>
+       <button type="button" data-focus="100,0" title="Top right" aria-label="Top right" aria-pressed="false">↗</button>
+       <button type="button" data-focus="0,50" title="Middle left" aria-label="Middle left" aria-pressed="false">←</button>
+       <button type="button" data-focus="50,50" title="Centre image" aria-label="Centre image" aria-pressed="false" id="resetImageFocus">●</button>
+       <button type="button" data-focus="100,50" title="Middle right" aria-label="Middle right" aria-pressed="false">→</button>
+       <button type="button" data-focus="0,100" title="Bottom left" aria-label="Bottom left" aria-pressed="false">↙</button>
+       <button type="button" data-focus="50,100" title="Bottom centre" aria-label="Bottom centre" aria-pressed="false">↓</button>
+       <button type="button" data-focus="100,100" title="Bottom right" aria-label="Bottom right" aria-pressed="false">↘</button>
+       </div>
+       <p class="help">The preview shows the crop on event cards. The original full image remains in event details. Save event to keep this position.</p>
+      </div>
+     </div>
     </div>
-    <div class="form-actions">
-     <div class="tools"><button type="submit" id="save" class="btn primary">Save event</button><button type="button" id="delete" class="btn danger" disabled>Delete…</button></div>
-     <button type="button" id="resetChanges" class="btn">Reset changes</button>
-    </div>
-    <p id="status" class="status" role="status" aria-live="polite"></p>
    </form>
    <form id="uploadForm" class="upload-form" enctype="multipart/form-data">
     <input type="hidden" name="eventId" id="uploadEventId">
     <input type="hidden" name="editScope" id="uploadEditScope" value="occurrence">
-    <div class="field"><label for="imageRole">Image placement</label>
-     <select id="imageRole" name="imageRole">
-      <option value="header">Use as event header</option>
-      <option value="gallery">Add to listing/gallery</option>
-     </select>
-     <p class="help">For PDFs and documents, the placement is always Downloads. A selected file will upload when you Save event; the separate Upload attachment button adds a file without changing event details.</p>
+    <div class="upload-heading"><strong>Add an image or attachment</strong><small>Images, PDF, Word or Excel · Up to 8 MB</small></div>
+    <div class="upload-dropzone" id="uploadDropzone">
+     <input type="file" name="attachment" id="uploadAttachment" class="upload-file-input" accept="image/jpeg,image/png,image/webp,image/gif,application/pdf,.doc,.docx,.xls,.xlsx,.txt">
+     <label for="uploadAttachment" class="upload-drop-target">
+      <span class="upload-drop-symbol" aria-hidden="true">＋</span>
+      <strong>Choose a file or drop it here</strong>
+      <small>Files are added when you save the event</small>
+     </label>
     </div>
-    <label for="uploadAttachment">Add an image, PDF or document (maximum 8 MB)</label>
-     <label class="check" for="optimiseUpload"><input id="optimiseUpload" type="checkbox" checked> Optimise large pictures before uploading (faster)</label>
-     <p class="help">A smaller WebP copy (up to 2400px) is uploaded to Drive for large JPEG/PNG/WebP images. The original on your computer is untouched. Untick to upload the exact file; documents and GIFs are not changed.</p>
-    <div class="tools">
-     <input type="file" name="attachment" id="uploadAttachment" accept="image/jpeg,image/png,image/webp,image/gif,application/pdf,.doc,.docx,.xls,.xlsx,.txt">
-     <button type="submit" id="uploadButton" class="btn" disabled>Upload attachment</button>
+    <div id="uploadSelected" class="upload-selected" hidden>
+     <div class="upload-selected-info"><strong id="uploadSelectedName"></strong><small id="uploadSelectedMeta"></small></div>
+     <button type="button" id="uploadClear" class="upload-clear">Remove</button>
     </div>
-    <p id="uploadStatus" class="status" role="status" aria-live="polite">Save this event before uploading a file.</p>
+    <div class="upload-placement"><label for="imageRole">Image placement</label>
+     <select id="imageRole" name="imageRole"><option value="header">Use as event header</option><option value="gallery">Add to gallery</option></select>
+    </div>
+    <details class="upload-options">
+     <summary>Image upload options</summary>
+     <label class="check" for="optimiseUpload"><input id="optimiseUpload" type="checkbox" checked> Optimise large pictures for faster uploading</label>
+     <p class="help">Large JPEG, PNG or WebP files may be converted to a smaller WebP copy. Untick to keep the exact original. PDFs, documents and GIFs are unchanged.</p>
+    </details>
+    <div class="upload-actions">
+     <p class="help">Use <strong>Save event</strong> below to save changes and upload your selected file together.</p>
+     <button type="submit" id="uploadButton" class="btn" hidden disabled>Upload file only</button>
+    </div>
+    <p id="uploadStatus" class="status" role="status" aria-live="polite"></p>
    </form>
+   <div class="form-actions">
+    <div class="tools"><button type="submit" form="eventForm" id="save" class="btn primary">Save event</button><button type="button" id="delete" class="btn danger" disabled>Delete…</button></div>
+    <button type="button" id="resetChanges" class="btn">Reset changes</button>
+   </div>
+   <p id="status" class="status" role="status" aria-live="polite"></p>
   </div>
  </section>
  <aside class="panel preview" aria-label="Live website preview">
@@ -280,12 +308,6 @@ textarea{resize:vertical;min-height:100px;line-height:1.5}
      <img id="previewHeaderImage" alt="" hidden>
      <span id="artCategory">General</span><div id="artTitle">Your event title</div><span id="artDate">Date to be confirmed</span>
     </div>
-    <div id="imageFocusControls" class="image-focus-controls" hidden>
-      <p class="help">Drag the picture above to reposition its crop. You can also use the sliders. This position will be used on event cards; the full image remains available in event details.</p>
-      <div class="focus-row"><label for="imageFocusX">Horizontal</label><input id="imageFocusX" type="range" min="0" max="100" value="50"><output id="imageFocusXValue" for="imageFocusX">50%</output></div>
-      <div class="focus-row"><label for="imageFocusY">Vertical</label><input id="imageFocusY" type="range" min="0" max="100" value="50"><output id="imageFocusYValue" for="imageFocusY">50%</output></div>
-      <button type="button" id="resetImageFocus" class="btn">Centre image</button>
-     </div>
      <div id="previewGallery" class="preview-gallery" hidden></div>
     <div class="preview-info"><h3 id="pvTitle">Your event title</h3><p id="pvDate">Select an event date</p><p id="pvLocation" hidden></p></div>
    </div>
