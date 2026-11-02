@@ -1,0 +1,34 @@
+name: Audit synchronisation health
+on:
+  workflow_run:
+    workflows: ["Build and deploy What's On"]
+    branches: [main]
+    types: [completed]
+  schedule:
+    - cron: '9,24,39,54 * * * *'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: write
+
+concurrency:
+  group: synchronisation-health
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test health classification
+        run: node --test test/audit-sync-health.test.mjs
+      - name: Publish synchronisation health signal
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/audit-sync-health.mjs
+      - name: Add status link to run summary
+        if: always()
+        run: |
+          echo "Health signal: https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/monitoring/sync-ok.txt" >> "$GITHUB_STEP_SUMMARY"
+          echo "HTTP 200 = healthy; HTTP 404 = unhealthy. Stale after 60 minutes." >> "$GITHUB_STEP_SUMMARY"
