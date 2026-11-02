@@ -355,8 +355,9 @@ async function optimiseUpload(){
  if(!file||!$('optimiseUpload').checked||file.size<700000||
     !/^(image\/jpeg|image\/png|image\/webp)$/.test(file.type))return;
  if(typeof createImageBitmap!=='function'||typeof DataTransfer==='undefined')return;
- const image=await createImageBitmap(file);
+ let image;
  try{
+  image=await createImageBitmap(file);
   const scale=Math.min(1,2400/Math.max(image.width,image.height));
   const width=Math.max(1,Math.round(image.width*scale));
   const height=Math.max(1,Math.round(image.height*scale));
@@ -374,7 +375,10 @@ async function optimiseUpload(){
   refreshImagePreview();
   const kb=n=>Math.max(1,Math.round(n/1024))+' KB';
   $('uploadStatus').textContent='Optimised '+kb(file.size)+' → '+kb(output.size)+'. Uploading the smaller copy…';
- }finally{image.close()}
+ }catch(error){
+  console.warn('Image optimisation unavailable; original will be used:',error);
+  $('uploadStatus').textContent='Optimisation unavailable; uploading the original image.';
+ }finally{if(image)image.close()}
 }
 function mediaUrl(item){
  if(item && item.fileId && /^[A-Za-z0-9_-]{10,}$/.test(item.fileId))
@@ -673,6 +677,7 @@ async function save(ev){
    status('Event saved. Uploading file…');
    await call('editorUploadFile',$('uploadForm'));
    uploaded=true;
+   status('File uploaded. Refreshing calendar…');
   }
   var refreshWarning='';
   try{await range()}catch(err){refreshWarning=' Calendar refresh failed; use Refresh to reload.'}
