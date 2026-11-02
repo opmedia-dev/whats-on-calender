@@ -1,0 +1,43 @@
+name: Publish private What's On editor
+
+# Never run on ordinary pushes, PRs, or the public Pages deployment.
+# Explicit release only, after Apps Script OAuth and deployment setup.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: calendar-editor
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validate editor before deployment
+        run: npm ci && npm test
+      - name: Install Google's Apps Script deployment CLI
+        run: npm install --global @google/clasp@3
+      - name: Configure Apps Script deployment credentials
+        env:
+          CLASPRC_JSON: ${{ secrets.APPS_SCRIPT_CLASPRC_JSON }}
+          CLASP_JSON: ${{ secrets.APPS_SCRIPT_CLASP_JSON }}
+          DEPLOYMENT_ID: ${{ secrets.APPS_SCRIPT_DEPLOYMENT_ID }}
+        run: |
+          set -eu
+          test -n "$CLASPRC_JSON" || { echo '::error::Missing APPS_SCRIPT_CLASPRC_JSON'; exit 1; }
+          test -n "$CLASP_JSON" || { echo '::error::Missing APPS_SCRIPT_CLASP_JSON'; exit 1; }
+          test -n "$DEPLOYMENT_ID" || { echo '::error::Missing APPS_SCRIPT_DEPLOYMENT_ID'; exit 1; }
+          printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
+          printf '%s' "$CLASP_JSON" > ".clasp.json"
+          chmod 600 "$HOME/.clasprc.json" ".clasp.json"
+          node -e "const c=require('./.clasp.json');if(!c.scriptId || c.rootDir!=='admin/apps-script') throw Error('CLASP_JSON must contain scriptId and rootDir=admin/apps-script')"
+      - name: Update code in the authorised Apps Script project
+        run: clasp push --force
+      - name: Update the existing versioned web-app deployment
+        env:
+          DEPLOYMENT_ID: ${{ secrets.APPS_SCRIPT_DEPLOYMENT_ID }}
+        run: clasp create-deployment --deploymentId "$DEPLOYMENT_ID" --description "Event manager ${{ github.sha }}"
