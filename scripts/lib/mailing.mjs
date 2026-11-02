@@ -16,25 +16,31 @@ const xmlTag = (block, name) => {
 const plain = (value) => decodeEntities(value.replace(/<\/?(?:style|script)\b[^>]*>[\s\S]*?<\/\s*(?:style|script)>/gi, '')
   .replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim());
 
-// Prefer a genuine image in the sent campaign to ornamental placeholders.
-// Skip known tracking pixels, tiny logo/icon files and non-HTTPS sources.
-// The URL is used as an <img> source; newsletter HTML is never injected.
+// Choose the first usable image in campaign HTML, including genuine parish
+// logos. The earlier 140px/90px minimum accidentally skipped ordinary logos
+// and selected the second illustration instead. Only discard obvious tiny
+// icons/tracking pixels and unsafe image URLs. Never inject newsletter HTML.
 export function mailingImageFromHtml(html = '') {
   for (const match of String(html).matchAll(/<img\b[^>]*>/gi)) {
     const tag = match[0];
-    const src = tag.match(/\b(?:src|data-src)\s*=\s*(["'])(.*?)\1/i)?.[2];
-    if (!src) continue;
     const width = Number(tag.match(/\bwidth\s*=\s*["']?(\d+)/i)?.[1] || 0);
     const height = Number(tag.match(/\bheight\s*=\s*["']?(\d+)/i)?.[1] || 0);
-    if ((width && width < 140) || (height && height < 90)) continue;
-    const decoded = decodeEntities(src);
-    try {
-      const url = new URL(decoded);
-      if (url.protocol !== 'https:') continue;
-      if (/(?:\/track\/|\/open\/|pixel|spacer)(?:[/.?_-]|$)/i.test(url.pathname)) continue;
-      if (/\.svg(?:$|\?)/i.test(url.pathname)) continue;
-      return url.href;
-    } catch { /* Ignore invalid external image references. */ }
+    // A valid logo may be 100 × 60. Reject only icon/tracking dimensions.
+    if ((width && width <= 24) || (height && height <= 24)) continue;
+    const sources = [
+      tag.match(/\sdata-src\s*=\s*(["'])(.*?)\1/i)?.[2],
+      tag.match(/\ssrc\s*=\s*(["'])(.*?)\1/i)?.[2],
+    ];
+    for (const source of sources) {
+      if (!source) continue;
+      try {
+        const url = new URL(decodeEntities(source));
+        if (url.protocol !== 'https:') continue;
+        if (/(?:\/track\/|\/open\/|pixel|spacer|tracking)(?:[/.?_-]|$)/i.test(url.pathname)) continue;
+        if (/\.svg(?:$|\?)/i.test(url.pathname)) continue;
+        return url.href;
+      } catch { /* Try another image source. */ }
+    }
   }
   return '';
 }
