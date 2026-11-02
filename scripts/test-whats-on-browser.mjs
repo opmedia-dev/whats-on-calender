@@ -89,8 +89,9 @@ try {
  const cardWidth = (await embed.locator('#highlights .wo-card').first().boundingBox()).width;
  const sectionWidth = (await embed.locator('#highlights').boundingBox()).width;
  assert.ok(sectionWidth > 600, 'desktop content is wide enough to expose a stretched single card');
- assert.ok(cardWidth > 200 && cardWidth <= 341,
-   'one featured card must remain a regular-size card, not stretch: ' + cardWidth);
+ const regularCardWidth = (await embed.locator('#cards .wo-card').first().boundingBox()).width;
+ assert.ok(cardWidth > 200 && Math.abs(cardWidth - regularCardWidth) <= 2,
+   'the single Highlight must match normal event card width: ' + cardWidth + ' vs ' + regularCardWidth);
  assert.equal(await embed.locator('#selected-month').textContent(), monthLabel(current));
 
  await embed.locator('#month-next').click();
