@@ -1,4 +1,5 @@
 name: Build and deploy What's On
+run-name: "What's On · ${{ github.event_name == 'schedule' && 'GitHub schedule' || inputs.source || github.event_name }}"
 
 on:
   push:
@@ -11,6 +12,11 @@ on:
         description: Rebuild even if the calendar is unchanged
         type: boolean
         default: false
+      source:
+        description: What started this run? External schedule uses external-cron
+        type: choice
+        options: [manual, external-cron]
+        default: manual
 
 permissions:
   actions: write
@@ -67,7 +73,7 @@ jobs:
         id: mailings
         env:
           MAILCHIMP_RSS_URL: ${{ vars.MAILCHIMP_RSS_URL }}
-          SITE_URL: ${{ github.event_name == 'schedule' && format('https://{0}.github.io/{1}/', github.repository_owner, github.event.repository.name) || '' }}
+          SITE_URL: ${{ (github.event_name == 'schedule' || inputs.source == 'external-cron') && format('https://{0}.github.io/{1}/', github.repository_owner, github.event.repository.name) || '' }}
           FORCE: ${{ inputs.force || 'false' }}
         run: node scripts/sync-mailings.mjs
 
@@ -77,7 +83,7 @@ jobs:
         env:
           GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
           GCAL_ID: ${{ vars.GCAL_ID }}
-          SITE_URL: ${{ github.event_name == 'schedule' && format('https://{0}.github.io/{1}/', github.repository_owner, github.event.repository.name) || '' }}
+          SITE_URL: ${{ (github.event_name == 'schedule' || inputs.source == 'external-cron') && format('https://{0}.github.io/{1}/', github.repository_owner, github.event.repository.name) || '' }}
           # A mailing-only change still needs a complete events.json and
           # associated media copied into this combined Pages deployment.
           FORCE: ${{ steps.mailings.outputs.changed == 'true' || inputs.force || 'false' }}
@@ -92,13 +98,21 @@ jobs:
         env:
           MODE: ${{ steps.source.outputs.mode }}
           EVENT: ${{ github.event_name }}
+          SOURCE: ${{ inputs.source || '' }}
           SYNC_CHANGED: ${{ steps.sync.outputs.changed }}
           MAILINGS_CHANGED: ${{ steps.mailings.outputs.changed }}
         run: |
-          if [ "$EVENT" != 'schedule' ] || [ "$MAILINGS_CHANGED" = 'true' ] || { [ "$MODE" = 'live' ] && [ "$SYNC_CHANGED" != 'false' ]; }; then
-            echo "changed=true" >> "$GITHUB_OUTPUT"
+          # External scheduler calls are ordinary workflow_dispatch events,
+          # but must behave like scheduled checks: skip publishing unchanged data.
+          # Explicit manual runs and push builds still publish unconditionally.
+          if [ "$EVENT" = 'schedule' ] || [ "$SOURCE" = 'external-cron' ]; then
+            if [ "$MAILINGS_CHANGED" = 'true' ] || { [ "$MODE" = 'live' ] && [ "$SYNC_CHANGED" != 'false' ]; }; then
+              echo "changed=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "changed=false" >> "$GITHUB_OUTPUT"
+            fi
           else
-            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Build site
