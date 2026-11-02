@@ -90,10 +90,17 @@ test('non-recurring event can become private through native Calendar visibility'
  assert.ok(standAlone);
 });
 
-test('this-event-only refuses Google visibility changes that could privatise the whole series',()=>{
+test('this-event-only hides one occurrence from public embeds without changing native Google Calendar series visibility',()=>{
  const {context,form,calls}=fixture();
- assert.throws(()=>context.editorSaveEvent({...form,editScope:'occurrence',visibility:'private',repeat:'none'}),/whole recurring series/);
- assert.equal(calls.filter(c=>c.method==='patch').length,0);
+ const res=context.editorSaveEvent({...form,editScope:'occurrence',visibility:'private',repeat:'none'});
+ assert.equal(res.status,'updated');
+ const patches=calls.filter(c=>c.method==='patch');
+ assert.equal(patches.length,1);
+ assert.equal(patches[0].id,'weekly-series_20261115T100000Z');
+ assert.equal(patches[0].body.extendedProperties.shared.woPrivate,'true');
+ assert.equal(patches[0].body.extendedProperties.shared.woFeatured,'false');
+ assert.equal('visibility' in patches[0].body,false);
+ assert.equal('recurrence' in patches[0].body,false);
 });
 
 test('this-and-future splits series, retains media and previous history, and returns new series ID',()=>{
@@ -159,6 +166,7 @@ test('editor exposes every scope and private-event control while public sync hid
  }
  assert.match(editor,/id="visibility"/);
  assert.match(editor,/state\.scope===\x27following\x27/);
- assert.match(sync,/events = events\.filter\(e => !e\.recurringEventId \|\| !isHidden\(masters\.get/);
+ assert.match(sync,/e\.extendedProperties\?\.shared\?\.woPrivate === 'false'/);
+ assert.match(sync,/e\.extendedProperties\?\.shared\?\.woPrivate === 'true'/);
  assert.match(sync,/events = events\.filter[\s\S]*?Attachment metadata/);
 });
