@@ -141,7 +141,11 @@ try {
       startDate:date,endDate:date,startTime:'10:00',endTime:'11:00',
       allDay:false,description:'Private meeting',location:'Hall',repeat:'weekly',
       featured:false,visibility:'private',revision:'etag',isRecurring:true,
-      isInstance:true,attachments:[],
+      isInstance:true,headerImageId:'test-attachment-2026',attachments:[{
+        fileId:'test-attachment-2026',mimeType:'image/png',
+        title:'907e3e0a-c45c-f6f1-69a5-c28361091cfe.png',
+        fileUrl:'https://drive.google.com/file/d/test-attachment-2026/view',
+      }],
     };
     const scopeEvents=[{
       id:eventId,seriesId:'private-recurring-master',isInstance:true,recurring:true,
@@ -166,12 +170,41 @@ try {
     }
     window.google={script:{run:runner(()=>{},()=>{})}};
   });
+  await linkedPage.route('https://drive.google.com/thumbnail**', route => route.fulfill({
+    status:200,contentType:'image/png',body:tinyPng,
+  }));
   await linkedPage.goto(url);
   await linkedPage.getByText('Google Calendar · editor').waitFor({timeout:15000});
   await linkedPage.locator('.event-pill').first().click();
   await linkedPage.locator('#scopeBox .scope-option').first().waitFor();
   assert.equal(await linkedPage.locator('#scopeBox .scope-option').count(),3);
   assert.equal(await linkedPage.locator('#visibility').inputValue(),'private');
+  // Real Drive attachment UI: thumbnails, compact selection and working
+  // pointer drag on a previously uploaded header (not just draft photos).
+  await linkedPage.locator('#attachmentList .attachment-item').first().waitFor();
+  assert.equal(await linkedPage.locator('#attachmentList .attachment-item').count(),1);
+  assert.equal(await linkedPage.locator('.attachment-meta strong').textContent(),'Image 1');
+  assert.equal(await linkedPage.locator('.attachment-thumb').count(),1);
+  assert.equal(await linkedPage.locator('.attachment-choice input').isChecked(),true);
+  assert.equal(await linkedPage.locator('#attachmentList button').count(),0);
+  assert.equal(await linkedPage.locator('.attachment-no-header').isVisible(),true);
+  await linkedPage.locator('#previewHeaderImage').evaluate(img => img.decode());
+  await linkedPage.locator('#art').scrollIntoViewIfNeeded();
+  assert.equal(await linkedPage.locator('#previewHeaderImage').getAttribute('draggable'),'false');
+  const existingBefore = await linkedPage.locator('#previewHeaderImage').evaluate(img=>img.style.objectPosition);
+  const frameRect = await linkedPage.locator('#art').boundingBox();
+  await linkedPage.mouse.move(frameRect.x+frameRect.width/2,frameRect.y+frameRect.height/2);
+  await linkedPage.mouse.down();
+  await linkedPage.mouse.move(frameRect.x+frameRect.width/2,frameRect.y+frameRect.height/2-80,{steps:8});
+  await linkedPage.mouse.up();
+  const existingAfter = await linkedPage.locator('#previewHeaderImage').evaluate(img=>img.style.objectPosition);
+  assert.notEqual(existingAfter,existingBefore,'dragging an existing Drive thumbnail adjusts crop');
+  await linkedPage.locator('#resetImageFocus').click();
+  await linkedPage.locator('.attachment-no-header input').check();
+  assert.equal(await linkedPage.locator('#previewHeaderImage').isVisible(),false);
+  await linkedPage.locator('.attachment-choice input').check();
+  assert.equal(await linkedPage.locator('#previewHeaderImage').isVisible(),true);
+
   assert.equal(await linkedPage.locator('#visibility').isDisabled(),true);
   assert.match(await linkedPage.locator('#visibilityHint').textContent(), /Current privacy: Private/);
   const scopeGeometry = await linkedPage.locator('#scopeBox').evaluate(fieldset => ({
@@ -194,6 +227,8 @@ try {
     assert.ok(choice.labelHeight < 58, 'one choice must not fill multiple rows');
   }
   await linkedPage.locator('input[name=scope][value=following]').check();
+  await linkedPage.locator('#appConfirmDialog').waitFor();
+  await linkedPage.locator('#appConfirmYes').click();
   await linkedPage.waitForFunction(() => {
     const select=document.getElementById('visibility');
     return select && !select.disabled && document.querySelector('input[name=scope][value=following]').checked;

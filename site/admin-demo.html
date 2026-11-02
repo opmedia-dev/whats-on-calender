@@ -148,9 +148,28 @@ textarea{resize:vertical;min-height:100px;line-height:1.5}
 
 
 /* Distinct header and listing/gallery image roles */
-.attachment-item{flex-wrap:wrap}
-.attachment-item button{margin-left:auto;padding:5px 9px;border:1px solid #d4c5c6;border-radius:5px;background:white;color:var(--accent);font-size:11px}
-.attachment-item .image-role{font-size:11px;font-weight:750;color:#655d60}
+/* Existing event media: compact image picker rather than full-width action buttons. */
+.attachment-list{display:grid;gap:8px;margin:10px 0 7px}
+.attachment-item{display:grid;grid-template-columns:62px minmax(0,1fr) auto;align-items:center;gap:12px;padding:9px;border:1px solid #e3dad7;border-radius:9px;background:#fff;min-width:0}
+.attachment-item.is-header{border-color:#bb8c96;background:#fffafb}
+.attachment-thumb{width:62px;height:58px;object-fit:cover;border-radius:6px;background:#f1ece9;border:1px solid #e4dad6}
+.attachment-file-icon{width:62px;height:58px;display:flex;align-items:center;justify-content:center;border-radius:6px;background:#f3eeeb;color:#6d4650;font-size:11px;font-weight:750}
+.attachment-meta{display:grid;align-content:center;min-width:0;gap:4px}
+.attachment-meta strong{color:#332e30;font-size:12.5px;line-height:1.35;font-weight:720;overflow-wrap:anywhere}
+.attachment-meta small{font-size:11px;color:#71676b}
+.attachment-meta a{font-size:11.5px;color:var(--accent);font-weight:650;width:max-content;max-width:100%}
+.attachment-choice{display:flex!important;align-items:center;gap:7px;margin:0!important;padding:8px 9px;border:1px solid #ddd0d1;border-radius:7px;background:#fff;color:#67444c;font-size:11.5px!important;cursor:pointer;white-space:nowrap}
+.attachment-choice input[type=radio],.attachment-no-header input[type=radio]{width:16px;height:16px;margin:0;flex:none;accent-color:var(--accent)}
+.attachment-choice:has(input:checked){background:#f8ecee;border-color:#b97886;font-weight:750}
+.attachment-no-header{display:flex!important;align-items:center;gap:9px;width:max-content;max-width:100%;margin:2px 0 0!important;padding:8px 11px;border:1px solid #ded2d1;border-radius:7px;background:#fff;color:#51464b;font-size:12px!important;font-weight:600!important;cursor:pointer}
+.attachment-no-header:has(input:checked){background:#f7edee;border-color:#b97886}
+.attachment-none-note{margin:4px 0 0!important;font-size:11px}
+.attachment-help{margin:0 0 9px!important}
+.preview-art.has-photo{cursor:grab;touch-action:none}
+.preview-art.has-photo.is-dragging{cursor:grabbing}
+.preview-art.has-photo #previewHeaderImage{-webkit-user-drag:none;user-select:none;pointer-events:none}
+@media(max-width:520px){.attachment-item{grid-template-columns:48px minmax(0,1fr);gap:9px}.attachment-thumb,.attachment-file-icon{width:48px;height:48px}.attachment-choice{grid-column:2;justify-self:start;padding:6px 9px}}
+
 .preview-art.has-photo{position:relative;padding:0;min-height:210px;background:#ebe7e3}
 .preview-art.has-photo:before,.preview-art.has-photo>#artCategory,.preview-art.has-photo>#artTitle,.preview-art.has-photo>#artDate{display:none}
 .preview-art #previewHeaderImage{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;object-position:50% 50%;touch-action:none;cursor:grab;user-select:none}
@@ -356,7 +375,7 @@ input[aria-invalid=true],select[aria-invalid=true]{border-color:#ba4254!importan
   <div class="panel-body">
    <div class="preview-card">
     <div id="art" class="preview-art" data-type="general">
-     <img id="previewHeaderImage" alt="" hidden>
+     <img id="previewHeaderImage" alt="" draggable="false" hidden>
      <span id="artCategory">General</span><div id="artTitle">Your event title</div><span id="artDate">Date to be confirmed</span>
     </div>
      <div id="previewGallery" class="preview-gallery" hidden></div>
@@ -640,37 +659,71 @@ function attachmentList(items){
  state.attachments=Array.isArray(items)?items.map(a=>({...a})):[];
  const box=$('attachmentList');box.replaceChildren();
  const images=state.attachments.filter(a=>/^image\//i.test(a.mimeType||''));
- const selected=state.headerImageId==='none'?null:(images.find(a=>a.fileId&&a.fileId===state.headerImageId)||images[0]||null);
- if(!state.attachments.length)box.append(create('span','muted','No attachments yet'));
+ const selected=state.headerImageId==='none'?null:
+  (images.find(a=>a.fileId&&a.fileId===state.headerImageId)||images[0]||null);
+ if(!state.attachments.length)box.append(create('p','muted','No attachments yet. Add an image or document below.'));
+ let imageNumber=0,documentNumber=0;
  state.attachments.forEach(function(item){
   const isImage=/^image\//i.test(item.mimeType||'');
-  const row=create('div','attachment-item');
-  const link=create('a','',item.title||'Attached file');
-  if(/^https:\/\//i.test(item.fileUrl||'')){link.href=item.fileUrl;link.target='_blank';link.rel='noopener noreferrer'}
-  const badge=create('span','image-role',isImage?(item===selected?'Header image':'Listing image'):(item.mimeType==='application/pdf'?'PDF download':'Download'));
-  row.append(badge,link);
-  if(isImage&&item.fileId&&item!==selected){
-   const button=create('button','','Use as header');button.type='button';
-   button.addEventListener('click',function(){
-    state.headerImageId=item.fileId;state.imageFocus='50,50';state.dirty=true;attachmentList(state.attachments);preview();
-    $('headerImageHint').textContent='Header change is unsaved. Press Save event to apply it.';
+  const row=create('div','attachment-item'+(item===selected?' is-header':''));
+  const title=String(item.title||'').trim();
+  const opaque=/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}(?:\.[a-z0-9]{2,5})?$/i.test(title);
+  const displayTitle=!title||opaque
+   ? (isImage?'Image '+(++imageNumber):'Document '+(++documentNumber))
+   : title;
+  if(isImage){
+   if(!opaque)imageNumber++;
+   const thumb=create('img','attachment-thumb');
+   const imageUrl=mediaUrl(item);
+   thumb.alt='';thumb.loading='lazy';thumb.decoding='async';
+   if(imageUrl)thumb.src=imageUrl;
+   row.append(thumb);
+  }else{
+   if(!opaque)documentNumber++;
+   row.append(create('span','attachment-file-icon',(item.mimeType||'').includes('pdf')?'PDF':'FILE'));
+  }
+  const meta=create('div','attachment-meta');
+  const name=create('strong','',displayTitle);name.title=title||displayTitle;
+  const suffix=(title.match(/\.([a-z0-9]{2,5})$/i)||[])[1]||((item.mimeType||'').split('/')[1]||'file');
+  const detail=create('small','',suffix.toUpperCase()+(item===selected?' · Header image':isImage?' · Gallery image':' · Attachment'));
+  meta.append(name,detail);
+  const link=create('a','','Open file');
+  if(/^https:\/\//i.test(item.fileUrl||'')){
+   link.href=item.fileUrl;link.target='_blank';link.rel='noopener noreferrer';
+   meta.append(link);
+  }
+  row.append(meta);
+  if(isImage&&item.fileId){
+   const label=create('label','attachment-choice');
+   const radio=create('input','');
+   radio.type='radio';radio.name='headerMediaSelection';radio.value=item.fileId;
+   radio.checked=item===selected;
+   radio.setAttribute('aria-label','Use '+displayTitle+' as event header');
+   const labelText=create('span','',item===selected?'Header selected':'Use as header');
+   label.append(radio,labelText);
+   radio.addEventListener('change',function(){
+    if(!radio.checked)return;
+    state.headerImageId=item.fileId;state.imageFocus='50,50';state.dirty=true;
+    attachmentList(state.attachments);preview();
    });
-   row.append(button);
+   row.append(label);
   }
   box.append(row);
  });
  if(images.length){
-  const none=create('button','','Listing images only — no header');
-  none.type='button';
-  none.disabled=state.headerImageId==='none';
-  none.addEventListener('click',function(){
+  const label=create('label','attachment-no-header');
+  const radio=create('input','');radio.type='radio';radio.name='headerMediaSelection';
+  radio.value='none';radio.checked=state.headerImageId==='none';
+  radio.addEventListener('change',function(){
+   if(!radio.checked)return;
    state.headerImageId='none';state.dirty=true;attachmentList(state.attachments);preview();
   });
-  box.append(none);
+  label.append(radio,create('span','','No header image (use category placeholder)'));
+  box.append(label);
  }
  $('headerImageHint').textContent=selected
-  ? (state.headerImageId?'Selected header: ':'Automatically selected header: ')+(selected.title||'Image')
-  : 'No header image: a category placeholder will be used.';
+  ? 'Header chosen for event cards. Use Position header image below to adjust the crop.'
+  : (images.length?'A category placeholder will appear on cards. Attached pictures stay in the gallery.':'Add an image to show a picture on event cards.');
  refreshImagePreview();
 }
 function create(tag,cls,text){var el=document.createElement(tag);if(cls)el.className=cls;if(text!==undefined)el.textContent=text;return el}
@@ -964,24 +1017,57 @@ document.querySelectorAll('[data-format]').forEach(function(button){
   state.changed=true;state.dirty=true;preview();
  });
 });
-// Drag the image within the frame; sliders provide precise keyboard-accessible positioning.
+// Drag the photo itself, not the browser's native draggable <img> element.
+// Listen on the card frame: pointer capture prevents an image drag ghost or
+// a child image stealing pointermove/pointerup on Safari and Chrome.
 (function(){
- const img=$('previewHeaderImage');let start=null;
- img.addEventListener('pointerdown',function(ev){
-  if(img.hidden||ev.button!==0||!img.naturalWidth||!img.naturalHeight)return;
-  start={x:ev.clientX,y:ev.clientY,focus:focusNumbers()};
-  img.setPointerCapture(ev.pointerId);img.classList.add('is-dragging');
+ const frame=$('art'),img=$('previewHeaderImage');
+ let start=null;
+ img.draggable=false;
+ img.addEventListener('dragstart',function(event){event.preventDefault()});
+ function dimensions(){
+  const box=frame.getBoundingClientRect();
+  if(!img.naturalWidth||!img.naturalHeight||!box.width||!box.height)return null;
+  const scale=Math.max(box.width/img.naturalWidth,box.height/img.naturalHeight);
+  return {x:Math.max(0,img.naturalWidth*scale-box.width),
+          y:Math.max(0,img.naturalHeight*scale-box.height)};
+ }
+ function describeCrop(){
+  const hint=$('imageFocusControls').querySelector('.crop-editor-header small');
+  const overflow=dimensions();
+  if(!overflow)return;
+  hint.textContent=overflow.x<2&&overflow.y<2
+   ? 'This picture already fits the card proportions, so there is no extra image to move.'
+   : 'Drag the photo in the preview to fine-tune its crop, or choose a position below.';
+ }
+ img.addEventListener('load',describeCrop);
+ frame.addEventListener('pointerdown',function(event){
+  if(!frame.classList.contains('has-photo')||img.hidden||
+     (event.pointerType==='mouse'&&event.button!==0))return;
+  const overflow=dimensions();
+  if(!overflow)return;
+  start={pointerId:event.pointerId,x:event.clientX,y:event.clientY,
+    focus:focusNumbers(),overflow};
+  event.preventDefault();
+  frame.setPointerCapture(event.pointerId);
+  frame.classList.add('is-dragging');
  });
- img.addEventListener('pointermove',function(ev){
-  if(!start)return;
-  const frame=$('art').getBoundingClientRect();
-  const scale=Math.max(frame.width/img.naturalWidth,frame.height/img.naturalHeight);
-  const excessX=img.naturalWidth*scale-frame.width,excessY=img.naturalHeight*scale-frame.height;
-  setImageFocus(excessX>1?start.focus[0]-(ev.clientX-start.x)*100/excessX:start.focus[0],
-    excessY>1?start.focus[1]-(ev.clientY-start.y)*100/excessY:start.focus[1]);
+ frame.addEventListener('pointermove',function(event){
+  if(!start||event.pointerId!==start.pointerId)return;
+  const dx=event.clientX-start.x,dy=event.clientY-start.y;
+  // object-position is percentage of the overflow, not of the card.
+  const x=start.overflow.x>1?start.focus[0]-dx*100/start.overflow.x:start.focus[0];
+  const y=start.overflow.y>1?start.focus[1]-dy*100/start.overflow.y:start.focus[1];
+  if(Math.round(x)!==focusNumbers()[0]||Math.round(y)!==focusNumbers()[1])setImageFocus(x,y);
  });
- function end(){start=null;img.classList.remove('is-dragging')}
- img.addEventListener('pointerup',end);img.addEventListener('pointercancel',end);
+ function end(event){
+  if(!start||event.pointerId!==start.pointerId)return;
+  start=null;frame.classList.remove('is-dragging');
+  if(frame.hasPointerCapture(event.pointerId))frame.releasePointerCapture(event.pointerId);
+ }
+ frame.addEventListener('pointerup',end);
+ frame.addEventListener('pointercancel',end);
+ frame.addEventListener('lostpointercapture',end);
  document.querySelectorAll('.crop-pad button[data-focus]').forEach(function(button){
   button.addEventListener('click',function(){
    const values=button.dataset.focus.split(',').map(Number);
