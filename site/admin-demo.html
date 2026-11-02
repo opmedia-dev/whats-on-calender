@@ -244,6 +244,8 @@ textarea{resize:vertical;min-height:100px;line-height:1.5}
      <p class="help">For PDFs and documents, the placement is always Downloads. A selected file will upload when you Save event; the separate Upload attachment button adds a file without changing event details.</p>
     </div>
     <label for="uploadAttachment">Add an image, PDF or document (maximum 8 MB)</label>
+     <label class="check" for="optimiseUpload"><input id="optimiseUpload" type="checkbox" checked> Optimise large pictures before uploading (faster)</label>
+     <p class="help">A smaller WebP copy (up to 2400px) is uploaded to Drive for large JPEG/PNG/WebP images. The original on your computer is untouched. Untick to upload the exact file; documents and GIFs are not changed.</p>
     <div class="tools">
      <input type="file" name="attachment" id="uploadAttachment" accept="image/jpeg,image/png,image/webp,image/gif,application/pdf,.doc,.docx,.xls,.xlsx,.txt">
      <button type="submit" id="uploadButton" class="btn" disabled>Upload attachment</button>
@@ -346,6 +348,33 @@ function resetDraftImage(){
  $('uploadStatus').textContent=linked&&!state.uploadConfigured
   ? 'Image uploads are unavailable until EDITOR_UPLOAD_FOLDER_ID is configured and deployed.'
   : 'Select a file and press Save event to save and upload together.';
+}
+// Reduce bytes sent through Apps Script, preserving the original local file.
+async function optimiseUpload(){
+ const input=$('uploadAttachment'),file=input.files[0];
+ if(!file||!$('optimiseUpload').checked||file.size<700000||
+    !/^(image\/jpeg|image\/png|image\/webp)$/.test(file.type))return;
+ if(typeof createImageBitmap!=='function'||typeof DataTransfer==='undefined')return;
+ const image=await createImageBitmap(file);
+ try{
+  const scale=Math.min(1,2400/Math.max(image.width,image.height));
+  const width=Math.max(1,Math.round(image.width*scale));
+  const height=Math.max(1,Math.round(image.height*scale));
+  const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;
+  const context=canvas.getContext('2d');if(!context)return;
+  context.drawImage(image,0,0,width,height);
+  const output=await new Promise(function(resolve){canvas.toBlob(resolve,'image/webp',0.88)});
+  if(!output||output.type!=='image/webp'||output.size>=file.size*0.9)return;
+  const name=file.name.replace(/\.[^.]+$/,'')+'.webp';
+  const transfer=new DataTransfer();
+  transfer.items.add(new File([output],name,{type:'image/webp',lastModified:Date.now()}));
+  input.files=transfer.files;
+  if(state.draftImageUrl)URL.revokeObjectURL(state.draftImageUrl);
+  state.draftImageUrl=URL.createObjectURL(input.files[0]);
+  refreshImagePreview();
+  const kb=n=>Math.max(1,Math.round(n/1024))+' KB';
+  $('uploadStatus').textContent='Optimised '+kb(file.size)+' → '+kb(output.size)+'. Uploading the smaller copy…';
+ }finally{image.close()}
 }
 function mediaUrl(item){
  if(item && item.fileId && /^[A-Za-z0-9_-]{10,}$/.test(item.fileId))
@@ -621,7 +650,6 @@ async function save(ev){
    var problem='Cannot save the selected file: the parish Drive upload folder is not configured. Set EDITOR_UPLOAD_FOLDER_ID in Code.gs, then deploy a new version.';
    status(problem,true);$('uploadStatus').textContent=problem;return;
   }
-  if(file.size>8*1024*1024){status('Selected file exceeds the 8 MB limit.',true);return}
   if(!confirm('Save this event and upload "'+file.name+'" to the public parish Drive folder?'))return;
  }
  if(state.active&&state.active.isRecurring&&state.scope==='series'
@@ -629,6 +657,12 @@ async function save(ev){
  var saved=null,uploaded=false;
  pending(true);status('Saving event to Google Calendar…');
  try{
+  if(file){
+   status('Preparing image for upload…');
+   await optimiseUpload();
+   if($('uploadAttachment').files[0]?.size>8*1024*1024)
+    throw new Error('Selected file exceeds 8 MB, even after optimisation.');
+  }
   saved=await call('editorSaveEvent',v);
   if(!saved||!saved.id)throw new Error('Calendar did not return a saved event ID. Check Calendar before retrying.');
   state.id=saved.id;state.revision=saved.revision||state.revision;
@@ -720,11 +754,12 @@ $('uploadForm').addEventListener('submit',async function(ev){
  if(state.dirty){$('uploadStatus').textContent='Save event changes first, or save and upload the file together.';return}
  var file=$('uploadAttachment').files[0];
  if(!file)return;
- if(file.size>8*1024*1024){$('uploadStatus').textContent='File must be smaller than 8 MB.';return}
  if(!confirm('This file will be publicly accessible from the event. Upload it to the parish Drive folder?'))return;
  $('uploadEventId').value=state.id;$('uploadEditScope').value=state.scope;
  pending(true);$('uploadStatus').textContent='Uploading to Google Drive and attaching to the event…';
  try{
+  await optimiseUpload();
+  if($('uploadAttachment').files[0]?.size>8*1024*1024)throw new Error('Selected file exceeds 8 MB, even after optimisation.');
   await call('editorUploadFile',$('uploadForm'));
   $('uploadAttachment').value='';
   var loaded=await call('editorGetEvent',state.id,state.scope);
