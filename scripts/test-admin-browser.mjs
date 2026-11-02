@@ -105,6 +105,53 @@ try {
   assert.equal(await page.locator('#title').inputValue(), '');
   await page.locator('#closeEditor').click();
 
+  // Regression: a private recurring event shows compact, aligned scope radio
+  // options, and the privacy selector changes availability with the edit scope.
+  const privateRecurring = {
+    id:'weekly_20261102',selectedId:'weekly_20261102',seriesId:'weekly',revision:'etag',
+    isRecurring:true,isInstance:true,editScope:'occurrence',visibility:'private',
+    title:'Private weekly meeting',category:'general',categorySource:'selected',
+    startDate:'2026-11-02',endDate:'2026-11-02',startTime:'10:00',endTime:'11:00',
+    allDay:false,description:'Private meeting',location:'Hall',repeat:'weekly',
+    featured:false,attachments:[],
+  };
+  await page.evaluate(event => put(event), privateRecurring);
+  await assertModal('private recurring event');
+  assert.equal(await page.locator('#scopeBox').isVisible(),true);
+  assert.equal(await page.locator('#scopeBox .scope-option').count(),3);
+  assert.equal(await page.locator('#visibility').inputValue(),'private');
+  assert.equal(await page.locator('#visibility').isDisabled(),true);
+  assert.match(await page.locator('#visibilityHint').textContent(), /Current privacy: Private/);
+  const scopeGeometry = await page.locator('#scopeBox').evaluate(fieldset => ({
+    height:fieldset.getBoundingClientRect().height,
+    labels:[...fieldset.querySelectorAll('.scope-option')].map(label=>{
+      const radio=label.querySelector('input').getBoundingClientRect();
+      const span=label.querySelector('span').getBoundingClientRect();
+      return {radioX:radio.x,radioMidY:radio.y+radio.height/2,
+        radioWidth:radio.width,textX:span.x,textMidY:span.y+span.height/2,
+        labelHeight:label.getBoundingClientRect().height};
+    }),
+  }));
+  assert.ok(scopeGeometry.height < 235, 'scope choices must be compact: '+JSON.stringify(scopeGeometry));
+  for (const choice of scopeGeometry.labels) {
+    assert.ok(choice.radioWidth <= 20, 'radio input must not expand across the row');
+    assert.ok(choice.radioX + choice.radioWidth < choice.textX,
+      'radio must appear immediately before its label');
+    assert.ok(Math.abs(choice.radioMidY-choice.textMidY) < 6,
+      'radio and label text must share a horizontal baseline');
+    assert.ok(choice.labelHeight < 58, 'one choice must not fill multiple rows');
+  }
+  await page.evaluate(event => put({...event,editScope:'following'}), privateRecurring);
+  assert.equal(await page.locator('input[name="scope"][value="following"]').isChecked(),true);
+  assert.equal(await page.locator('#visibility').isEnabled(),true);
+  assert.equal(await page.locator('#visibility').inputValue(),'private');
+  assert.match(await page.locator('#visibilityHint').textContent(), /this date and future occurrences/);
+  await page.evaluate(event => put({...event,editScope:'series'}), privateRecurring);
+  assert.equal(await page.locator('input[name="scope"][value="series"]').isChecked(),true);
+  assert.equal(await page.locator('#visibility').isEnabled(),true);
+  assert.match(await page.locator('#visibilityHint').textContent(), /every event in the series/);
+  await page.locator('#closeEditor').click();
+
   await page.setViewportSize({ width: 390, height: 780 });
   await page.locator('#newEvent').click();
   await assertModal('mobile New event');
@@ -112,5 +159,5 @@ try {
   assert.ok(dialog.width < 390, 'mobile dialog must fit viewport');
   assert.ok(dialog.height <= 780, 'mobile dialog must not exceed viewport');
   assert.deepEqual(errors, [], 'browser must not report runtime errors');
-  console.log('PASS: New event, existing event, date, custom repeat, Reset, mobile modal');
+  console.log('PASS: Editor workflow, aligned recurring scope choices, private visibility by scope, mobile modal');
 } finally { await browser.close(); }
