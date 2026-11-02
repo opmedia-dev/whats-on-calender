@@ -191,6 +191,26 @@ test('header image metadata is event-scoped and rejects a file from another draf
   assert.equal(events.length,2, 'rejected cross-event header must not modify the calendar');
 });
 
+test('non-recurring attachments may be detached without deleting a Drive file',()=>{
+ const {context,event,events}=setup();
+ event.attachments=[
+  {fileId:'existing-image',fileUrl:'https://drive.google.com/file/d/existing-image/view',title:'Poster',mimeType:'image/jpeg'},
+  {fileId:'download-pdf',fileUrl:'https://drive.google.com/file/d/download-pdf/view',title:'Handout',mimeType:'application/pdf'},
+ ];
+ event.extendedProperties.shared.woHeaderImageId='existing-image';
+ const result=context.editorRemoveAttachment(event.id,'occurrence',event.etag,'existing-image');
+ assert.equal(result.removed,true);
+ assert.equal(result.driveFileRetained,true);
+ assert.equal(events.length,1);
+ assert.equal(events[0].kind,'patch');
+ assert.equal(events[0].body.attachments.length,1);
+ assert.equal(events[0].body.attachments[0].title,'Handout');
+ assert.equal(events[0].body.extendedProperties.shared.woHeaderImageId,'none');
+ assert.throws(()=>context.editorRemoveAttachment(event.id,'occurrence','outdated-etag','download-pdf'),/changed/);
+ assert.throws(()=>context.editorRemoveAttachment(event.id,'occurrence',event.etag,'foreign-file'),/not attached/);
+ assert.equal(events.length,1);
+});
+
 test('public sync separates header photo, additional gallery pictures and downloads', () => {
   assert.match(sync, /woHeaderImageId/);
   assert.match(sync, /headerFileId === 'none'/);
