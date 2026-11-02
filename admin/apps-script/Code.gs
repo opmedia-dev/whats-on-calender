@@ -480,7 +480,7 @@ function editorSaveEvent(form) {
     // Never let a discarded draft/another event supply a foreign file ID.
     const headerChoice = String(form.headerImageId || '').trim();
     if (headerChoice && headerChoice !== 'none') {
-      const match = (record.target.attachments || []).find(a =>
+      const match = [...(record.target.attachments || []), ...(record.master?.attachments || [])].find(a =>
         a.fileId === headerChoice && /^image\//i.test(a.mimeType || ''));
       if (!match) throw new Error('The selected header image is not attached to this event. Reload and choose again.');
     }
