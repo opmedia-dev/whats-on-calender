@@ -97,7 +97,7 @@ const timeMax = new Date(now + (config.futureDays ?? 400) * DAY).toISOString();
 const { meta, items: instances } = await listEvents({ singleEvents: 'true', orderBy: 'startTime', timeMin, timeMax });
 const isHidden = (e) => e.status === 'cancelled' ||
   (config.hidePrivate !== false && (e.visibility === 'private' || e.visibility === 'confidential'));
-const events = instances.filter((e) => !isHidden(e) && e.start);
+let events = instances.filter((e) => !isHidden(e) && e.start);
 console.log(`Calendar "${meta.summary}": ${instances.length} event(s) in range, ${events.length} public`);
 
 // Series (the repeating "master" events) carry the RRULE used for "Every Sunday" etc.
@@ -108,6 +108,10 @@ for (const id of new Set(events.map((e) => e.recurringEventId).filter(Boolean)))
   const res = await get(CAL_API, `/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(id)}`, {}, { allowFail: true });
   if (!res.error) masters.set(id, await res.json());
 }
+
+// A recurring instance can inherit privacy from its master, even when its own
+// visibility field says default. Exclude these BEFORE downloading any media.
+events = events.filter(e => !e.recurringEventId || !isHidden(masters.get(e.recurringEventId) || {}));
 
 // Attachment metadata (cheap) is fetched up front so a replaced poster counts as a change.
 const fileMeta = new Map();
