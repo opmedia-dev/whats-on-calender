@@ -650,8 +650,9 @@ function editorRemoveAttachment(id, scope, revision, attachmentKey) {
     const shared = record.target.extendedProperties?.shared || {};
     const currentHeader = shared[HEADER_IMAGE_KEY] ||
       record.master?.extendedProperties?.shared?.[HEADER_IMAGE_KEY] || '';
-    if (currentHeader === attachment.fileId ||
-        (!remaining.length && attachment.mimeType?.startsWith('image/') && currentHeader !== 'none')) {
+    const inferredHeader = currentHeader === 'none' ? null :
+      currentHeader || original.find(a => /^image\//i.test(a.mimeType || '') && a.fileId)?.fileId;
+    if (attachment.fileId && inferredHeader === attachment.fileId) {
       const next = remaining.find(a => /^image\//i.test(a.mimeType || '') && a.fileId);
       changes.extendedProperties = { shared: Object.assign({}, shared, {
         [HEADER_IMAGE_KEY]: next ? next.fileId : 'none',
