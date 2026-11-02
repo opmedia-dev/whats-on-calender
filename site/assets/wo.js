@@ -547,9 +547,9 @@ export function renderCard(e, { showRecurrence = false, clock, summary = false, 
   const img = e.info?.image;
   const { href, target } = eventHref(e);
   const c = clock || param('clock', '12');
-  const regular = showRecurrence && e.recurring && e.recurrence;
+  const regular = showRecurrence && e.recurring;
   let when;
-  if (regular) when = `${e.recurrence}${e.allDay ? '' : `, ${formatTime(e.startDate, c)}`}`;
+  if (regular && e.recurrence) when = `${formatShortDate(e.startDate)} · ${e.recurrence}${e.allDay ? '' : `, ${formatTime(e.startDate, c)}`}`;
   else if (e.startKey !== e.endKey) when = formatWhen(e, { clock: c, ordinals: false });
   else when = `${formatShortDate(e.startDate)} · ${formatTimeRange(e, c)}`;
   const d = e.startDate;
