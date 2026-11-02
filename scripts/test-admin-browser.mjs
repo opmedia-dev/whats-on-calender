@@ -7,6 +7,7 @@ const browser = await chromium.launch({ headless: true });
 try {
   const page = await browser.newPage({ viewport: { width: 1400, height: 940 } });
   const errors = [];
+  page.on('dialog', dialog => dialog.accept()); // Accept discard-confirmation during the close-flow smoke test.
   page.on('pageerror', error => errors.push(error.stack || error.message));
   page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
   const url = pathToFileURL(path.resolve('site/admin-demo.html')).href;
