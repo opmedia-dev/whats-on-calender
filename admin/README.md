@@ -5,8 +5,8 @@ This is an **alternative interface for editing the existing St John the Baptist,
 - **Live editing runtime:** Google Apps Script web app, using the Google Calendar Advanced service.
 - **Source control:** `admin/apps-script/Code.gs`, `Index.html`, and `appsscript.json` in this GitHub repository.
 - **Pre-rollout demonstration:** `site/admin-demo.html` on GitHub Pages. It contains only sample events and **cannot save/delete**.
-- **Existing public embeds:** unchanged. Public `events.json` gains `category` and `categorySource` properties without changing image-led featured-event selection.
-- **Current workflow:** month/week calendar, click a day to create an event, click an event to edit it; form and live placeholder preview side-by-side above 930px, stacked on smaller screens. No special description tags and no featured checkbox.
+- **Existing public embeds:** banner event slots and What's On Highlights now use explicit `woFeatured` metadata, rather than inferring it from a header image.
+- **Current workflow:** month/week calendar, click a day to create an event, click an event to edit it; form and live placeholder preview side-by-side above 930px, stacked on smaller screens. No special description tags; a dedicated Featured checkbox controls banner and Highlights placement.
 - **Still under development:** final production tests of rich-text authoring, Google Drive image/PDF/document uploads, complicated historical recurrence patterns, attendee management and public category-placeholder rendering. The preview is a design concept until the publishing change is implemented.
 
 ## Google OAuth, authentication and hosting
@@ -106,9 +106,8 @@ legacy events** without an explicit choice.
 - Select **Listing images only — no header** to use the category text
   placeholder while still publishing photos in the detail-page gallery. A
   gallery-only first upload does not silently become a header.
-- The original image-based banner selection is unchanged: an event with a
-  header image may be eligible under the existing rules. There is **no
-  separate featured checkbox**.
+- **Feature this event** is independent of the header/gallery selection. It stores `woFeatured=true` or `false` as a shared Google Calendar event property. Only marked events appear in banner event slots and the What's On Highlights filter. Other events remain in the full listings, timetable and calendar. For recurring series, choose **Entire series** to feature future dates, or **This date only** for an exception.
+- Events without a featured property are **not** automatically featured, even if they have an image.
 - Draft file selections are local to the open event. Closing without saving,
   switching events or resetting clears their file input, temporary preview and
   browser object URL. The read-only demo can preview a chosen local picture
