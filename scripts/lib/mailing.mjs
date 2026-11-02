@@ -39,7 +39,7 @@ export function mailingImageFromHtml(html = '') {
     const tag = match[0];
     const width = Number(tag.match(/\bwidth\s*=\s*["']?(\d+)/i)?.[1] || 0);
     const height = Number(tag.match(/\bheight\s*=\s*["']?(\d+)/i)?.[1] || 0);
-    // A valid logo may be 100 × 60. Reject only icon/tracking dimensions.
+    // Content illustrations can be narrow; reject only icons/tracking dimensions.
     if ((width && width <= 24) || (height && height <= 24)) continue;
     const sources = [
       tag.match(/\sdata-src\s*=\s*(["'])(.*?)\1/i)?.[2],
