@@ -142,3 +142,26 @@ test('Google OAuth stays user-bound, with no write credentials in the GitHub Pag
   ]);
   assert.doesNotMatch(published, /ScriptApp\.getOAuthToken|GOOGLE_API_KEY|client_secret|access_token/);
 });
+
+test('both editor HTML variants have JavaScript that parses as a standalone browser script', () => {
+  for (const [name, html] of [
+    ['Apps Script live editor', frontend],
+    ['GitHub Pages demonstration', published],
+  ]) {
+    const match = html.match(/<script>\s*([\s\S]*?)<\/script>/i);
+    assert.ok(match, name + ': missing inline controller');
+    assert.doesNotThrow(() => new vm.Script(match[1], { filename: name }), name);
+  }
+});
+
+test('editor release workflow requires explicit manual dispatch and privileged secrets', () => {
+  const wf = fs.readFileSync(path.join(root,'.github/workflows/deploy-admin-editor.yml'),'utf8');
+  assert.match(wf, /workflow_dispatch:/);
+  assert.doesNotMatch(wf, /^\s+push:/m);
+  assert.match(wf, /environment: calendar-editor/);
+  assert.match(wf, /secrets\.APPS_SCRIPT_CLASPRC_JSON/);
+  assert.match(wf, /secrets\.APPS_SCRIPT_CLASP_JSON/);
+  assert.match(wf, /secrets\.APPS_SCRIPT_DEPLOYMENT_ID/);
+  assert.match(wf, /clasp create-deployment --deploymentId/);
+  assert.match(wf, /rootDir.*admin\/apps-script/);
+});
