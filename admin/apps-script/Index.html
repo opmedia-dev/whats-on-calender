@@ -269,7 +269,7 @@ var $=function(id){return document.getElementById(id)};
 var labels={general:'General',worship:'Worship & services',community:'Community',music:'Music',families:'Children & families',heritage:'Heritage & talks',fundraising:'Fundraising'};
 var fields=['title','category','repeat','startDate','endDate','startTime','endTime','location'];
 var linked=(typeof google!=='undefined' && google.script && google.script.run);
-var state={events:[],date:new Date(),mode:'month',busy:false,id:'',revision:'',scope:'occurrence',active:null,changed:false,dirty:false};
+var state={events:[],date:new Date(),mode:'month',busy:false,id:'',revision:'',scope:'occurrence',active:null,changed:false,dirty:false,attachments:[],headerImageId:'',draftImageUrl:''};
 function key(d){return d.toISOString().slice(0,10)}
 function fromDate(s){return new Date(s+'T12:00:00Z')}
 function add(s,n){var d=fromDate(s);d.setUTCDate(d.getUTCDate()+n);return key(d)}
@@ -311,17 +311,73 @@ function safeRich(html){
  return host.innerHTML;
 }
 function richHTML(){return safeRich($('description').innerHTML)}
+function resetDraftImage(){
+ if(state.draftImageUrl)URL.revokeObjectURL(state.draftImageUrl);
+ state.draftImageUrl='';
+ $('uploadForm').reset();
+ $('uploadEventId').value=state.id||'';
+ $('uploadEditScope').value=state.scope||'occurrence';
+ $('imageRole').value='header';
+ $('uploadStatus').textContent=state.id?'Choose a file to attach after saving changes.':'Save this event before uploading.';
+}
+function mediaUrl(item){
+ if(item && item.fileId && /^[A-Za-z0-9_-]{10,}$/.test(item.fileId))
+  return 'https://drive.google.com/thumbnail?id='+encodeURIComponent(item.fileId)+'&sz=w700';
+ if(item && /^https:\/\//i.test(item.fileUrl||''))return item.fileUrl;
+ return '';
+}
+function refreshImagePreview(){
+ const images=state.attachments.filter(a=>/^image\//i.test(a.mimeType||''));
+ const header=images.find(a=>a.fileId&&a.fileId===state.headerImageId)||images[0]||null;
+ const file=$('uploadAttachment').files[0];
+ const draftImage=Boolean(file&&file.type.startsWith('image/'));
+ const draftHeader=draftImage&&$('imageRole').value==='header';
+ const draftGallery=draftImage&&$('imageRole').value==='gallery';
+ const img=$('previewHeaderImage');
+ const src=draftHeader?state.draftImageUrl:mediaUrl(header);
+ if(src){img.src=src;img.hidden=false;$('art').classList.add('has-photo')}
+ else{img.removeAttribute('src');img.hidden=true;$('art').classList.remove('has-photo')}
+ const gallery=$('previewGallery');gallery.replaceChildren();
+ const others=images.filter(a=>a!==header);
+ if(others.length||draftGallery){
+  gallery.append(create('span','gallery-label','Additional images in the event listing'));
+  others.forEach(function(item){
+   const url=mediaUrl(item);
+   if(url){const el=create('img','');el.src=url;el.alt=item.title||'Event image';gallery.append(el)}
+  });
+  if(draftGallery&&state.draftImageUrl){
+   const el=create('img','');el.src=state.draftImageUrl;el.alt='Draft image not uploaded';gallery.append(el);
+  }
+ }
+ gallery.hidden=!others.length&&!draftGallery;
+}
 function attachmentList(items){
- var box=$('attachmentList');box.replaceChildren();
- if(!items||!items.length){box.append(create('span','muted','No attachments yet'));return}
- items.forEach(function(item){
-  var row=create('div','attachment-item');
-  var a=create('a','',item.title||'Attached file');
-  if(/^https:\/\//i.test(item.fileUrl||'')){
-   a.href=item.fileUrl;a.target='_blank';a.rel='noopener noreferrer';
-  }else a.removeAttribute('href');
-  row.append(create('span','',item.mimeType==='application/pdf'?'PDF':'File'),a);box.append(row);
+ state.attachments=Array.isArray(items)?items.map(a=>({...a})):[];
+ const box=$('attachmentList');box.replaceChildren();
+ const images=state.attachments.filter(a=>/^image\//i.test(a.mimeType||''));
+ const selected=images.find(a=>a.fileId&&a.fileId===state.headerImageId)||images[0]||null;
+ if(!state.attachments.length)box.append(create('span','muted','No attachments yet'));
+ state.attachments.forEach(function(item){
+  const isImage=/^image\//i.test(item.mimeType||'');
+  const row=create('div','attachment-item');
+  const link=create('a','',item.title||'Attached file');
+  if(/^https:\/\//i.test(item.fileUrl||'')){link.href=item.fileUrl;link.target='_blank';link.rel='noopener noreferrer'}
+  const badge=create('span','image-role',isImage?(item===selected?'Header image':'Listing image'):(item.mimeType==='application/pdf'?'PDF download':'Download'));
+  row.append(badge,link);
+  if(isImage&&item.fileId&&item!==selected){
+   const button=create('button','','Use as header');button.type='button';
+   button.addEventListener('click',function(){
+    state.headerImageId=item.fileId;state.dirty=true;attachmentList(state.attachments);preview();
+    $('headerImageHint').textContent='Header change is unsaved. Press Save event to apply it.';
+   });
+   row.append(button);
+  }
+  box.append(row);
  });
+ $('headerImageHint').textContent=selected
+  ? (state.headerImageId?'Selected header: ':'Automatically selected header: ')+(selected.title||'Image')
+  : 'No header image: a category placeholder will be used.';
+ refreshImagePreview();
 }
 function create(tag,cls,text){var el=document.createElement(tag);if(cls)el.className=cls;if(text!==undefined)el.textContent=text;return el}
 function eventDay(e){var s=e.start.slice(0,10);return s}
