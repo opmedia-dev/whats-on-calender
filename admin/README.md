@@ -7,7 +7,7 @@ This is an **alternative interface for editing the existing St John the Baptist,
 - **Pre-rollout demonstration:** `site/admin-demo.html` on GitHub Pages. It contains only sample events and **cannot save/delete**.
 - **Existing public embeds:** unchanged. Public `events.json` gains `category` and `categorySource` properties without changing image-led featured-event selection.
 - **Current workflow:** month/week calendar, click a day to create an event, click an event to edit it; form and live placeholder preview side-by-side above 930px, stacked on smaller screens. No special description tags and no featured checkbox.
-- **Not in this milestone:** image upload, rich-text WYSIWYG, full recurrence editor, attendee management, approval workflow, and final public category-placeholder rendering. The preview is a design concept until the latter is implemented.
+- **Still under development:** final production tests of rich-text authoring, Google Drive image/PDF/document uploads, complicated historical recurrence patterns, attendee management and public category-placeholder rendering. The preview is a design concept until the publishing change is implemented.
 
 ## Google OAuth, authentication and hosting
 
@@ -30,35 +30,53 @@ Do not set `executeAs` to the deployment owner for a multi-user editor. That wou
 1. Confirm the parish calendar ID in `config.json` and `EDITOR_CALENDAR_ID` in `Code.gs` are the same. They currently refer to the pre-existing parish calendar.
 2. Share the parish calendar with each authorised editor, granting **Make changes to events** (Google Calendar's `writer` role), not just viewer rights. One account should retain owner-level administration.
 3. Open <https://script.google.com/> using the chosen long-lived parish/organisation account, create a new **standalone Apps Script** project and name it e.g. `St John's What's On Editor`.
-4. Enable **Google Calendar API** as an **Advanced Google service** in that Apps Script project. Use the manifest in this repository and upload `Code.gs` and `Index.html`.
+4. Enable **Google Calendar API and Google Drive API** as **Advanced Google services** in that Apps Script project. Use the manifest in this repository and add `Code.gs` and `Index.html` in the browser. Configure the parish's attachment folder ID in `Code.gs` before enabling uploads.
 5. Create a **Web app deployment** under **Deploy → New deployment** with **Execute as: User accessing the web app**. For a Google Workspace parish with all editors in the same domain, restrict access to the domain; otherwise require signed-in Google users and enforce the calendar-role check as the backend already does.
 6. Test with an authorised editor and a viewer-only account. The viewer-only user must be unable to read or edit events from the private calendar interface.
 7. Do not give volunteers direct access to the raw Google Calendar UI unless they need it for exceptional administrative work. The editor will use the same source calendar.
 
-## GitHub-based deployment (optional after the initial Google setup)
+## Deploy entirely in a browser (recommended)
 
-The repository includes **Publish private What's On editor**, a manually triggered GitHub Actions workflow (`.github/workflows/deploy-admin-editor.yml`). It **will not run automatically** on merges, and requires secrets configured in the GitHub Actions environment `calendar-editor`.
+**Nothing is installed on the parish desktops or an administrator's computer.**
+Creating the Google Apps Script project and publishing its initial web-app
+deployment can be done at <https://script.google.com/> using the website's
+editor and **Deploy → New deployment → Web app**.
 
-Before using it, enable the **Google Apps Script API** for the authorised deployment account at <https://script.google.com/home/usersettings> and authenticate the Google `clasp` CLI locally. Generate a local `.clasp.json` like:
+For later code updates, open the same Apps Script project, update the
+versioned source from the approved GitHub PR and use **Deploy → Manage
+deployments → Edit → New version**. The web-app URL remains stable. None
+of this requires a terminal, Node.js or `clasp`.
 
-```json
-{
-  "scriptId": "THE_REAL_APPS_SCRIPT_PROJECT_ID",
-  "rootDir": "admin/apps-script"
-}
-```
+For attachments, nominate a parish-controlled Google Drive folder shared
+with the editors (permission to add files). Set its **folder ID** as
+`EDITOR_UPLOAD_FOLDER_ID` in `Code.gs`, then enable the advanced Google
+Drive API service alongside Calendar. Uploads are limited to 8 MB each and
+supported image, PDF, Word, Excel and text files; uploaded assets are made
+viewable to anyone with their link because the public site must show them.
+**Never upload private or confidential documents.** The app requests a
+Drive OAuth scope in addition to Calendar access. Editors should confirm
+that this scope is acceptable for the parish's Google account policy.
 
-**Do not commit `.clasp.json` or `.clasprc.json`.** The workflow reads three GitHub Actions *secrets* from the `calendar-editor` environment:
+### Optional automatic deployment from GitHub (advanced, not required)
 
-| Secret | Purpose |
-| --- | --- |
-| `APPS_SCRIPT_CLASPRC_JSON` | JSON contents of the local `~/.clasprc.json` created during `clasp login`. Contains highly sensitive **deployment** OAuth credentials. |
-| `APPS_SCRIPT_CLASP_JSON` | JSON contents of the local `.clasp.json` pointing at the Apps Script project and source folder. |
-| `APPS_SCRIPT_DEPLOYMENT_ID` | Existing versioned Web app deployment ID, created via Google initially. |
+The separately included workflow **Publish private What's On editor**
+can upload source updates from GitHub Actions to the existing Apps Script
+deployment. The actual `clasp` CLI then runs in **GitHub's cloud runner**,
+not on a parish computer. This still requires an initial secure setup of
+Google OAuth deployment credentials, script ID and deployment ID. Those
+credentials must be stored only in the `calendar-editor` GitHub Actions
+environment secrets:
 
-Then run **Actions → Publish private What's On editor → Run workflow**. It validates tests, pushes only the `admin/apps-script` code, and updates the existing versioned web-app deployment without changing its URL. Use GitHub **environment approvals** if multiple maintainers can run deployment workflows.
+- `APPS_SCRIPT_CLASPRC_JSON`: deployer's OAuth credentials
+- `APPS_SCRIPT_CLASP_JSON`: script project ID and source directory
+- `APPS_SCRIPT_DEPLOYMENT_ID`: existing web-app deployment ID
 
-These secrets are **not the parish administrators' login credentials**. They let GitHub upload trusted code to Google; editors still authenticate individually when using the resulting web app.
+The current workflow does not establish those credentials from scratch.
+They are normally provisioned via a separate authorised CLI login, which
+**may require an administrator's trusted machine during setup**. Since
+the parish cannot install software, **do not use this option initially**.
+Use the browser-only deployment and update workflow above instead.
+Neither option requires installations on the editor users' desktops.
 
 ## Editing behaviour and safeguards
 
@@ -74,7 +92,7 @@ These secrets are **not the parish administrators' login credentials**. They let
 
 ## Verification before rollout
 
-1. Review <https://opmedia-dev.github.io/whats-on-calender/admin-demo.html> after the branch is merged and Pages deployed. It is a sample-only, no-OAuth visual preview.
+1. Download the latest `whats-on-editor-ui-demo` artifact from the successful draft-PR validation run. This is an updated sample-only, no-OAuth visual preview.
 2. Deploy the Google Apps Script web app separately using an authorised account.
 3. Test a standalone event, an all-day event, a weekly recurring series, an edited single occurrence, a full-series edit, and deleting an event.
 4. Confirm that read-only Google accounts cannot use the editor to read or change calendar data.
