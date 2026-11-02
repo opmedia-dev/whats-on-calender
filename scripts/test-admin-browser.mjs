@@ -165,7 +165,16 @@ try {
         editorGetEvent: (id,scope) => success({
           ...mockedEvent,selectedId:id,editScope:scope,
           isInstance:scope!=='series',
+          ...(scope==='series' ? {
+            id:'private-recurring-master',selectedOccurrenceDate:date,
+            seriesStartDate:'2026-01-05',
+          } : {}),
         }),
+        editorRemoveAttachment: (id,scope,revision,fileId) => {
+          mockedEvent.attachments=mockedEvent.attachments.filter(a => a.fileId!==fileId);
+          mockedEvent.headerImageId='none';
+          success({removed:true,driveFileRetained:true,eventId:id,revision:'next-etag'});
+        },
       };
     }
     window.google={script:{run:runner(()=>{},()=>{})}};
@@ -245,6 +254,22 @@ try {
       document.getElementById('visibility').value==='private';
   });
   assert.match(await linkedPage.locator('#visibilityHint').textContent(), /every event in the series/);
+  assert.equal(await linkedPage.locator('#startDate').inputValue(),
+    await linkedPage.evaluate(() => new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/London',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())),
+    'the date clicked must stay visible when switching to All in series');
+  assert.equal(await linkedPage.locator('#startDate').isDisabled(),true,
+    'selected reference date is not editable in all-series scope');
+  assert.match(await linkedPage.locator('#seriesDateHint').textContent(),/2026-01-05/);
+  assert.equal(await linkedPage.locator('#attachment-remove').count(),0);
+  await linkedPage.locator('.attachment-remove').first().click();
+  assert.equal(await linkedPage.locator('#appConfirmDialog').isVisible(),true);
+  assert.match(await linkedPage.locator('#appConfirmMessage').textContent(),/original stays in Google Drive/);
+  await linkedPage.locator('#appConfirmCancel').click();
+  assert.equal(await linkedPage.locator('#attachmentList .attachment-item').count(),1,'cancel keeps attachment');
+  await linkedPage.locator('.attachment-remove').first().click();
+  await linkedPage.locator('#appConfirmYes').click();
+  await linkedPage.waitForFunction(() => document.querySelectorAll('#attachmentList .attachment-item').length === 0);
+  assert.match(await linkedPage.locator('#appNoticeText').textContent(),/original file retained in Google Drive/i);
   await linkedPage.locator('#title').fill('');
   await linkedPage.locator('#save').click();
   assert.equal(await linkedPage.locator('#appNotice').isVisible(),true,'required-field errors appear within editor');
