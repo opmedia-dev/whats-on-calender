@@ -25,6 +25,7 @@
 <body>
   <main class="page">
     <h1>What's On embeds</h1>
+    <p>Choose each embed's loading behaviour before copying it to Duda. <strong>Eager</strong> begins loading immediately; <strong>lazy</strong> waits until the embed approaches the screen. Existing Duda embeds keep their old loading setting until you replace their HTML.</p>
     <p>Copy these into a Duda <strong>HTML widget</strong>. Events published: <strong id="count">…</strong> <span class="muted" id="generated"></span></p>
 
     <section class="panel">
@@ -55,12 +56,14 @@
         <div><label for="ttDays">Days ahead</label><input id="ttDays" type="number" min="1" max="7" value="7"><p class="muted">Seven days are shown by default, including days with no events.</p></div>
         <div><label for="ttHeroHeight">Hero height (pixels)</label><input id="ttHeroHeight" type="number" min="320" max="900" value="434"><p class="muted">Compact seven-row weekly agenda for the 593 × 434px desktop slot. Each day is one horizontal row with its events beside the date. No thumbnails or internal scrolling; grows naturally on mobile.</p></div>
       </div>
+      <div class="load-preference"><label for="loadTimetable">Embed loading</label><select id="loadTimetable"><option value="eager" selected>Eager — load immediately</option><option value="lazy">Lazy — load near viewport</option></select><p class="muted">Recommended: eager for the visible homepage timetable hero.</p></div>
       <textarea id="code-timetable" readonly></textarea>
       <div class="row"><button class="wo-btn copy" data-target="code-timetable">Copy code</button> <a id="open-timetable" target="_blank">Open preview</a></div>
     </section>
     <section class="panel">
       <h2>2. Weekly Mailing Hero — 593 × 434</h2>
       <p class="muted">One featured card showing the latest sent parish mailing, its date, a short excerpt and a link to the full Mailchimp issue. Matches the timetable hero's dimensions, with mobile height adjusting automatically. No Google Calendar events or magazine are included.</p>
+      <div class="load-preference"><label for="loadMailingHero">Embed loading</label><select id="loadMailingHero"><option value="eager" selected>Eager — load immediately</option><option value="lazy">Lazy — load near viewport</option></select><p class="muted">Recommended: eager when the mailing hero is visible immediately.</p></div>
       <textarea id="code-mailingHero" readonly></textarea>
       <div class="row"><button class="wo-btn copy" data-target="code-mailingHero">Copy code</button> <a id="open-mailingHero" target="_blank">Open hero mailing preview</a></div>
     </section>
@@ -90,12 +93,14 @@
           <p class="muted">Adds a “View all issues” button. Entering a URL also enables the magazine.</p>
         </div>
       </div>
+      <div class="load-preference"><label for="loadBanner">Embed loading</label><select id="loadBanner"><option value="eager" selected>Eager — load immediately</option><option value="lazy">Lazy — load near viewport</option></select><p class="muted">Recommended: eager for the homepage featured-events banner.</p></div>
       <textarea id="code-banner" readonly></textarea>
       <div class="row"><button class="wo-btn copy" data-target="code-banner">Copy code</button> <a id="open-banner" target="_blank">Open preview</a></div>
     </section>
     <section class="panel">
       <h2>4. Weekly Mailing archive</h2>
       <p class="muted">An independent, searchable list of sent weekly mailings. The full email opens in Mailchimp. Set the public RSS URL in GitHub Actions variable <code>MAILCHIMP_RSS_URL</code> to replace the sample mailing.</p>
+      <div class="load-preference"><label for="loadMailings">Embed loading</label><select id="loadMailings"><option value="eager">Eager — load immediately</option><option value="lazy" selected>Lazy — load near viewport</option></select><p class="muted">Recommended: lazy for the mailing archive lower down a page; use eager if it starts at the top.</p></div>
       <textarea id="code-mailings" readonly></textarea>
       <div class="row"><button class="wo-btn copy" data-target="code-mailings">Copy code</button> <a id="open-mailings" target="_blank">Open mailing archive preview</a></div>
     </section>
@@ -111,6 +116,7 @@
         <div><label for="whatsonCols">Maximum columns</label><input id="whatsonCols" type="number" min="1" max="5" value="3"></div>
         <div><label for="whatsonPerPage">Events per page</label><input id="whatsonPerPage" type="number" min="1" max="60" value="9"></div>
       </div>
+      <div class="load-preference"><label for="loadWhatson">Embed loading</label><select id="loadWhatson"><option value="eager">Eager — load immediately</option><option value="lazy" selected>Lazy — load near viewport</option></select><p class="muted">Use eager when What's On is at the top of its own page; otherwise lazy saves initial bandwidth.</p></div>
       <textarea id="code-whatson" readonly></textarea>
       <div class="row"><button class="wo-btn copy" data-target="code-whatson">Copy code</button> <a id="open-whatson" target="_blank">Open preview</a></div>
     </section>
@@ -121,6 +127,7 @@
         <div><label for="calMaxPerDay">Visible events per day before +more</label><input id="calMaxPerDay" type="number" min="1" max="12" value="3"></div>
         <div><label for="calCellHeight">Minimum day cell height in pixels</label><input id="calCellHeight" type="number" min="80" max="400" value="128"></div>
       </div>
+      <div class="load-preference"><label for="loadCalendar">Embed loading</label><select id="loadCalendar"><option value="eager">Eager — load immediately</option><option value="lazy" selected>Lazy — load near viewport</option></select><p class="muted">Use eager for an immediately visible calendar; otherwise lazy is usually more efficient.</p></div>
       <textarea id="code-calendar" readonly></textarea>
       <div class="row"><button class="wo-btn copy" data-target="code-calendar">Copy code</button> <a id="open-calendar" target="_blank">Open preview</a></div>
     </section>
@@ -171,10 +178,10 @@ if(d.type==='event'&&deep){var u=new URL(location.href);if(d.id)u.searchParams.s
 <\/script>`;
 
     const esc = (s) => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
-    function iframe(page, query, height, title, extra = '') {
+    function iframe(page, query, height, title, extra = '', loading = 'lazy') {
       const qs = query.toString();
       const src = `${base}${page}${qs ? `?${qs}` : ''}`;
-      return { src, html: `<iframe data-whatson${extra} src="${esc(src)}" title="${title}" style="width:100%;height:${height}px;border:0;display:block" allow="fullscreen; web-share; clipboard-write" loading="lazy"></iframe>\n${listener()}` };
+      return { src, html: `<iframe data-whatson${extra} src="${esc(src)}" title="${title}" style="width:100%;height:${height}px;border:0;display:block" allow="fullscreen; web-share; clipboard-write" loading="${loading === 'eager' ? 'eager' : 'lazy'}"></iframe>\n${listener()}` };
     }
     const val = (id) => document.getElementById(id).value.trim();
     const hex = (id) => val(id).replace(/^#/, '');
@@ -229,12 +236,12 @@ if(d.type==='event'&&deep){var u=new URL(location.href);if(d.id)u.searchParams.s
       setInt(cal, 'cellHeight', 'calCellHeight', 80, 400);
 
       const snippets = {
-        timetable: iframe('timetable.html', tt, Number(val('ttHeroHeight')) || 434, 'Weekly timetable'),
-        mailingHero: iframe('mailing-hero.html', q, 434, 'Latest parish weekly mailing'),
-        banner: iframe('banner.html', bn, 520, "What's happening"),
-        mailings: iframe('mailings.html', q, 800, 'Parish weekly mailings'),
-        whatson: iframe('whats-on.html', wn, 1600, "What's On", ' data-deeplink'),
-        calendar: iframe('calendar.html', cal, 1100, 'Calendar'),
+        timetable: iframe('timetable.html', tt, Number(val('ttHeroHeight')) || 434, 'Weekly timetable', '', val('loadTimetable')),
+        mailingHero: iframe('mailing-hero.html', q, 434, 'Latest parish weekly mailing', '', val('loadMailingHero')),
+        banner: iframe('banner.html', bn, 520, "What's happening", '', val('loadBanner')),
+        mailings: iframe('mailings.html', q, 800, 'Parish weekly mailings', '', val('loadMailings')),
+        whatson: iframe('whats-on.html', wn, 1600, "What's On", ' data-deeplink', val('loadWhatson')),
+        calendar: iframe('calendar.html', cal, 1100, 'Calendar', '', val('loadCalendar')),
       };
       for (const [k, s] of Object.entries(snippets)) {
         document.getElementById(`code-${k}`).value = s.html;
