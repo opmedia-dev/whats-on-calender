@@ -27,6 +27,12 @@ jobs:
         run: npm ci
       - name: Test event parsing and presentation
         run: npm test
+      - name: Install headless Chromium for editor interaction smoke test
+        run: |
+          npm install --no-save --ignore-scripts playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Browser test: calendar clicks open editor
+        run: node scripts/test-admin-browser.mjs
       - name: Create realistic API-free preview data
         run: node scripts/preview-data.mjs
       - name: Create sample weekly mailing for standalone preview
