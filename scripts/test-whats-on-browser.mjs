@@ -117,6 +117,13 @@ try {
  // Exercise the real embed generator as well as its unit tests.
  // Existing Duda iframes must be replaced to apply a new loading preference.
  await page.goto(base + '/index.html');
+ await page.waitForFunction(() => /^[0-9]+m [0-9]{2}s$/.test(document.getElementById('refresh-countdown')?.textContent || ''));
+ assert.match(await page.locator('#refresh-time').textContent(), /^[0-9]{2}:[0-9]{2}$/);
+ assert.ok((await page.locator('#refresh-history').getAttribute('href')).includes('/actions/workflows/deploy.yml'));
+ const clockBefore = await page.locator('#refresh-countdown').textContent();
+ await page.waitForTimeout(1250);
+ const clockAfter = await page.locator('#refresh-countdown').textContent();
+ assert.notEqual(clockAfter, clockBefore, 'next scheduled check countdown must tick without page reload');
  const defaults = [
   ['loadTimetable','code-timetable','eager'],
   ['loadMailingHero','code-mailingHero','eager'],
