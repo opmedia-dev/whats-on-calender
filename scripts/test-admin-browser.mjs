@@ -195,7 +195,7 @@ try {
   assert.equal(await linkedPage.locator('.attachment-meta strong').textContent(),'Image 1');
   assert.equal(await linkedPage.locator('.attachment-thumb').count(),1);
   assert.equal(await linkedPage.locator('.attachment-choice input').isChecked(),true);
-  assert.equal(await linkedPage.locator('#attachmentList button').count(),0);
+  assert.equal(await linkedPage.locator('#attachmentList button.attachment-remove').count(),1);
   assert.equal(await linkedPage.locator('.attachment-no-header').isVisible(),true);
   await linkedPage.locator('#previewHeaderImage').evaluate(img => img.decode());
   await linkedPage.locator('#art').scrollIntoViewIfNeeded();
