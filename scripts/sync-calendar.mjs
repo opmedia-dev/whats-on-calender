@@ -19,6 +19,7 @@ import { execFileSync } from 'node:child_process';
 import sharp from 'sharp';
 import { describeRecurrence } from './lib/recurrence.mjs';
 import { processDescription } from './lib/description.mjs';
+import { eventCategory } from './lib/event-category.mjs';
 
 const root = path.resolve(import.meta.dirname, '..');
 const config = JSON.parse(fs.readFileSync(path.join(root, 'config.json'), 'utf8'));
@@ -237,6 +238,7 @@ for (const e of events) {
     attachments.find((a) => a.mimeType === 'application/pdf' && a.local);
   const image = imageSource ? await makeImage(imageSource) : null;
   const desc = processDescription(e.description);
+  const category = eventCategory(e, master);
   const files = attachments
     .filter((a) => !(image && a === imageSource && IMAGE_TYPES.test(a.mimeType)))
     .map(({ title, url, mimeType, size }) => ({ title, url, mimeType, size }));
@@ -259,6 +261,8 @@ for (const e of events) {
     allDay,
     location: e.location?.trim() || '',
     colorId: e.colorId || null,
+    category: category.category,
+    categorySource: category.source,
     recurring: Boolean(e.recurringEventId),
     recurrence: master?.recurrence ? describeRecurrence(master.recurrence, master.start?.dateTime || master.start?.date, timeZone) : null,
     featured: Boolean(image),
