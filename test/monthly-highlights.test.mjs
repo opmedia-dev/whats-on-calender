@@ -37,6 +37,12 @@ test('Highlights is a permanent top section, and month is the default listing', 
  assert.match(page,/const monthEvents = \(\) => eventsInMonth\(events, selectedMonth\)/);
  assert.match(page,/id="month-prev"/);
  assert.match(page,/id="month-next"/);
+ assert.doesNotMatch(page, /month-next[^\n]+render\(true\)/);
+ assert.doesNotMatch(page, /month-prev[^\n]+render\(true\)/);
+ assert.doesNotMatch(page, /todayButton\.addEventListener\('click',[^\n]+render\(true\)/);
+ const css=source('site/assets/wo.css');
+ assert.match(css, /#highlights-section \.wo-cards\{display:flex;flex-wrap:wrap/);
+ assert.match(css, /#highlights-section \.wo-card\{[^}]*max-width:340px/);
  assert.match(page,/renderCard\(e, \{ showRecurrence: e\.recurring, summary: summaries/);
  assert.doesNotMatch(page,/featured:\s*series\.filter/);
 });
