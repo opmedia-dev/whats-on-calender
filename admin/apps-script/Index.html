@@ -638,9 +638,11 @@ function showEditor(title){
  $('dialogTitle').textContent=title;
  if(!$('editorDialog').open)$('editorDialog').showModal();
 }
-function closeEditor(){
- if((state.dirty || $('uploadAttachment').files.length) &&
-    !confirm('Discard your unsaved event changes and selected files?'))return;
+async function closeEditor(){
+ if(state.busy)return;
+ if(state.dirty || $('uploadAttachment').files.length){
+  if(!await askAction({title:'Discard unsaved changes?',message:'Changes and any selected files will be discarded. The saved calendar event remains unchanged.',confirmText:'Discard changes',danger:true}))return;
+ }
  state.dirty=false;resetDraftImage();$('editorDialog').close();
 }
 function weekOf(date){
@@ -825,12 +827,12 @@ async function save(ev){
    var problem='Cannot save the selected file: the parish Drive upload folder is not configured. Set EDITOR_UPLOAD_FOLDER_ID in Code.gs, then deploy a new version.';
    status(problem,true);$('uploadStatus').textContent=problem;return;
   }
-  if(!confirm('Save this event and upload "'+file.name+'" to the public parish Drive folder?'))return;
+  if(!await askAction({title:'Save event and upload file?',message:'Save the event and upload "'+file.name+'" to the parish Drive folder?',confirmText:'Save and upload'}))return;
  }
  if(state.active&&state.active.isRecurring&&state.scope==='series'
-   && !confirm('Change ALL events in this recurring series, including earlier dates?'))return;
+   && !await askAction({title:'Change all recurring events?',message:'This will change the entire series, including earlier dates.',confirmText:'Update whole series'}))return;
  if(state.active&&state.active.isRecurring&&state.scope==='following'
-   && !confirm('Change THIS event and all FUTURE occurrences? Earlier dates remain unchanged. This splits the recurrence into two calendar series.'))return;
+   && !await askAction({title:'Change this and future events?',message:'The series will split at this date. Earlier dates stay unchanged.',confirmText:'Update future events'}))return;
  var saved=null,uploaded=false;
  pending(true);status('Saving event to Google Calendar…');
  try{
@@ -866,7 +868,7 @@ async function save(ev){
 async function remove(){
  if(!linked||!state.id)return;
  var target=state.active&&state.active.isRecurring?(state.scope==='series'?'entire series':state.scope==='following'?'this event and every future occurrence':'one occurrence'):'event';
- if(!confirm('Delete this '+target+' permanently from Google Calendar?'))return;
+ if(!await askAction({title:'Delete '+target+'?',message:'Permanently delete '+target+' from Google Calendar? This cannot be undone.',confirmText:'Delete',danger:true}))return;
  pending(true);status('Deleting…');
  try{await call('editorDeleteEvent',state.id,state.scope,state.revision);await range();state.dirty=false;resetDraftImage();$('editorDialog').close();status('Deleted from calendar.')}
  catch(e){status(e.message||String(e),true);pending(false)}
@@ -882,10 +884,14 @@ $('refresh').addEventListener('click',load);
 $('eventForm').addEventListener('submit',save);
 $('delete').addEventListener('click',remove);
 $('resetChanges').addEventListener('click',function(){if(state.id){state.dirty=false;openEvent(state.id,state.scope)}else newEntry($('startDate').value||today())});
-document.querySelectorAll('input[name=scope]').forEach(function(el){el.addEventListener('change',function(){
+document.querySelectorAll('input[name=scope]').forEach(function(el){el.addEventListener('change',async function(){
  if(!el.checked||!state.id)return;
- if(state.dirty&&!confirm('Changing the editing scope will discard unsaved changes. Continue?')){
-  var original=document.querySelector('input[name=scope][value='+state.scope+']');if(original)original.checked=true;return;
+ if(state.dirty){
+  const ok=await askAction({title:'Change editing scope?',message:'Switching the recurrence scope discards unsaved editor changes.',confirmText:'Discard and switch',danger:true});
+  if(!ok){
+   const original=document.querySelector('input[name=scope][value='+state.scope+']');if(original)original.checked=true;
+   return;
+  }
  }
  state.dirty=false;openEvent(state.active?.selectedId||state.id,el.value);
 })});
@@ -897,15 +903,20 @@ $('description').addEventListener('paste',function(e){
 });
 document.querySelectorAll('[data-format]').forEach(function(button){
  button.addEventListener('mousedown',function(e){e.preventDefault()});
- button.addEventListener('click',function(){
-  $('description').focus();
-  var action=button.dataset.format;
+ button.addEventListener('click',async function(){
+  const action=button.dataset.format;
   if(action==='createLink'){
-   var href=prompt('Enter a web link (https://) or email address (mailto:)');
+   const selection=window.getSelection();
+   const range=selection&&selection.rangeCount?selection.getRangeAt(0).cloneRange():null;
+   const href=await askAction({title:'Add a link',message:'Enter a secure website address or email link.',input:true,confirmText:'Insert link'});
    if(!href)return;
-   if(!/^(?:https:\/\/|mailto:)/i.test(href)){status('Links must use https:// or mailto:',true);return}
+   $('description').focus();
+   if(range){selection.removeAllRanges();selection.addRange(range)}
    document.execCommand('createLink',false,href);
-  }else document.execCommand(action,false,null);
+  }else{
+   $('description').focus();
+   document.execCommand(action,false,null);
+  }
   state.changed=true;state.dirty=true;preview();
  });
 });
@@ -941,7 +952,7 @@ $('uploadForm').addEventListener('submit',async function(ev){
  if(state.dirty){$('uploadStatus').textContent='Save event changes first, or save and upload the file together.';return}
  var file=$('uploadAttachment').files[0];
  if(!file)return;
- if(!confirm('This file will be publicly accessible from the event. Upload it to the parish Drive folder?'))return;
+ if(!await askAction({title:'Upload attachment?',message:'Upload this file to the parish Drive folder and link it to the event?',confirmText:'Upload file'}))return;
  $('uploadEventId').value=state.id;$('uploadEditScope').value=state.scope;
  pending(true);$('uploadStatus').textContent='Uploading to Google Drive and attaching to the event…';
  try{
