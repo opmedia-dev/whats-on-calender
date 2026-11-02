@@ -15,10 +15,10 @@
     import { loadMailings } from './assets/mailings.js';
     import { renderMailingHero } from './assets/mailing-hero.js?v=mailchimp-logo-20261102';
 
-    await init();
+    const initialisation = init(); // Start the host handshake while event data loads.
     const host = document.getElementById('mailingHero');
     try {
-      const { mailings, preview } = await loadMailings();
+      const [, { mailings, preview }] = await Promise.all([initialisation, loadMailings()]);
       const latest = mailings[0];
       if (latest) {
         host.replaceChildren(renderMailingHero(latest, { h, preview }));
