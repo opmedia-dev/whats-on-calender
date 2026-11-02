@@ -11,6 +11,7 @@
 const EDITOR_CALENDAR_ID = 'c_d30f3ffb0daab410095d7c8446d61248b0f80e4925fe7599e3880611b490f8ca@group.calendar.google.com';
 const EDITOR_ZONE = 'Europe/London';
 const CATEGORY_KEY = 'woCategory';
+const HEADER_IMAGE_KEY = 'woHeaderImageId';
 const CATEGORIES = ['general', 'worship', 'community', 'music', 'families', 'heritage', 'fundraising'];
 const WRITE_ROLES = ['writer', 'owner'];
 // Set to a dedicated parish-controlled Google Drive folder before enabling uploads.
@@ -135,6 +136,7 @@ function localEvent_(e) {
     hasFormattedDescription: /<\/?(?:p|div|span|strong|b|a|br|ul|ol|li)\b/i.test(e.description || ''),
     descriptionOriginal: e.description || '',
     attachments: attachmentsFor_(e),
+    headerImageId: e.extendedProperties?.shared?.[HEADER_IMAGE_KEY] || '',
   };
 }
 
@@ -320,6 +322,18 @@ function editorSaveEvent(form) {
     if (form.revision !== record.target.etag) {
       throw new Error('This event changed in Google Calendar. Reload it before saving to avoid overwriting another editor.');
     }
+    // A chosen header must be a real image already attached to THIS event.
+    // Never let a discarded draft/another event supply a foreign file ID.
+    const headerChoice = String(form.headerImageId || '').trim();
+    if (headerChoice) {
+      const match = (record.target.attachments || []).find(a =>
+        a.fileId === headerChoice && /^image\//i.test(a.mimeType || ''));
+      if (!match) throw new Error('The selected header image is not attached to this event. Reload and choose again.');
+    }
+    const existingShared = (record.target.extendedProperties && record.target.extendedProperties.shared) || {};
+    parsed.body.extendedProperties.shared = Object.assign({}, existingShared, {
+      [CATEGORY_KEY]: category_(form.category), [HEADER_IMAGE_KEY]: headerChoice,
+    });
     if (scope === 'occurrence' && record.recurring) {
       // Instance exceptions cannot alter recurring masters.
       delete parsed.body.recurrence;
@@ -385,7 +399,17 @@ function editorUploadFile(form) {
       fileUrl: file.webViewLink || 'https://drive.google.com/file/d/' + encodeURIComponent(file.id) + '/view',
       title: file.name || name, mimeType: file.mimeType || mimeType,
     };
-    const updated = Calendar.Events.patch({ attachments: existing.concat([attachment]) },
+    const role = String(form.imageRole || 'gallery');
+    if (!['header', 'gallery'].includes(role)) throw new Error('Invalid image placement.');
+    if (role === 'header' && !mimeType.startsWith('image/')) {
+      throw new Error('Only an image can be used as the header.');
+    }
+    const shared = (record.target.extendedProperties && record.target.extendedProperties.shared) || {};
+    const changes = { attachments: existing.concat([attachment]) };
+    if (role === 'header') {
+      changes.extendedProperties = { shared: Object.assign({}, shared, { [HEADER_IMAGE_KEY]: file.id }) };
+    }
+    const updated = Calendar.Events.patch(changes,
       EDITOR_CALENDAR_ID, record.target.id, { sendUpdates: 'none', supportsAttachments: true });
     return { uploaded: true, name: attachment.title, eventId: updated.id, attachmentCount: existing.length + 1 };
   } finally { lock.releaseLock(); }
