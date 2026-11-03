@@ -21,7 +21,7 @@ try {
   console.log('Loaded demo:', url);
   fs.mkdirSync('ui-review', {recursive:true});
   assert.equal(await page.locator('.workspace-grid').count(),1,'Events workspace must render');
-  assert.ok(await page.locator('#agendaList .agenda-item').count() >= 1,'Agenda must include today's demo events');
+  assert.ok(await page.locator('#agendaList .agenda-item').count() >= 1,'Agenda must include the current demo events');
   await page.screenshot({path:'ui-review/event-manager-calendar-desktop.png',fullPage:true});
   await page.locator('#eventSearch').fill('Sunday Eucharist');
   assert.equal(await page.locator('#agendaList .agenda-item').count(),1,'Search should filter agenda');
