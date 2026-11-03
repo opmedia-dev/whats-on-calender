@@ -316,6 +316,12 @@ try {
   assert.ok(dialog.width < 390, 'mobile dialog must fit viewport');
   assert.ok(dialog.height <= 780, 'mobile dialog must not exceed viewport');
   assert.equal(await page.locator('.editor-footer #save').isVisible(),true,'Save action must remain visible on mobile');
+  assert.equal(await page.locator('.editor-dialog>.layout').evaluate(el => el.scrollTop),0,
+    'opening the mobile editor must reset its scroll position');
+  const footerButtons = await page.locator('.editor-footer .btn').evaluateAll(buttons =>
+    buttons.map(button => Math.round(button.getBoundingClientRect().top)));
+  assert.ok(Math.max(...footerButtons)-Math.min(...footerButtons)<8,
+    'mobile Save, Delete and Reset actions should share one row');
   await page.screenshot({path:'ui-review/event-manager-editor-mobile.png'});
   assert.deepEqual(errors, [], 'browser must not report runtime errors');
   console.log('PASS: Editor workflow, aligned recurring scope choices, private visibility by scope, mobile modal');
