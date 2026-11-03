@@ -10,16 +10,9 @@
 </head>
 <body>
  <main class="menu-shell" id="menuWidget" aria-label="What's On highlights">
-   <div class="menu-stage wo-cards is-band" id="menuStage" aria-roledescription="carousel" aria-label="Featured events and publications">
+   <div class="menu-stage wo-cards is-band" id="menuStage" aria-roledescription="carousel" aria-live="off" aria-label="Featured events and publications">
      <p class="menu-loading" role="status">Loading parish highlights…</p>
    </div>
-   <nav class="menu-controls" id="menuControls" aria-label="Featured item controls" hidden>
-     <button id="menuPrevious" type="button" aria-label="Previous featured item" title="Previous">‹</button>
-     <div class="menu-dots" id="menuDots" role="group" aria-label="Choose featured item"></div>
-     <button id="menuPause" class="menu-pause" type="button" aria-label="Pause automatic rotation" aria-pressed="false" title="Pause rotation">Ⅱ</button>
-     <button id="menuNext" type="button" aria-label="Next featured item" title="Next">›</button>
-   </nav>
-   <span class="menu-sr-only" id="menuAnnouncement" aria-live="polite" aria-atomic="true"></span>
  </main>
  <script type="module">
  import { init, loadEvents, param, flag, isUpcoming, nextPerSeries, formatWhen, renderCard, h, icon, reportHeight } from './assets/wo.js';
@@ -30,10 +23,6 @@
 
  const widget = document.getElementById('menuWidget');
  const stage = document.getElementById('menuStage');
- const controls = document.getElementById('menuControls');
- const dots = document.getElementById('menuDots');
- const announcement = document.getElementById('menuAnnouncement');
- const pauseButton = document.getElementById('menuPause');
  const seconds = menuSeconds(param('autoplay'));
  const height = menuHeight(param('height'));
  document.documentElement.style.setProperty('--menu-height', String(height) + 'px');
@@ -150,7 +139,7 @@
   let slides = [];
  let active = 0;
  let hovered = false;
- let paused = seconds === 0 || reducedMotion.matches;
+ const paused = seconds === 0;
  let lastAdvance = Date.now();
  let renderedColumns = 0;
 
@@ -164,7 +153,7 @@
  function visibleColumns() {
    return Math.min(slides.length, columnsForWidth(stage.clientWidth));
  }
- function paint(manual = false) {
+ function paint() {
    if (!slides.length) return;
    const columns = visibleColumns();
    renderedColumns = columns;
@@ -178,70 +167,21 @@
      return card;
    });
    stage.replaceChildren(...cards);
-   dots.replaceChildren(...slides.map((entry, index) =>
-     h('button', {
-       type: 'button', 'aria-label': 'Start with item ' + (index + 1) + ' of ' + slides.length + ': ' + entry.title,
-       'aria-current': index === active ? 'true' : 'false',
-       onclick: () => moveTo(index, true),
-     })));
-   if (manual) announcement.textContent = 'Showing items starting with ' + slides[active].title;
    lastAdvance = Date.now();
    reportHeight();
  }
- function moveTo(index, manual = false) {
+ function moveTo(index) {
    if (!slides.length) return;
    active = (index + slides.length) % slides.length;
-   paint(manual);
+   paint();
  }
- function updatePause() {
-   pauseButton.textContent = paused ? '▶' : 'Ⅱ';
-   pauseButton.setAttribute('aria-pressed', String(paused));
-   pauseButton.setAttribute('aria-label', paused ? 'Resume automatic rotation' : 'Pause automatic rotation');
-   pauseButton.title = paused ? 'Resume rotation' : 'Pause rotation';
- }
- document.getElementById('menuPrevious').addEventListener('click', () => moveTo(active - 1, true));
- document.getElementById('menuNext').addEventListener('click', () => moveTo(active + 1, true));
- pauseButton.addEventListener('click', () => { paused = !paused; updatePause(); lastAdvance = Date.now(); });
  widget.addEventListener('mouseenter', () => { hovered = true; });
  widget.addEventListener('mouseleave', () => { hovered = false; lastAdvance = Date.now(); });
- reducedMotion.addEventListener?.('change', () => {
-   if (reducedMotion.matches) paused = true;
-   updatePause();
- });
- if (seconds === 0) pauseButton.hidden = true;
- updatePause();
 
- const hostReady = init();
- const eventsJob = loadEvents().catch((error) => {
-   console.warn('Featured events are unavailable:', error);
-   return { events: [], preview: false };
- });
- const mailingJob = flag('mailing', true) ? loadMailings().catch((error) => {
-   console.warn('Parish mailing is unavailable:', error);
-   return { mailings: [], preview: false };
- }) : Promise.resolve({ mailings: [], preview: false });
- const magazineJob = flag('flipbook', true)
-   ? loadMagazineIssue(previewUrl).catch((error) => {
-       console.warn('Magazine cover unavailable; showing a text-only magazine slide:', error);
-       return { title: 'Latest parish magazine', cover: null };
-     })
-   : Promise.resolve(null);
- const [, eventData, mailingData, magazineData] = await Promise.all([
-   hostReady, eventsJob, mailingJob, magazineJob,
- ]);
- const now = new Date();
- const horizon = horizonDays(param('days'));
- const selected = nextPerSeries(eventData.events.filter((event) =>
-   event.featured === true && isUpcoming(event, now) &&
-   event.startDate.getTime() - now.getTime() < horizon * 86400000));
- const mailing = mailingData.mailings[0] ? { ...mailingData.mailings[0], preview: mailingData.preview } : null;
- slides = menuSlides({ events: selected, mailing, magazine: magazineData, maxEvents: menuEventLimit(param('max')) })
-   .map((item) => viewOf(item, Boolean(eventData.preview)));
  if (slides.length === 0) {
    stage.replaceChildren(h('div', { class: 'menu-unavailable', role: 'status' },
      'Featured events and publications will appear here when available.'));
  } else {
-   controls.hidden = slides.length <= 1;
    paint();
    // Recompute the number of banner-sized cards when the menu width changes.
    // Width-only observation avoids the height feedback loops seen in older embeds.
@@ -253,7 +193,6 @@
      if (visibleColumns() !== renderedColumns) paint();
    }).observe(stage);
  }
- updatePause();
  reportHeight();
  if (seconds > 0) {
    setInterval(() => {
