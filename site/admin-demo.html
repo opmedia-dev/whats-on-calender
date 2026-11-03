@@ -1234,7 +1234,7 @@ function put(e){
  $('repeatHint').textContent=e.repeat==='keep'?'Complex recurrence preserved unless deliberately changed.':'Weekly and monthly patterns supported.';
  $('categoryHint').textContent=e.categorySource==='suggested'?'Suggested from title; choose a category to save it.':'Category stored on event.';
  
- adjustAllDay();preview();pending(false);state.dirty=false;showEditor('Edit event');status('Loaded from calendar — not yet changed.');
+ adjustAllDay();preview();pending(false);state.dirty=false;showEditor('Edit event');status(linked?'Loaded from calendar — not yet changed.':'Read-only demo — no changes will be saved.');
 }
 async function openEvent(id,scope){
  if(state.busy)return;pending(true);status('Opening event…');
