@@ -1,6 +1,6 @@
 # What's On
 
-Four What's On event embeds and two independent mailing embeds (latest mailing hero and archive) for a Duda site (or any site), built from a public Google Calendar and Mailchimp RSS feed.
+Five What's On event/content embeds and two independent mailing embeds (latest mailing hero and archive) for a Duda site (or any site), built from a public Google Calendar and Mailchimp RSS feed.
 Hosted for free on GitHub Pages, so there's no server to run.
 
 | Page | Embed |
@@ -8,6 +8,7 @@ Hosted for free on GitHub Pages, so there's no server to run.
 | `timetable.html` | Compact seven-row weekly agenda for a 593×434px desktop slot; no oversized day cards, thumbnails or internal scrollbar; today highlighted |
 | `mailing-hero.html` | Latest mailing image and issue strip within the existing Duda Mailing tab, 593×434px; text fallback when no suitable image is available |
 | `banner.html` | "What's happening": rotating event cards plus a fixed weekly mailing and fixed latest parish magazine |
+| `menu-highlights.html` | Compact, animated What's On **navigation-menu** rotator: featured events, the latest mailing and the magazine each take turns, one at a time |
 | `whats-on.html` | What's On page: regular (repeating) events, search, a card grid and full event details |
 | `calendar.html` | Monthly calendar with Today/prev/next, a Month/List switch and "+N more" for busy days; switches to a list on phones |
 | `mailings.html` | Independent, searchable Parish Weekly Mailings archive (links open on Mailchimp) |
@@ -31,9 +32,7 @@ Live site: https://opmedia-dev.github.io/whats-on-calender/
 The latest **sent** campaign from the public Mailchimp RSS feed appears as a **fixed card**
 in `banner.html` (default `mailing=1`) and as an **independent, single-card hero**
 in `mailing-hero.html`, using the same **593×434px** space as the timetable hero.
-Past issues appear only in `mailings.html`. Mailings are never inserted into `whats-on.html`,
-`calendar.html`, the hero **timetable** or Google Calendar event data. The monthly parish
-magazine remains a separate fixed card in the banner.
+Past issues appear only in `mailings.html`. The latest mailing is also available as a rotating slide in the **navigation-menu** embed. Mailings are never inserted into `whats-on.html`, `calendar.html`, the hero **timetable** or Google Calendar event data. The monthly parish magazine remains a separate fixed card in the homepage banner, and a rotating slide in the menu embed.
 
 Configure repository **Settings → Secrets and variables → Actions → Variables →
 New repository variable** with the name `MAILCHIMP_RSS_URL` and the exact public
@@ -129,7 +128,7 @@ Open <https://opmedia-dev.github.io/whats-on-calender/>, enter your What's On pa
 configure **each embed** independently before copying its HTML snippet into a Duda
 **HTML** widget. The visual embed generator provides these controls without hand-editing URLs:
 
-- **Iframe loading (per embed):** the generator provides an **Eager / Lazy** dropdown for all six embeds. Homepage timetable hero, mailing hero and featured banner default to **Eager** (load immediately); weekly mailing archive, What's On and the monthly calendar default to **Lazy** (load when near the viewport). Change What's On/calendar to Eager when they appear at the top of a page. Loading affects the *outer Duda iframe*, not how often calendar data syncs.
+- **Iframe loading (per embed):** the generator provides an **Eager / Lazy** dropdown for all seven embeds. Homepage timetable hero, mailing hero, featured banner and navigation-menu rotator default to **Eager** (load immediately); weekly mailing archive, What's On and the monthly calendar default to **Lazy** (load when near the viewport). Change What's On/calendar to Eager when they appear at the top of a page. Loading affects the *outer Duda iframe*, not how often calendar data syncs.
 - **Existing Duda HTML widgets do not automatically change their iframe loading:** to apply a new selection, copy and replace that embed's complete generated HTML snippet (iframe **and** message listener) after deployment. Other public site code improvements apply to existing embed URLs without replacement.
 - **Shared:** brand colours, font families, corner radius, 12/24-hour clock and excluded titles.
 - **Hero timetable:** seven full-width horizontal day rows at the 593×434px desktop size, using a narrow date rail and compact time + event title lines (no thumbnail images or locations). The iframe defaults to **434px**. Empty days are a single subtle line instead of an oversized card. Rows expand naturally on phones; unusually busy days use a counted link to the full agenda rather than silently clipping events.
@@ -142,13 +141,13 @@ configure **each embed** independently before copying its HTML snippet into a Du
   and the fixed latest magazine as four equal-width columns. Both publications
   stay visible as the event pages change. The cards match height and typography. The cover comes
   from the flipbook's published `issues.json` and opens the complete flipbook.
+- **Menu rotator:** `menu-highlights.html` is an independent, fixed-height carousel designed for a What’s On navigation dropdown/mega-menu, **not a full page**. The embed generator defaults to 320px height but allows 220–560px; width follows the menu container. A featured calendar event, latest sent mailing and latest magazine all participate in the same animated rotation; the latest events are interleaved with publications. Posters are contained in a separate image area rather than covered by text, preserving any lettering already printed on the poster. Event clicks use the configured What’s On page URL; magazine clicks use the configured parish archive URL when available. Manual arrows, dots and a pause button are provided, with automatic rotation pausing on hover, focus, hidden tab and reduced-motion preference. It uses the existing 15-minute data sync, without a new GitHub Action or duplicated feeds. Menu dimensions and browser support for HTML widgets vary in Duda; configure the actual menu container to show the iframe without clipping.
 - **Weekly Mailing Hero:** a 593×434px content-only preview intended for the existing **Duda Mailing hero tab**, which already provides its own section heading, tabs and subscription controls. A genuine image from the sent Mailchimp issue fills the top of the embed; the issue title, date and small Read mailing link sit below it. Without a suitable image, a clean text-led fallback shows the issue excerpt. No redundant masthead, additional heading, subscription button or decorative illustration is inserted. Mobile height adapts and preview content is labelled.
 - **Weekly Mailings:** searchable independent archive of sent Mailchimp campaigns.
 - **What's On page:** permanent featured Highlights at top, a browsable current-month view by default, optional regular events row, search, filters, repeating badges in every view, grid columns and page size.
 - **Monthly calendar:** grid/list/automatic view, events per day and minimum cell height.
 
-The magazine column is a banner-only integration with the separate `flipbook` repository;
-it is not embedded into the standalone What's On page or monthly calendar.
+The magazine metadata is reused in the homepage banner and navigation-menu rotator. It is not embedded into the standalone What's On page or monthly calendar.
 
 The detail view's Back button always returns to its own timetable, banner or events list (instead of stepping backwards through future dates in a repeating event).
 
@@ -157,7 +156,7 @@ remain visible. The monthly calendar continues to display events on their schedu
 
 The snippet's script does three things:
 
-- sizes **all six iframes** to the actual content height, both up and down:
+- sizes **all seven iframes** to the actual content height, both up and down:
   mobile wrapping, the calendar's mobile agenda list, banner paging, mailing
   archive searches, and opening/closing event details are all accommodated
 - scrolls the embed into view when an event opens
