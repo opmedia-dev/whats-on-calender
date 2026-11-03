@@ -60,6 +60,6 @@ test('Apps Script Event Manager and public editor demo show the same countdown',
   assert.match(page,/Europe\/London/);
   assert.match(page,/setInterval\(updateRefreshCountdown,1000\)/);
   assert.match(page,/cron-job.org/);
-  assert.match(page,/Refresh history \/ run now/);
+  assert.match(page,/id="refresh-history"/);
  }
 });
