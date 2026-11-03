@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -54,6 +55,14 @@ const server = createServer(async (req, res) => {
   if(event.data.type==='hello')event.source.postMessage({source:'whatson-host',type:'hello',page:location.href},'*');
  });
 </script></body></html>`);
+   return;
+  }
+  if (url.pathname === '/mailings.json') {
+   res.writeHead(200, { 'Content-Type':'application/json' });
+   res.end(JSON.stringify({preview:false,mailings:[{
+    title:'Parish Weekly Mailing — Sample issue',published:'2026-11-01T12:00:00Z',
+    url:'https://us4.campaign-archive.com/?u=sample&id=sample',image:''
+   }]}));
    return;
   }
   if (url.pathname === '/events.json') {
@@ -128,6 +137,7 @@ try {
   ['loadTimetable','code-timetable','eager'],
   ['loadMailingHero','code-mailingHero','eager'],
   ['loadBanner','code-banner','eager'],
+  ['loadMenu','code-menu','eager'],
   ['loadMailings','code-mailings','lazy'],
   ['loadWhatson','code-whatson','lazy'],
   ['loadCalendar','code-calendar','lazy'],
@@ -146,6 +156,65 @@ try {
  await page.locator('#loadBanner').selectOption('lazy');
  assert.match(await page.locator('#code-banner').inputValue(), /loading="lazy"/);
  assert.match(await page.locator('#code-timetable').inputValue(), /loading="eager"/);
+ assert.match(await page.locator('#code-menu').inputValue(), /menu-highlights\.html/);
+ await page.locator('#menuHeight').fill('360');
+ assert.match(await page.locator('#code-menu').inputValue(), /height:360px/);
+ assert.match(await page.locator('#code-menu').inputValue(), /loading="eager"/);
+ await page.locator('#menuMagazine').uncheck();
+ assert.match(await page.locator('#code-menu').inputValue(), /flipbook=0/);
+ await page.locator('#menuMagazine').check();
+
+ // Simulate a published Flipbook issue without depending on the public network.
+ await page.route('https://opmedia-dev.github.io/flipbook/issues.json', route => route.fulfill({
+  status:200,contentType:'application/json',
+  headers:{'access-control-allow-origin':'*'},
+  body:JSON.stringify({issues:[{id:'nov-2026',title:'Parish Magazine — November',cover:''}]})
+ }));
+ await page.setViewportSize({ width: 790, height: 650 });
+ await page.goto(base + '/menu-highlights.html?height=300&autoplay=0&link=https%3A%2F%2Fwww.stjohnsoldmalden.org.uk%2Fevents-calendar&flipbookLink=https%3A%2F%2Fwww.stjohnsoldmalden.org.uk%2Fmagazine');
+ await page.locator('.menu-slide').waitFor({timeout:15000});
+ fs.mkdirSync('ui-review',{recursive:true});
+ await page.waitForTimeout(500); // Capture fully visible slide, not the entrance fade.
+ await page.screenshot({path:'ui-review/menu-highlights-wide.png'});
+ assert.equal(await page.locator('#menuDots button').count(),3,
+  'one featured event, one weekly mailing and one magazine must rotate');
+ assert.match(await page.locator('.menu-slide').textContent(), /only featured/i);
+ assert.equal(Math.round((await page.locator('.menu-shell').boundingBox()).height),300);
+ assert.match(await page.locator('.menu-slide').getAttribute('href'),/www\.stjohnsoldmalden\.org\.uk\/events-calendar\?event=only-featured/);
+ await page.locator('#menuNext').click();
+ assert.match(await page.locator('.menu-slide').textContent(),/Parish Weekly Mailing/);
+ await page.locator('#menuNext').click();
+ assert.match(await page.locator('.menu-slide').textContent(),/Parish Magazine — November/);
+ await page.waitForTimeout(500);
+ await page.screenshot({path:'ui-review/menu-highlights-magazine.png'});
+ assert.match(await page.locator('.menu-slide').getAttribute('href'),/www\.stjohnsoldmalden\.org\.uk\/magazine/);
+ await page.locator('#menuPrevious').click();
+ assert.match(await page.locator('.menu-slide').textContent(),/Parish Weekly Mailing/);
+ await page.setViewportSize({width:360,height:620});
+ const stacked=await page.locator('.menu-slide').evaluate(el=>{
+  const art=el.querySelector('.menu-visual').getBoundingClientRect();
+  const copy=el.querySelector('.menu-copy').getBoundingClientRect();
+  return {below:copy.top>=art.bottom-1,overflow:document.documentElement.scrollWidth>window.innerWidth};
+ });
+ assert.ok(stacked.below,'menu item must stack its artwork above text in narrow menus');
+ await page.waitForTimeout(500);
+ await page.screenshot({path:'ui-review/menu-highlights-narrow.png'});
+ assert.equal(stacked.overflow,false,'menu widget must not overflow the menu column');
+
+ await page.goto(base+'/menu-highlights.html?height=300&autoplay=3');
+ await page.locator('.menu-slide').waitFor();
+ // Pointer must be OUTSIDE the 300px-high carousel. Hover intentionally pauses it.
+ await page.mouse.move(350,610);
+ assert.equal(await page.locator('#menuPause').getAttribute('aria-pressed'),'false');
+
+ const initial=await page.locator('.menu-slide').textContent();
+ await page.waitForTimeout(4200);
+ assert.notEqual(await page.locator('.menu-slide').textContent(),initial,'unfocused menu should auto-rotate');
+ await page.locator('#menuPause').click();
+ assert.equal(await page.locator('#menuPause').getAttribute('aria-pressed'),'true');
+ const paused=await page.locator('.menu-slide').textContent();
+ await page.waitForTimeout(3400);
+ assert.equal(await page.locator('.menu-slide').textContent(),paused,'manual pause must prevent auto-rotation');
 
  assert.deepEqual(pageErrors, [], 'no JavaScript page exceptions');
  console.log('PASS: month navigation and card sizing, plus all embed loading defaults and selective eager/lazy overrides in Chromium');

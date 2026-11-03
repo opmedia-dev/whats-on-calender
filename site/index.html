@@ -111,6 +111,24 @@
       <textarea id="code-banner" readonly></textarea>
       <div class="row"><button class="wo-btn copy" data-target="code-banner">Copy code</button> <a id="open-banner" target="_blank">Open preview</a></div>
     </section>
+
+    <section class="panel">
+      <h2>3a. What's On menu — rotating highlights</h2>
+      <p class="muted">A separate, compact carousel for the <strong>What's On navigation menu</strong> rather than another full-width page banner. One item appears at a time; upcoming Featured events, the latest mailing and the latest parish magazine rotate together. Poster images are kept separate from the text so existing writing on artwork isn't obscured.</p>
+      <div class="grid2">
+        <div><label for="menuHeight">Menu embed height (pixels)</label><input id="menuHeight" type="number" min="220" max="560" step="10" value="320"><p class="muted">Match the available space inside the actual menu. Width automatically follows the menu column; no fixed desktop width.</p></div>
+        <div><label for="menuAutoplay">Rotate automatically every (seconds; 0 = paused)</label><input id="menuAutoplay" type="number" min="0" max="60" value="8"><p class="muted">Pause on hover, focus, reduced-motion settings and manual Pause. Arrows and dots remain available.</p></div>
+        <div><label for="menuMax">Maximum upcoming featured event slides</label><input id="menuMax" type="number" min="1" max="12" value="4"></div>
+        <div><label for="menuDays">Featured events lookahead (days)</label><input id="menuDays" type="number" min="1" max="400" value="400"></div>
+        <div><label class="inline" for="menuMailing"><input id="menuMailing" type="checkbox" checked> Include the latest weekly mailing</label></div>
+        <div><label class="inline" for="menuMagazine"><input id="menuMagazine" type="checkbox" checked> Include the latest parish magazine</label></div>
+      </div>
+      <p class="muted">The event destination uses <strong>What's On page URL on your site</strong> above. The magazine uses the preview/archive addresses from the existing banner settings. The carousel is a read-only widget and does not create another refresh schedule.</p>
+      <div class="load-preference"><label for="loadMenu">Embed loading</label><select id="loadMenu"><option value="eager" selected>Eager — recommended for navigation menus</option><option value="lazy">Lazy — only if the menu opens immediately</option></select><p class="muted">Eager prevents a blank carousel when visitors open a menu that was initially hidden.</p></div>
+      <textarea id="code-menu" readonly></textarea>
+      <div class="row"><button class="wo-btn copy" data-target="code-menu">Copy code</button> <a id="open-menu" target="_blank" rel="noopener noreferrer">Open menu carousel preview</a></div>
+    </section>
+
     <section class="panel">
       <h2>4. Weekly Mailing archive</h2>
       <p class="muted">An independent, searchable list of sent weekly mailings. The full email opens in Mailchimp. Set the public RSS URL in GitHub Actions variable <code>MAILCHIMP_RSS_URL</code> to replace the sample mailing.</p>
@@ -237,6 +255,17 @@ if(d.type==='event'&&deep){var u=new URL(location.href);if(d.id)u.searchParams.s
         if (val('flipbookLink')) bn.set('flipbookLink', val('flipbookLink'));
         if (val('flipbookUrl')) bn.set('flipbookUrl', val('flipbookUrl'));
       }
+      const mn = new URLSearchParams(withLink);
+      setInt(mn, 'height', 'menuHeight', 220, 560);
+      setInt(mn, 'autoplay', 'menuAutoplay', 0, 60);
+      setInt(mn, 'max', 'menuMax', 1, 12);
+      setInt(mn, 'days', 'menuDays', 1, 400);
+      if (!document.getElementById('menuMailing').checked) mn.set('mailing', '0');
+      if (!document.getElementById('menuMagazine').checked) mn.set('flipbook', '0');
+      if (document.getElementById('menuMagazine').checked) {
+        if (val('flipbookLink')) mn.set('flipbookLink', val('flipbookLink'));
+        if (val('flipbookUrl')) mn.set('flipbookUrl', val('flipbookUrl'));
+      }
       const wn = new URLSearchParams(q);
       if (!document.getElementById('regular').checked) wn.set('regular', '0');
       if (!document.getElementById('filters').checked) wn.set('filters', '0');
@@ -253,6 +282,7 @@ if(d.type==='event'&&deep){var u=new URL(location.href);if(d.id)u.searchParams.s
         timetable: iframe('timetable.html', tt, Number(val('ttHeroHeight')) || 434, 'Weekly timetable', '', val('loadTimetable')),
         mailingHero: iframe('mailing-hero.html', q, 434, 'Latest parish weekly mailing', '', val('loadMailingHero')),
         banner: iframe('banner.html', bn, 520, "What's happening", '', val('loadBanner')),
+        menu: iframe('menu-highlights.html', mn, Number(val('menuHeight')) || 320, "What's On navigation menu highlights", '', val('loadMenu')),
         mailings: iframe('mailings.html', q, 800, 'Parish weekly mailings', '', val('loadMailings')),
         whatson: iframe('whats-on.html', wn, 1600, "What's On", ' data-deeplink', val('loadWhatson')),
         calendar: iframe('calendar.html', cal, 1100, 'Calendar', '', val('loadCalendar')),

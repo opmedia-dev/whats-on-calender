@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+<head>
+ <meta charset="utf-8">
+ <meta name="viewport" content="width=device-width,initial-scale=1">
+ <meta name="robots" content="noindex">
+ <title>What's On — Menu Highlights</title>
+ <link rel="stylesheet" href="assets/wo.css">
+ <link rel="stylesheet" href="assets/menu-carousel.css">
+</head>
+<body>
+ <main class="menu-shell" id="menuWidget" aria-label="What's On highlights">
+   <div class="menu-stage" id="menuStage" aria-roledescription="carousel" aria-label="Featured events and publications">
+     <p class="menu-loading" role="status">Loading parish highlights…</p>
+   </div>
+   <nav class="menu-controls" id="menuControls" aria-label="Featured item controls" hidden>
+     <button id="menuPrevious" type="button" aria-label="Previous featured item" title="Previous">‹</button>
+     <div class="menu-dots" id="menuDots" role="group" aria-label="Choose featured item"></div>
+     <button id="menuPause" class="menu-pause" type="button" aria-label="Pause automatic rotation" aria-pressed="false" title="Pause rotation">Ⅱ</button>
+     <button id="menuNext" type="button" aria-label="Next featured item" title="Next">›</button>
+   </nav>
+   <span class="menu-sr-only" id="menuAnnouncement" aria-live="polite" aria-atomic="true"></span>
+ </main>
+ <script type="module">
+ import { init, loadEvents, param, flag, isUpcoming, nextPerSeries, formatWhen, h, reportHeight } from './assets/wo.js';
+ import { loadMailings } from './assets/mailings.js';
+ import { loadMagazineIssue, magazineDestination } from './assets/magazine.js';
+ import { horizonDays } from './assets/banner-config.js';
+ import { menuHeight, menuSeconds, menuEventLimit, menuSlides, canAdvanceMenu } from './assets/menu-carousel.js';
+
+ const widget = document.getElementById('menuWidget');
+ const stage = document.getElementById('menuStage');
+ const controls = document.getElementById('menuControls');
+ const dots = document.getElementById('menuDots');
+ const announcement = document.getElementById('menuAnnouncement');
+ const pauseButton = document.getElementById('menuPause');
+ const seconds = menuSeconds(param('autoplay'));
+ const height = menuHeight(param('height'));
+ document.documentElement.style.setProperty('--menu-height', String(height) + 'px');
+ const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+ const defaultPreview = 'https://opmedia-dev.github.io/flipbook/preview.html';
+ const configuredPreview = param('flipbookUrl', defaultPreview);
+ const previewUrl = (() => {
+   try {
+     const parsed = new URL(configuredPreview);
+     if (parsed.protocol === 'https:') return parsed.href;
+   } catch { /* use a reliable default */ }
+   return defaultPreview;
+ })();
+ const magazineLink = magazineDestination(previewUrl, param('flipbookLink'), param('accent'));
+
+ function visualSource(value) {
+   try {
+     const parsed = new URL(value || '', location.href);
+     return parsed.protocol === 'https:' || parsed.origin === location.origin ? parsed.href : '';
+   } catch { return ''; }
+ }
+ function eventLink(event) {
+   try {
+     const link = new URL(param('link'));
+     if (link.protocol === 'https:' || link.protocol === 'http:') {
+       link.searchParams.set('event', event.id);
+       return { href: link.href, target: '_top' };
+     }
+   } catch { /* fall back to an independent hosted event details page */ }
+   const hosted = new URL('whats-on.html', location.href);
+   hosted.hash = 'event=' + encodeURIComponent(event.id);
+   return { href: hosted.href, target: '_blank' };
+ }
+ function viewOf(item, isSample) {
+   if (item.type === 'event') {
+     const event = item.event;
+     const navigation = eventLink(event);
+     return {
+       type: 'event', tag: isSample ? 'Sample featured event' : 'Featured event',
+       title: event.title,
+       meta: formatWhen(event, { clock: param('clock', '12'), year: true, ordinals: false }),
+       link: 'Event details', image: visualSource(event.info?.image?.small || event.info?.image?.src),
+       href: navigation.href, target: navigation.target, symbol: '✣'
+     };
+   }
+   if (item.type === 'mailing') {
+     const mailing = item.mailing;
+     const date = new Date(mailing.published);
+     const published = Number.isFinite(date.getTime())
+       ? new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', day: 'numeric', month: 'short', year: 'numeric' }).format(date)
+       : '';
+     return {
+       type: 'mailing', tag: mailing.preview ? 'Sample weekly mailing' : 'Latest weekly mailing',
+       title: mailing.title, meta: published || mailing.summary || '',
+       link: 'Read mailing', image: visualSource(mailing.image),
+       href: mailing.url, target: '_blank', symbol: '✉'
+     };
+   }
+   return {
+     type: 'magazine', tag: 'Parish magazine',
+     title: item.magazine.title, meta: 'The latest issue of our parish magazine',
+     link: magazineLink.usesArchive ? 'View magazine archive' : 'Read the magazine',
+     image: visualSource(item.magazine.cover), href: magazineLink.href,
+     target: magazineLink.usesArchive ? '_top' : '_blank', symbol: '▤'
+   };
+ }
+ function renderVisual(view) {
+   const visual = h('div', { class: 'menu-visual kind-' + view.type });
+   const placeholder = () => h('span', { class: 'menu-symbol', 'aria-hidden': 'true' }, view.symbol);
+   if (!view.image) {
+     visual.classList.add('is-placeholder');
+     visual.append(placeholder());
+   } else {
+     const photo = h('img', { src: view.image, alt: '', loading: 'eager', decoding: 'async' });
+     photo.addEventListener('error', () => {
+       if (!photo.isConnected) return;
+       visual.classList.add('is-placeholder');
+       visual.replaceChildren(placeholder());
+     }, { once: true });
+     visual.append(photo);
+   }
+   return visual;
+ }
+
+ let slides = [];
+ let active = 0;
+ let hovered = false;
+ let paused = seconds === 0 || reducedMotion.matches;
+ let lastAdvance = Date.now();
+
+ function paint(manual = false) {
+   if (!slides.length) return;
+   const view = slides[active];
+   const link = h('a', {
+     class: 'menu-slide', href: view.href, target: view.target,
+     rel: view.target === '_blank' ? 'noopener noreferrer' : null,
+     'aria-label': view.tag + ': ' + view.title,
+     'aria-roledescription': 'slide',
+     'aria-posinset': active + 1,
+     'aria-setsize': slides.length,
+   },
+     renderVisual(view),
+     h('div', { class: 'menu-copy' },
+       h('span', { class: 'menu-label' }, view.tag),
+       h('h2', { class: 'menu-title' }, view.title),
+       view.meta ? h('p', { class: 'menu-meta' }, view.meta) : null,
+       h('span', { class: 'menu-link' }, view.link)));
+   stage.replaceChildren(link);
+   dots.replaceChildren(...slides.map((entry, index) =>
+     h('button', {
+       type: 'button', 'aria-label': 'Show ' + (index + 1) + ' of ' + slides.length + ': ' + entry.title,
+       'aria-current': index === active ? 'true' : 'false',
+       onclick: () => moveTo(index, true),
+     })));
+   if (manual) announcement.textContent = 'Featured item ' + (active + 1) + ' of ' + slides.length + ': ' + view.title;
+   lastAdvance = Date.now();
+   reportHeight();
+ }
+ function moveTo(index, manual = false) {
+   if (!slides.length) return;
+   active = (index + slides.length) % slides.length;
+   paint(manual);
+ }
+ function updatePause() {
+   pauseButton.textContent = paused ? '▶' : 'Ⅱ';
+   pauseButton.setAttribute('aria-pressed', String(paused));
+   pauseButton.setAttribute('aria-label', paused ? 'Resume automatic rotation' : 'Pause automatic rotation');
+   pauseButton.title = paused ? 'Resume rotation' : 'Pause rotation';
+ }
+ document.getElementById('menuPrevious').addEventListener('click', () => moveTo(active - 1, true));
+ document.getElementById('menuNext').addEventListener('click', () => moveTo(active + 1, true));
+ pauseButton.addEventListener('click', () => { paused = !paused; updatePause(); lastAdvance = Date.now(); });
+ widget.addEventListener('mouseenter', () => { hovered = true; });
+ widget.addEventListener('mouseleave', () => { hovered = false; lastAdvance = Date.now(); });
+ reducedMotion.addEventListener?.('change', () => {
+   if (reducedMotion.matches) paused = true;
+   updatePause();
+ });
+ if (seconds === 0) pauseButton.hidden = true;
+ updatePause();
+
+ const hostReady = init();
+ const eventsJob = loadEvents().catch((error) => {
+   console.warn('Featured events are unavailable:', error);
+   return { events: [], preview: false };
+ });
+ const mailingJob = flag('mailing', true) ? loadMailings().catch((error) => {
+   console.warn('Parish mailing is unavailable:', error);
+   return { mailings: [], preview: false };
+ }) : Promise.resolve({ mailings: [], preview: false });
+ const magazineJob = flag('flipbook', true)
+   ? loadMagazineIssue(previewUrl).catch((error) => {
+       console.warn('Magazine cover unavailable; showing a text-only magazine slide:', error);
+       return { title: 'Latest parish magazine', cover: null };
+     })
+   : Promise.resolve(null);
+ const [, eventData, mailingData, magazineData] = await Promise.all([
+   hostReady, eventsJob, mailingJob, magazineJob,
+ ]);
+ const now = new Date();
+ const horizon = horizonDays(param('days'));
+ const selected = nextPerSeries(eventData.events.filter((event) =>
+   event.featured === true && isUpcoming(event, now) &&
+   event.startDate.getTime() - now.getTime() < horizon * 86400000));
+ const mailing = mailingData.mailings[0] ? { ...mailingData.mailings[0], preview: mailingData.preview } : null;
+ slides = menuSlides({ events: selected, mailing, magazine: magazineData, maxEvents: menuEventLimit(param('max')) })
+   .map((item) => viewOf(item, Boolean(eventData.preview)));
+ if (slides.length === 0) {
+   stage.replaceChildren(h('div', { class: 'menu-unavailable', role: 'status' },
+     'Featured events and publications will appear here when available.'));
+ } else {
+   controls.hidden = slides.length <= 1;
+   paint();
+ }
+ updatePause();
+ reportHeight();
+ if (seconds > 0) {
+   setInterval(() => {
+     if (!canAdvanceMenu({
+       slideCount: slides.length, paused, hovered, focused: widget.contains(document.activeElement),
+       hidden: document.hidden, reducedMotion: reducedMotion.matches,
+     })) return;
+     if (Date.now() - lastAdvance >= seconds * 1000) moveTo(active + 1);
+   }, 800);
+ }
+ </script>
+</body>
+</html>
