@@ -802,8 +802,32 @@ async function removeAttachment(item,displayName){
 }
 function create(tag,cls,text){var el=document.createElement(tag);if(cls)el.className=cls;if(text!==undefined)el.textContent=text;return el}
 function eventDay(e){var s=e.start.slice(0,10);return s}
-function eventsAt(day){return state.events.filter(function(e){return eventDay(e)===day})}
+function matchesEvent(e){
+ const query=$('eventSearch').value.trim().toLocaleLowerCase(),category=$('categoryFilter').value;
+ return (!category||(e.category||'general')===category)&&(!query||String(e.title||'').toLocaleLowerCase().includes(query));
+}
+function eventsAt(day){return state.events.filter(function(e){return eventDay(e)===day&&matchesEvent(e)})}
 function eventTime(e){return e.allDay?'All day':(e.start.slice(11,16)||'')}
+function renderAgenda(start){
+ const visible=state.events.filter(function(e){
+  const day=eventDay(e);
+  return matchesEvent(e)&&(state.mode==='month'?day.slice(0,7)===start.slice(0,7):day>=start&&day<=add(start,6));
+ }).sort(function(a,b){return a.start.localeCompare(b.start)});
+ const count=visible.length;
+ $('visibleCount').textContent=count+' matching event'+(count===1?'':'s')+' in this '+state.mode;
+ $('agendaCount').textContent=count+' event'+(count===1?'':'s');
+ const host=$('agendaList');host.replaceChildren();
+ if(!count){host.append(create('p','agenda-empty','No matching events in this view. Try a different search, category or date.'));return}
+ visible.slice(0,12).forEach(function(e){
+  const item=create('button','agenda-item');item.type='button';item.dataset.category=e.category||'general';
+  const bar=create('span','agenda-mark');bar.setAttribute('aria-hidden','true');
+  const info=create('span','agenda-content');
+  info.append(create('span','agenda-item-title',e.title));
+  info.append(create('span','agenda-item-date',pretty(eventDay(e),{timeZone:'UTC',weekday:'short',day:'numeric',month:'short'})+' · '+eventTime(e)));
+  item.append(bar,info);item.addEventListener('click',function(){openEvent(e.id)});host.append(item);
+ });
+ if(count>12)host.append(create('p','agenda-extra','Showing the first 12 events. Use the calendar for the rest.'));
+}
 function showEditor(title){
  $('dialogTitle').textContent=title;
  if(!$('editorDialog').open)$('editorDialog').showModal();
@@ -937,6 +961,7 @@ function calendar(){
   }
   container.append(week);
  }
+ renderAgenda(start);
 }
 function put(e){
  state.id=e.selectedId||e.id;state.revision=e.revision;state.scope=e.editScope||'occurrence';state.active=e;state.changed=false;
@@ -1055,6 +1080,10 @@ async function remove(){
 $('prev').addEventListener('click',function(){shift(-1)});
 $('next').addEventListener('click',function(){shift(1)});
 $('today').addEventListener('click',function(){state.date=fromDate(today());range()});
+$('eventSearch').addEventListener('input',calendar);
+$('eventSearch').addEventListener('keydown',function(e){if(e.key==='Escape'){$('eventSearch').value='';calendar()}});
+$('categoryFilter').addEventListener('change',calendar);
+$('clearFilters').addEventListener('click',function(){$('eventSearch').value='';$('categoryFilter').value='';calendar();$('eventSearch').focus()});
 $('month').addEventListener('click',function(){setMode('month')});
 $('week').addEventListener('click',function(){setMode('week')});
 $('newEvent').addEventListener('click',function(){newEntry(today())});
