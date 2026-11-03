@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -172,6 +173,8 @@ try {
  await page.setViewportSize({ width: 790, height: 650 });
  await page.goto(base + '/menu-highlights.html?height=300&autoplay=0&link=https%3A%2F%2Fwww.stjohnsoldmalden.org.uk%2Fevents-calendar&flipbookLink=https%3A%2F%2Fwww.stjohnsoldmalden.org.uk%2Fmagazine');
  await page.locator('.menu-slide').waitFor({timeout:15000});
+ fs.mkdirSync('ui-review',{recursive:true});
+ await page.screenshot({path:'ui-review/menu-highlights-wide.png'});
  assert.equal(await page.locator('#menuDots button').count(),3,
   'one featured event, one weekly mailing and one magazine must rotate');
  assert.match(await page.locator('.menu-slide').textContent(), /only featured/i);
@@ -181,6 +184,7 @@ try {
  assert.match(await page.locator('.menu-slide').textContent(),/Parish Weekly Mailing/);
  await page.locator('#menuNext').click();
  assert.match(await page.locator('.menu-slide').textContent(),/Parish Magazine — November/);
+ await page.screenshot({path:'ui-review/menu-highlights-magazine.png'});
  assert.match(await page.locator('.menu-slide').getAttribute('href'),/www\.stjohnsoldmalden\.org\.uk\/magazine/);
  await page.locator('#menuPrevious').click();
  assert.match(await page.locator('.menu-slide').textContent(),/Parish Weekly Mailing/);
@@ -191,9 +195,11 @@ try {
   return {below:copy.top>=art.bottom-1,overflow:document.documentElement.scrollWidth>window.innerWidth};
  });
  assert.ok(stacked.below,'menu item must stack its artwork above text in narrow menus');
+ await page.screenshot({path:'ui-review/menu-highlights-narrow.png'});
  assert.equal(stacked.overflow,false,'menu widget must not overflow the menu column');
 
  await page.goto(base+'/menu-highlights.html?height=300&autoplay=3');
+ await page.mouse.move(0,0);
  await page.locator('.menu-slide').waitFor();
  const initial=await page.locator('.menu-slide').textContent();
  await page.waitForTimeout(4200);
