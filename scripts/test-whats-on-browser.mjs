@@ -267,13 +267,13 @@ try {
  assert.match(await page.locator('.menu-slide').first().textContent(),/Parish Weekly Mailing/);
  // Pause automatically while the visitor hovers, without requiring controls.
  await page.mouse.move(140,130);
- const current=await page.locator('.menu-slide').first().textContent();
+ const hoveredSlideText=await page.locator('.menu-slide').first().textContent();
  await page.waitForTimeout(3300);
- assert.equal(await page.locator('.menu-slide').first().textContent(),current,
+ assert.equal(await page.locator('.menu-slide').first().textContent(),hoveredSlideText,
    'hover should pause automatic rotation without a visible pause button');
  await page.mouse.move(350,610);
  await page.waitForFunction(initial=>document.querySelector('.menu-slide')?.textContent!==initial,
-   current,{timeout:7000});
+   hoveredSlideText,{timeout:7000});
  assert.match(await page.locator('.menu-slide').first().textContent(),/Parish Magazine — November/);
 
   assert.deepEqual(pageErrors, [], 'no JavaScript page exceptions');
