@@ -45,7 +45,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: whats-on-editor-ui-demo
-          path: site/admin-demo.html
+          path: |
+            site/admin-demo.html
+            ui-review/*.png
           if-no-files-found: error
           retention-days: 30
 
