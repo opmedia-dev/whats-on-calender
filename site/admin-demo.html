@@ -342,6 +342,20 @@ input:focus,select:focus,textarea:focus{border-color:#b78996!important;box-shado
 }
 @media(prefers-reduced-motion:reduce){.btn{transition:none}}
 
+
+/* Final usability refinements after desktop/mobile screenshot review. */
+.form-group-heading.first{margin-top:0;padding-top:0;border-top:0}
+@media(max-width:650px){
+ .editor-footer{display:flex;flex-direction:column;align-items:stretch;gap:7px;padding:10px 11px}
+ .editor-footer .form-actions{order:1;width:100%;display:flex;align-items:center;justify-content:space-between;flex-wrap:nowrap;gap:7px}
+ .editor-footer .form-actions>.tools{display:flex;flex:1;flex-wrap:nowrap;gap:7px}
+ .editor-footer .form-actions .btn{white-space:nowrap;font-size:11.5px;padding:9px 10px}
+ .editor-footer #resetChanges{flex:0 1 auto}
+ .editor-footer #delete{flex:0 1 auto}
+ .editor-footer #save{flex:1;min-width:88px}
+ .editor-footer .status{order:2;width:100%;flex:none;max-width:none;min-height:0;margin:0;font-size:11px}
+}
+
 </style>
 </head>
 <body>
@@ -392,7 +406,7 @@ input:focus,select:focus,textarea:focus{border-color:#b78996!important;box-shado
      </div>
      <p class="muted">For future events, the repeating series is split at this date. Earlier dates remain unchanged. Complex repeats may require editing in Google Calendar.</p>
     </fieldset>
-    <div class="form-group-heading"><span class="section-number" aria-hidden="true">01</span><div><h3>Event essentials</h3><p>Title, category, date and time</p></div></div>
+    <div class="form-group-heading first"><span class="section-number" aria-hidden="true">01</span><div><h3>Event essentials</h3><p>Title, category, date and time</p></div></div>
     <div class="field"><label for="title">Event title</label><input id="title" required maxlength="180" placeholder="e.g. Community Coffee Morning"></div>
     <div class="two">
      <div class="field"><label for="category">Event category</label><select id="category">
@@ -539,7 +553,7 @@ input:focus,select:focus,textarea:focus{border-color:#b78996!important;box-shado
     <div class="preview-info"><h3 id="pvTitle">Your event title</h3><p id="pvDate">Select an event date</p><p id="pvLocation" hidden></p></div>
    </div>
    <div id="previewDescription">Your event description will appear here.</div>
-   <p class="help">Category-placeholder concept. The existing public embeds are unchanged until their separate publishing update.</p>
+   <p class="help">Illustrative event-card preview. The published website updates after the next successful content synchronisation.</p>
   </div>
  </aside>
 </div>
@@ -962,7 +976,10 @@ function renderAgenda(start){
 }
 function showEditor(title){
  $('dialogTitle').textContent=title;
- if(!$('editorDialog').open)$('editorDialog').showModal();
+ if(!$('editorDialog').open){
+  $('editorDialog').showModal();
+  $('editorDialog').querySelector('.layout').scrollTop=0;
+ }
 }
 async function closeEditor(){
  if(state.busy)return;
