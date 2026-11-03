@@ -178,6 +178,32 @@
  widget.addEventListener('mouseenter', () => { hovered = true; });
  widget.addEventListener('mouseleave', () => { hovered = false; lastAdvance = Date.now(); });
 
+ const hostReady = init();
+ const eventsJob = loadEvents().catch((error) => {
+   console.warn('Featured events are unavailable:', error);
+   return { events: [], preview: false };
+ });
+ const mailingJob = flag('mailing', true) ? loadMailings().catch((error) => {
+   console.warn('Parish mailing is unavailable:', error);
+   return { mailings: [], preview: false };
+ }) : Promise.resolve({ mailings: [], preview: false });
+ const magazineJob = flag('flipbook', true)
+   ? loadMagazineIssue(previewUrl).catch((error) => {
+       console.warn('Magazine cover unavailable; showing a text-only magazine slide:', error);
+       return { title: 'Latest parish magazine', cover: null };
+     })
+   : Promise.resolve(null);
+ const [, eventData, mailingData, magazineData] = await Promise.all([
+   hostReady, eventsJob, mailingJob, magazineJob,
+ ]);
+ const now = new Date();
+ const horizon = horizonDays(param('days'));
+ const selected = nextPerSeries(eventData.events.filter((event) =>
+   event.featured === true && isUpcoming(event, now) &&
+   event.startDate.getTime() - now.getTime() < horizon * 86400000));
+ const mailing = mailingData.mailings[0] ? { ...mailingData.mailings[0], preview: mailingData.preview } : null;
+ slides = menuSlides({ events: selected, mailing, magazine: magazineData, maxEvents: menuEventLimit(param('max')) })
+   .map((item) => viewOf(item, Boolean(eventData.preview)));
  if (slides.length === 0) {
    stage.replaceChildren(h('div', { class: 'menu-unavailable', role: 'status' },
      'Featured events and publications will appear here when available.'));
