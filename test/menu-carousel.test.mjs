@@ -8,6 +8,7 @@ test('menu dimensions and autoplay are bounded, with sensible compact defaults',
   assert.equal(menuHeight(180), 320);
   assert.equal(menuHeight(600), 320);
   assert.equal(menuSeconds(undefined), 8);
+  assert.equal(menuSeconds(''), 8); // Absent query param must still auto-rotate
   assert.equal(menuSeconds(0), 0);
   assert.equal(menuSeconds(2), 8);
   assert.equal(menuSeconds(7), 7);
