@@ -5,6 +5,7 @@ export function menuHeight(raw) {
   return Number.isInteger(value) && value >= 220 && value <= 560 ? value : 320;
 }
 export function menuSeconds(raw) {
+  if (raw === undefined || raw === null || String(raw).trim() === '') return 8;
   const value = Number(raw);
   return Number.isInteger(value) && (value === 0 || (value >= 3 && value <= 60)) ? value : 8;
 }
