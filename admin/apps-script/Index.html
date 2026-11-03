@@ -214,16 +214,17 @@ input[aria-invalid=true],select[aria-invalid=true]{border-color:#ba4254!importan
 </style>
 </head>
 <body>
-<header><div class="brand"><div><strong>What's On — Event Manager</strong><small>St John the Baptist, Old Malden</small></div><span id="connection">Connecting…</span></div></header>
-<main>
-<div class="heading"><div><h1>Manage events</h1><p class="sub">Month/week calendar, event editor and live website preview.</p>
-<p class="editor-refresh-status">
- <span>Next scheduled website check in <strong id="refresh-countdown" role="timer" aria-live="off">calculating…</strong></span>
- <span>· Expected <strong id="refresh-time">—</strong> UK time</span>
- <span>· <a id="refresh-history" href="https://github.com/opmedia-dev/whats-on-calender/actions/workflows/deploy.yml" target="_blank" rel="noopener noreferrer">Refresh history / run now</a></span>
- <span class="refresh-note">External cron-job.org checks occur at :03, :18, :33 and :48 every hour (UK clock). GitHub may queue each run; publishing happens only when content changes.</span>
-</p></div>
-<div class="tools"><button id="newEvent" class="btn" type="button">+ New event</button><button id="refresh" class="btn" type="button">Refresh</button></div></div>
+<header class="app-topbar"><div class="brand"><span class="brand-monogram" aria-hidden="true">SJ</span><div class="brand-copy"><strong>St John's · What's On</strong><small>Parish events workspace</small></div><div class="header-meta"><span class="header-label">Content management</span><span id="connection">Connecting…</span></div></div></header>
+<main class="workspace">
+<div class="workspace-intro"><div><p class="eyebrow">Event management</p><h1>Events</h1><p class="sub">Plan parish activities, manage information and preview how each event will appear online.</p></div>
+ <div class="workspace-actions"><button id="refresh" type="button" class="btn">↻ Refresh events</button><button id="newEvent" type="button" class="btn primary">+ Create event</button></div></div>
+<div class="editor-refresh-status" role="note">
+ <span class="sync-light" aria-hidden="true"></span><span>Next website sync check in <strong id="refresh-countdown" role="timer" aria-live="off">calculating…</strong></span>
+ <span>· <strong id="refresh-time">—</strong> UK time</span>
+ <a id="refresh-history" href="https://github.com/opmedia-dev/whats-on-calender/actions/workflows/deploy.yml" target="_blank" rel="noopener noreferrer">Refresh history</a>
+ <span class="refresh-note">External cron-job.org checks at :03, :18, :33 and :48 each hour. Publishing occurs only when content changes.</span>
+</div>
+<div class="workspace-grid">
 <section class="panel cal-panel">
  <div class="panel-body">
   <div class="cal-head"><strong id="calTitle">Calendar</strong><div class="tools">
@@ -232,10 +233,18 @@ input[aria-invalid=true],select[aria-invalid=true]{border-color:#ba4254!importan
     <button id="month" aria-pressed="true" type="button">Month</button><button id="week" aria-pressed="false" type="button">Week</button>
    </span>
   </div></div>
+  <div class="calendar-filters" role="search" aria-label="Filter events">
+   <div class="filter-field"><label for="eventSearch">Find an event</label><input id="eventSearch" type="search" placeholder="Search event titles…" autocomplete="off"></div>
+   <div class="filter-field"><label for="categoryFilter">Category</label><select id="categoryFilter"><option value="">All categories</option><option value="worship">Worship &amp; services</option><option value="community">Community</option><option value="music">Music</option><option value="families">Children &amp; families</option><option value="heritage">Heritage &amp; talks</option><option value="fundraising">Fundraising</option><option value="general">General</option></select></div>
+   <button id="clearFilters" type="button" class="btn">Clear</button>
+  </div>
+  <p id="visibleCount" class="calendar-count" aria-live="polite">Loading events…</p>
   <div id="calendar" aria-live="polite">Loading calendar…</div>
   <p class="help">Select a day to create an event, or select an existing event to edit it.</p>
  </div>
 </section>
+<aside class="panel agenda-panel" aria-labelledby="agendaHeading"><div class="panel-heading"><h2 id="agendaHeading">Events in this view</h2><p>Open and edit events directly from this list.</p></div><div class="panel-body"><p id="agendaCount" class="agenda-count">Loading…</p><div id="agendaList" class="agenda-list" aria-live="polite"></div></div></aside>
+</div>
 </main>
 <dialog id="editorDialog" class="editor-dialog" aria-labelledby="dialogTitle">
  <div class="dialog-bar"><div><h2 id="dialogTitle">Event details</h2><p>Changes are not published until you save.</p></div><button id="closeEditor" type="button" class="dialog-close" aria-label="Close event editor">✕ Close</button></div>
