@@ -247,7 +247,7 @@ input[aria-invalid=true],select[aria-invalid=true]{border-color:#ba4254!importan
 </div>
 </main>
 <dialog id="editorDialog" class="editor-dialog" aria-labelledby="dialogTitle">
- <div class="dialog-bar"><div><h2 id="dialogTitle">Event details</h2><p>Changes are not published until you save.</p></div><button id="closeEditor" type="button" class="dialog-close" aria-label="Close event editor">✕ Close</button></div>
+ <div class="dialog-bar"><div><span class="dialog-kicker">Event editor</span><h2 id="dialogTitle">Event details</h2><p>Changes are not published until you save.</p></div><button id="closeEditor" type="button" class="dialog-close" aria-label="Close event editor">✕ Close</button></div>
 <div class="layout">
  <section class="panel">
   <div class="panel-heading"><h2>Event details</h2><p>Updates save to the existing parish Google Calendar.</p></div>
@@ -261,6 +261,7 @@ input[aria-invalid=true],select[aria-invalid=true]{border-color:#ba4254!importan
      </div>
      <p class="muted">For future events, the repeating series is split at this date. Earlier dates remain unchanged. Complex repeats may require editing in Google Calendar.</p>
     </fieldset>
+    <div class="form-group-heading"><span class="section-number" aria-hidden="true">01</span><div><h3>Event essentials</h3><p>Title, category, date and time</p></div></div>
     <div class="field"><label for="title">Event title</label><input id="title" required maxlength="180" placeholder="e.g. Community Coffee Morning"></div>
     <div class="two">
      <div class="field"><label for="category">Event category</label><select id="category">
@@ -313,6 +314,7 @@ input[aria-invalid=true],select[aria-invalid=true]{border-color:#ba4254!importan
      <div class="field"><label for="endTime">End time</label><input id="endTime" type="time" required></div>
     </div>
     <div class="field"><label for="location">Location</label><input id="location" maxlength="1000" placeholder="Church, hall or another venue"></div>
+    <div class="form-group-heading"><span class="section-number" aria-hidden="true">02</span><div><h3>Publishing</h3><p>Privacy and homepage visibility</p></div></div>
     <div class="field"><label for="visibility">Event visibility</label>
      <select id="visibility">
       <option value="default">Normal (calendar default)</option>
@@ -324,6 +326,7 @@ input[aria-invalid=true],select[aria-invalid=true]{border-color:#ba4254!importan
      <div class="featured-setting"><label class="check" for="featured"><input id="featured" type="checkbox"> <strong>Feature this event</strong></label>
       <p class="help">Show this event in the homepage banner and What's On Highlights. Other events remain in the calendar and full listings. For recurring events, choose whether this applies to one date or the whole series.</p>
      </div>
+    <div class="form-group-heading"><span class="section-number" aria-hidden="true">03</span><div><h3>Description</h3><p>Information for visitors</p></div></div>
     <div class="field"><label id="descriptionLabel" for="description">Description</label>
      <div class="formatbar" role="toolbar" aria-label="Text formatting">
       <button type="button" data-format="bold" aria-label="Bold"><strong>B</strong></button>
@@ -335,6 +338,7 @@ input[aria-invalid=true],select[aria-invalid=true]{border-color:#ba4254!importan
      <div id="description" class="rich-editor" contenteditable="true" role="textbox" aria-labelledby="descriptionLabel" aria-multiline="true" data-placeholder="Event details for visitors…"></div>
      <p class="help">Use the toolbar for bold, italic, lists and links. Formatting is retained in Google Calendar.</p>
     </div>
+    <div class="form-group-heading"><span class="section-number" aria-hidden="true">04</span><div><h3>Images &amp; documents</h3><p>Photos, attachments and positioning</p></div></div>
     <div class="field attachments-field">
      <label>Event images and attachments</label>
      <p class="help">Select a header image for event cards. Other images appear in the gallery; documents appear under Downloads.</p>
@@ -389,11 +393,7 @@ input[aria-invalid=true],select[aria-invalid=true]{border-color:#ba4254!importan
     </div>
     <p id="uploadStatus" class="status" role="status" aria-live="polite"></p>
    </form>
-   <div class="form-actions">
-    <div class="tools"><button type="submit" form="eventForm" id="save" class="btn primary">Save event</button><button type="button" id="delete" class="btn danger" disabled>Delete…</button></div>
-    <button type="button" id="resetChanges" class="btn">Reset changes</button>
-   </div>
-   <p id="status" class="status" role="status" aria-live="polite"></p>
+   
   </div>
  </section>
  <aside class="panel preview" aria-label="Live website preview">
@@ -412,6 +412,7 @@ input[aria-invalid=true],select[aria-invalid=true]{border-color:#ba4254!importan
   </div>
  </aside>
 </div>
+<footer class="editor-footer"><p id="status" class="status" role="status" aria-live="polite"></p><div class="form-actions"><button type="button" id="resetChanges" class="btn">Reset changes</button><div class="tools"><button type="button" id="delete" class="btn danger" disabled>Delete…</button><button type="submit" form="eventForm" id="save" class="btn primary">Save event</button></div></div></footer>
 </dialog>
 <dialog id="appConfirmDialog" class="app-confirm-dialog" aria-labelledby="appConfirmTitle" aria-describedby="appConfirmMessage">
  <form id="appConfirmForm" method="dialog">
