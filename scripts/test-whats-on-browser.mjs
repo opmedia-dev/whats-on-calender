@@ -221,15 +221,27 @@ try {
  await page.screenshot({path:'ui-review/menu-highlights-narrow.png'});
  assert.equal(stacked.overflow,false,'menu widget must not overflow the menu column');
 
+ // The timer pauses for hover, keyboard focus and reduced-motion, so
+ // explicitly establish an eligible state before asserting automatic paging.
+ await page.emulateMedia({reducedMotion:'no-preference'});
  await page.goto(base+'/menu-highlights.html?height=300&autoplay=3');
  await page.locator('.menu-slide').waitFor();
- // Pointer must be OUTSIDE the 300px-high carousel. Hover intentionally pauses it.
  await page.mouse.move(350,610);
- assert.equal(await page.locator('#menuPause').getAttribute('aria-pressed'),'false');
-
+ await page.locator('#menuWidget').evaluate(el=>el.dispatchEvent(new MouseEvent('mouseleave')));
+ const conditions=await page.evaluate(()=>({
+   hidden:document.hidden,
+   reducedMotion:matchMedia('(prefers-reduced-motion: reduce)').matches,
+   hovered:document.getElementById('menuWidget').matches(':hover'),
+   focused:document.getElementById('menuWidget').contains(document.activeElement),
+   pauseLabel:document.getElementById('menuPause').getAttribute('aria-pressed'),
+   slideCount:document.querySelectorAll('#menuDots button').length,
+ }));
+ console.log('Carousel autoplay preconditions:',JSON.stringify(conditions));
+ assert.deepEqual(conditions,{hidden:false,reducedMotion:false,hovered:false,
+   focused:false,pauseLabel:'false',slideCount:3});
  const initial=await page.locator('.menu-slide').textContent();
- await page.waitForTimeout(4200);
- assert.notEqual(await page.locator('.menu-slide').textContent(),initial,'unfocused menu should auto-rotate');
+ await page.waitForFunction((first)=>document.querySelector('.menu-slide')?.textContent!==first,
+   initial,{timeout:7000});
  await page.locator('#menuPause').click();
  assert.equal(await page.locator('#menuPause').getAttribute('aria-pressed'),'true');
  const paused=await page.locator('.menu-slide').textContent();
