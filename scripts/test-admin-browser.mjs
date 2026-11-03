@@ -18,6 +18,8 @@ try {
   assert.match(await page.locator('#refresh-time').textContent(), /^[0-9]{2}:[0-9]{2}$/);
   assert.ok((await page.locator('#refresh-history').getAttribute('href')).includes('/actions/workflows/deploy.yml'));
   await page.getByText('Demonstration · read-only').waitFor({ timeout: 15000 });
+  assert.equal(await page.locator('header.app-topbar #refresh-countdown').count(),1,'countdown belongs in header');
+  assert.equal(await page.locator('.editor-refresh-status').count(),0,'standalone refresh panel is removed');
   console.log('Loaded demo:', url);
   fs.mkdirSync('ui-review', {recursive:true});
   assert.equal(await page.locator('.workspace-grid').count(),1,'Events workspace must render');
@@ -33,6 +35,10 @@ try {
   assert.equal(await page.locator('#eventSearch').inputValue(),'');
   assert.equal(await page.locator('#categoryFilter').inputValue(),'');
   assert.ok(await page.locator('#agendaList .agenda-item').count() >= 1,'Clear restores agenda');
+  const controlHeights=await page.locator('#eventSearch, #categoryFilter, #clearFilters').evaluateAll(els=>els.map(el=>Math.round(el.getBoundingClientRect().height)));
+  assert.ok(Math.max(...controlHeights)-Math.min(...controlHeights)<=2,
+    'calendar filter controls should share one height: '+controlHeights.join(','));
+  assert.equal(await page.locator('#demoRecurringHint').isVisible(),true,'demo explains recurring examples');
 
   async function assertModal(label) {
     const modal = page.locator('#editorDialog');
@@ -47,6 +53,35 @@ try {
     assert.equal(await modal.locator('#pvTitle').count(), 1, 'live preview should be inside modal');
     assert.equal(await page.locator('#save').isDisabled(), true, 'demo may not save events');
   }
+
+  // Standalone demo: real recurrence scope controls, with no Google write.
+  await page.locator('#agendaList .agenda-item').filter({hasText:'Choir Practice'}).click();
+  await assertModal('weekly recurring example');
+  assert.equal(await page.locator('#scopeBox').isVisible(),true);
+  assert.equal(await page.locator('#scopeBox .scope-option').count(),3);
+  assert.equal(await page.locator('#repeat').inputValue(),'weekly');
+  assert.equal(await page.locator('#repeat').isDisabled(),true);
+  await page.locator('input[name=scope][value=following]').check();
+  await page.waitForFunction(()=>document.querySelector('input[name=scope][value=following]').checked &&
+    !document.getElementById('repeat').disabled);
+  await page.locator('#repeat').selectOption('custom');
+  assert.equal(await page.locator('#customRepeat').isVisible(),true);
+  await page.screenshot({path:'ui-review/event-manager-recurring-desktop.png'});
+  await page.locator('#closeEditor').click();
+  await page.locator('#appConfirmYes').click();
+  await page.locator('#agendaList .agenda-item').filter({hasText:'Community Craft Circle'}).click();
+  await assertModal('fortnightly recurring example');
+  await page.locator('input[name=scope][value=series]').check();
+  await page.waitForFunction(()=>document.querySelector('input[name=scope][value=series]').checked &&
+    !document.getElementById('repeat').disabled);
+  assert.equal(await page.locator('#repeat').inputValue(),'custom');
+  assert.equal(await page.locator('#customRepeat').isVisible(),true);
+  assert.equal(await page.locator('#repeatInterval').inputValue(),'2');
+  assert.equal(await page.locator('#repeatEnds').inputValue(),'count');
+  assert.equal(await page.locator('#repeatCount').inputValue(),'12');
+  assert.equal(await page.locator('#startDate').isDisabled(),true);
+  assert.equal(await page.locator('#seriesDateHint').isVisible(),true);
+  await page.locator('#closeEditor').click();
 
   await page.locator('#newEvent').click();
   await assertModal('New event');
