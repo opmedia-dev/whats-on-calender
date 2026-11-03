@@ -256,7 +256,11 @@ test('frontend contains month/week controls, side-by-side form/preview and a saf
   assert.match(frontend, /class="layout"/);
   assert.match(frontend, /<dialog id="editorDialog"/);
   assert.match(frontend, /editor-dialog \.layout\{display:grid;grid-template-columns:minmax\(0,1\.06fr\) minmax\(0,\.94fr\)/);
-  assert.doesNotMatch(frontend, /Events in view|id="eventSearch"|id="eventList"/);
+  assert.match(frontend, /id="eventSearch"/);
+  assert.match(frontend, /id="categoryFilter"/);
+  assert.match(frontend, /id="agendaList"/);
+  assert.match(frontend, /class="editor-footer"/);
+  assert.doesNotMatch(frontend, /id="eventList"/);
   assert.match(frontend, /id="resetChanges"/);
   assert.match(frontend, /HTMLFormElement\.prototype\.reset\.call/);
   assert.match(frontend, /id="customRepeat"/);
