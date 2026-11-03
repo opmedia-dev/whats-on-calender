@@ -30,7 +30,9 @@ const data = {
   from: shiftMonth(current, -3) + '-01T00:00:00Z',
   to: shiftMonth(current, 4) + '-01T00:00:00Z',
  },
- details: { demo: { summary: '', html: '', gallery: [], attachments: [] } },
+ details: { demo: { summary: '', html: '', gallery: [], attachments: [],
+   image: {src:'assets/sample-fair.svg',small:'assets/sample-fair.svg',position:'62% 40%',width:800,height:500},
+ } },
  events: [
   makeEvent('prior-month', previous, '10'),
   makeEvent('current-month', current, '12'),
@@ -179,6 +181,22 @@ try {
  assert.equal(await page.locator('#menuDots button').count(),3,
   'one featured event, one weekly mailing and one magazine must rotate');
  assert.match(await page.locator('.menu-slide').textContent(), /only featured/i);
+ assert.equal(await page.locator('.menu-slide.wo-card').count(),1,
+  'menu uses the shared banner card, not a separate hero layout');
+ assert.equal(await page.locator('.menu-slide .wo-date-badge').count(),1,
+  'event date badge matches the banner');
+ const crop=await page.locator('.menu-slide .wo-card-media img').evaluate(img=>({
+   fit:getComputedStyle(img).objectFit,
+   position:getComputedStyle(img).objectPosition,
+   media:img.parentElement.getBoundingClientRect().toJSON(),
+   image:img.getBoundingClientRect().toJSON(),
+ }));
+ assert.equal(crop.fit,'cover','featured image must crop exactly as the banner');
+ assert.equal(crop.position,'62% 40%','honour Event Manager crop position');
+ assert.ok(Math.abs(crop.media.width-crop.image.width)<2 && Math.abs(crop.media.height-crop.image.height)<2,
+  'image fills its media panel without letterboxing');
+ assert.equal(await page.locator('.menu-stage .wo-card-body').count(),1,
+  'event details use banner information band');
  assert.equal(Math.round((await page.locator('.menu-shell').boundingBox()).height),300);
  assert.match(await page.locator('.menu-slide').getAttribute('href'),/www\.stjohnsoldmalden\.org\.uk\/events-calendar\?event=only-featured/);
  await page.locator('#menuNext').click();
@@ -192,11 +210,13 @@ try {
  assert.match(await page.locator('.menu-slide').textContent(),/Parish Weekly Mailing/);
  await page.setViewportSize({width:360,height:620});
  const stacked=await page.locator('.menu-slide').evaluate(el=>{
-  const art=el.querySelector('.menu-visual').getBoundingClientRect();
-  const copy=el.querySelector('.menu-copy').getBoundingClientRect();
-  return {below:copy.top>=art.bottom-1,overflow:document.documentElement.scrollWidth>window.innerWidth};
+  const art=el.querySelector('.wo-card-media').getBoundingClientRect();
+  const copy=el.querySelector('.wo-card-body').getBoundingClientRect();
+  return {below:copy.top>=art.bottom-1,overflow:document.documentElement.scrollWidth>window.innerWidth,
+    mediaWidth:art.width,cardWidth:el.getBoundingClientRect().width};
  });
- assert.ok(stacked.below,'menu item must stack its artwork above text in narrow menus');
+ assert.ok(stacked.below,'banner card image must sit above the text band');
+ assert.ok(Math.abs(stacked.mediaWidth-stacked.cardWidth)<2,'image spans the narrow menu card');
  await page.waitForTimeout(500);
  await page.screenshot({path:'ui-review/menu-highlights-narrow.png'});
  assert.equal(stacked.overflow,false,'menu widget must not overflow the menu column');
