@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import { chromium } from 'playwright';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -18,6 +19,20 @@ try {
   assert.ok((await page.locator('#refresh-history').getAttribute('href')).includes('/actions/workflows/deploy.yml'));
   await page.getByText('Demonstration · read-only').waitFor({ timeout: 15000 });
   console.log('Loaded demo:', url);
+  fs.mkdirSync('ui-review', {recursive:true});
+  assert.equal(await page.locator('.workspace-grid').count(),1,'Events workspace must render');
+  assert.ok(await page.locator('#agendaList .agenda-item').count() >= 1,'Agenda must include today's demo events');
+  await page.screenshot({path:'ui-review/event-manager-calendar-desktop.png',fullPage:true});
+  await page.locator('#eventSearch').fill('Sunday Eucharist');
+  assert.equal(await page.locator('#agendaList .agenda-item').count(),1,'Search should filter agenda');
+  assert.equal(await page.locator('.cal-day .event-pill').count(),1,'Search should filter calendar');
+  await page.locator('#categoryFilter').selectOption('music');
+  assert.equal(await page.locator('#agendaList .agenda-item').count(),0,'Category and search compose');
+  assert.match(await page.locator('#agendaList').textContent(),/No matching events/);
+  await page.locator('#clearFilters').click();
+  assert.equal(await page.locator('#eventSearch').inputValue(),'');
+  assert.equal(await page.locator('#categoryFilter').inputValue(),'');
+  assert.ok(await page.locator('#agendaList .agenda-item').count() >= 1,'Clear restores agenda');
 
   async function assertModal(label) {
     const modal = page.locator('#editorDialog');
@@ -36,6 +51,9 @@ try {
   await page.locator('#newEvent').click();
   await assertModal('New event');
   assert.equal(await page.locator('#dialogTitle').textContent(), 'New event');
+  assert.equal(await page.locator('.form-group-heading').count(),4,'Editor fields must be grouped');
+  assert.ok(await page.locator('.editor-footer #save').count()===1,'Save must be accessible in footer');
+  await page.screenshot({path:'ui-review/event-manager-editor-desktop.png'});
   // Reproduce the reported bug: choose an image for an unsaved new event,
   // discard it, then open another event. No image or file may cross over.
   const tinyPng = await sharp({create:{width:90,height:240,channels:3,background:'#a66d52'}}).png().toBuffer();
@@ -297,6 +315,8 @@ try {
   const dialog = await page.locator('#editorDialog').boundingBox();
   assert.ok(dialog.width < 390, 'mobile dialog must fit viewport');
   assert.ok(dialog.height <= 780, 'mobile dialog must not exceed viewport');
+  assert.equal(await page.locator('.editor-footer #save').isVisible(),true,'Save action must remain visible on mobile');
+  await page.screenshot({path:'ui-review/event-manager-editor-mobile.png'});
   assert.deepEqual(errors, [], 'browser must not report runtime errors');
   console.log('PASS: Editor workflow, aligned recurring scope choices, private visibility by scope, mobile modal');
 } finally { await browser.close(); }
