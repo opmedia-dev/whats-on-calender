@@ -7,13 +7,12 @@ body{margin:0}
 .wo-demo-notice{display:none!important}
 .menu-shell{
   height:var(--menu-height);width:100%;min-width:0;display:flex;flex-direction:column;
-  overflow:hidden;border:1px solid var(--menu-border);border-radius:12px;
-  background:var(--wo-card);box-shadow:0 4px 18px rgba(40,22,30,.08)
+  overflow:hidden;border:0;border-radius:0;background:transparent;box-shadow:none
 }
 .menu-stage.wo-cards{
   display:grid;flex:1;min-height:0;min-width:0;overflow:hidden;
   grid-template-columns:repeat(var(--menu-columns,1),minmax(0,1fr));
-  gap:10px;padding:8px;background:#f7f5f2;
+  gap:10px;padding:0;background:transparent;
 }
 .menu-stage .wo-card{
   width:100%;height:100%;min-height:0;min-width:0;overflow:hidden;
@@ -68,24 +67,6 @@ body{margin:0}
 .menu-stage .wo-magazine-placeholder{font-size:13px}
 .menu-stage .wo-magazine-placeholder .wo-icon{width:36px;height:36px}
 .menu-slide{animation:menu-slide-in .35s ease both}
-.menu-controls{
-  flex:0 0 44px;height:44px;min-width:0;background:#fff;border-top:1px solid var(--menu-border);
-  display:flex;align-items:center;justify-content:center;gap:8px;padding:4px 9px;
-}
-.menu-controls button{
-  width:32px;height:32px;min-width:32px;border:1px solid transparent;border-radius:8px;
-  background:transparent;color:#675d66;display:grid;place-items:center;cursor:pointer;padding:0;
-  font-size:18px;line-height:1;
-}
-.menu-controls button:hover{background:#f6edf0;color:var(--wo-accent)}
-.menu-controls button:focus-visible{outline:2px solid var(--wo-accent);outline-offset:1px}
-.menu-controls button:disabled{opacity:.4;cursor:default}
-.menu-dots{display:flex;align-items:center;justify-content:center;min-width:0;flex:1;gap:4px;overflow-x:auto;scrollbar-width:none}
-.menu-dots::-webkit-scrollbar{display:none}
-.menu-dots button{width:20px;min-width:20px;height:26px;background:transparent}
-.menu-dots button:before{content:"";height:6px;width:6px;border-radius:999px;background:#cfc5ca;transition:width .2s,background .2s}
-.menu-dots button[aria-current="true"]:before{width:17px;background:var(--wo-accent)}
-.menu-pause{font-size:13px!important}
 .menu-loading,.menu-unavailable{display:grid;place-items:center;padding:20px;color:var(--wo-muted);
   text-align:center;font-size:13px;line-height:1.5;height:100%}
 .menu-sr-only{position:absolute!important;width:1px;height:1px;padding:0;overflow:hidden;
@@ -98,7 +79,6 @@ body{margin:0}
   .menu-stage .wo-card-link{font-size:11px}
 }
 @media(max-width:360px){
-  .menu-controls{gap:2px;padding:4px}
   .menu-stage .wo-card-body{height:107px}
 }
 @media(prefers-reduced-motion:reduce){

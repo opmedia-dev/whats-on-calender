@@ -188,8 +188,17 @@ try {
  fs.mkdirSync('ui-review',{recursive:true});
  await page.waitForTimeout(500); // Capture fully visible slide, not the entrance fade.
  await page.locator('.menu-shell').screenshot({path:'ui-review/menu-highlights-wide.png'});
- assert.equal(await page.locator('#menuDots button').count(),3,
-  'one featured event, one weekly mailing and one magazine must rotate');
+ assert.equal(await page.locator('.menu-controls').count(),0,'no frame control bar should exist');
+ assert.equal(await page.locator('#menuPrevious, #menuNext, #menuPause, #menuDots').count(),0,
+  'remove navigation arrows, pause button and pagination dots');
+ const frameStyle=await page.locator('.menu-shell').evaluate(el=>({
+   border:getComputedStyle(el).borderTopWidth,
+   shadow:getComputedStyle(el).boxShadow,
+   radius:getComputedStyle(el).borderTopLeftRadius,
+ }));
+ assert.equal(frameStyle.border,'0px','no outer widget border');
+ assert.equal(frameStyle.shadow,'none','no outer widget shadow');
+ assert.equal(frameStyle.radius,'0px','no outer rounded container');
  assert.equal(await page.locator('.menu-slide.wo-card').count(),3,
   'wide dropdown should show three normal banner-sized cards');
  assert.match(await page.locator('.menu-slide').first().textContent(), /only featured/i);
@@ -213,15 +222,12 @@ try {
   'event details use banner information band');
  assert.equal(Math.round((await page.locator('.menu-shell').boundingBox()).height),300);
  assert.match(await page.locator('.menu-slide').first().getAttribute('href'),/www\.stjohnsoldmalden\.org\.uk\/events-calendar\?event=only-featured/);
- await page.locator('#menuNext').click();
- assert.match(await page.locator('.menu-slide').first().textContent(),/Parish Weekly Mailing/);
- await page.locator('#menuNext').click();
- assert.match(await page.locator('.menu-slide').first().textContent(),/Parish Magazine — November/);
- await page.waitForTimeout(500);
+ // The visible cards should be the dated event, then mailing and magazine.
+ assert.match(await page.locator('.menu-slide').nth(1).textContent(),/Parish Weekly Mailing/);
+ assert.match(await page.locator('.menu-slide').nth(2).textContent(),/Parish Magazine — November/);
+ assert.match(await page.locator('.menu-slide').nth(2).getAttribute('href'),
+   /www\.stjohnsoldmalden\.org\.uk\/magazine/);
  await page.locator('.menu-shell').screenshot({path:'ui-review/menu-highlights-magazine.png'});
- assert.match(await page.locator('.menu-slide').first().getAttribute('href'),/www\.stjohnsoldmalden\.org\.uk\/magazine/);
- await page.locator('#menuPrevious').click();
- assert.match(await page.locator('.menu-slide').first().textContent(),/Parish Weekly Mailing/);
  await page.setViewportSize({width:360,height:620});
  await page.waitForFunction(()=>document.querySelectorAll('.menu-slide').length===1);
  const stacked=await page.locator('.menu-slide').evaluate(el=>{
@@ -248,22 +254,29 @@ try {
    reducedMotion:matchMedia('(prefers-reduced-motion: reduce)').matches,
    hovered:document.getElementById('menuWidget').matches(':hover'),
    focused:document.getElementById('menuWidget').contains(document.activeElement),
-   pauseLabel:document.getElementById('menuPause').getAttribute('aria-pressed'),
-   slideCount:document.querySelectorAll('#menuDots button').length,
+   controlCount:document.querySelectorAll('.menu-controls,#menuNext,#menuPause').length,
+   slideCount:document.querySelectorAll('.menu-slide').length,
  }));
  console.log('Carousel autoplay preconditions:',JSON.stringify(conditions));
  assert.deepEqual(conditions,{hidden:false,reducedMotion:false,hovered:false,
-   focused:false,pauseLabel:'false',slideCount:3});
- const initial=await page.locator('.menu-slide').first().textContent();
- await page.waitForFunction((first)=>document.querySelector('.menu-slide')?.textContent!==first,
-   initial,{timeout:7000});
- await page.locator('#menuPause').click();
- assert.equal(await page.locator('#menuPause').getAttribute('aria-pressed'),'true');
- const paused=await page.locator('.menu-slide').first().textContent();
- await page.waitForTimeout(3400);
- assert.equal(await page.locator('.menu-slide').first().textContent(),paused,'manual pause must prevent auto-rotation');
+   focused:false,controlCount:0,slideCount:1});
+ const first=await page.locator('.menu-slide').first().textContent();
+ assert.match(first,/only featured/i);
+ await page.waitForFunction(initial=>document.querySelector('.menu-slide')?.textContent!==initial,
+   first,{timeout:7000});
+ assert.match(await page.locator('.menu-slide').first().textContent(),/Parish Weekly Mailing/);
+ // Pause automatically while the visitor hovers, without requiring controls.
+ await page.mouse.move(140,130);
+ const hoveredSlideText=await page.locator('.menu-slide').first().textContent();
+ await page.waitForTimeout(3300);
+ assert.equal(await page.locator('.menu-slide').first().textContent(),hoveredSlideText,
+   'hover should pause automatic rotation without a visible pause button');
+ await page.mouse.move(350,610);
+ await page.waitForFunction(initial=>document.querySelector('.menu-slide')?.textContent!==initial,
+   hoveredSlideText,{timeout:7000});
+ assert.match(await page.locator('.menu-slide').first().textContent(),/Parish Magazine — November/);
 
- assert.deepEqual(pageErrors, [], 'no JavaScript page exceptions');
+  assert.deepEqual(pageErrors, [], 'no JavaScript page exceptions');
  console.log('PASS: month navigation and card sizing, plus all embed loading defaults and selective eager/lazy overrides in Chromium');
 } finally {
  if (browser) await browser.close();
