@@ -1,56 +1,73 @@
-/* Compact What's On navigation-menu rotator. Isolated from existing embeds. */
-:root {
-  --menu-height: 320px;
-  --menu-border: #e7e1e4;
-  --menu-paper: #fff;
-  --menu-ink: #2e2830;
-  --menu-muted: #675d67;
-}
+/* Navigation-menu carousel: use the exact banner's .wo-card components,
+   media crop positions and publication cover rules from wo.css. */
+:root{--menu-height:320px;--menu-border:#e7e1e4}
 *{box-sizing:border-box}
 html,body{width:100%;height:100%;overflow:hidden;background:transparent}
 body{margin:0}
-.wo-demo-notice{display:none!important} /* Each sample slide is explicitly labelled instead. */
+.wo-demo-notice{display:none!important}
 .menu-shell{
   height:var(--menu-height);width:100%;min-width:0;display:flex;flex-direction:column;
-  border:1px solid var(--menu-border);border-radius:12px;background:var(--menu-paper);
-  box-shadow:0 4px 18px rgba(40,22,30,.08);overflow:hidden;color:var(--menu-ink);
+  overflow:hidden;border:1px solid var(--menu-border);border-radius:12px;
+  background:var(--wo-card);box-shadow:0 4px 18px rgba(40,22,30,.08)
 }
-.menu-stage{flex:1;min-height:0;min-width:0;background:#faf8f9;overflow:hidden;position:relative}
-.menu-slide{
-  width:100%;height:100%;display:grid;grid-template-columns:minmax(0,44%) minmax(0,56%);
-  color:inherit;text-decoration:none;overflow:hidden;outline-offset:-4px;
-  animation:menu-slide-in .4s cubic-bezier(.22,.8,.25,1) both;
+.menu-stage.wo-cards{
+  display:grid;flex:1;min-height:0;min-width:0;overflow:hidden;
+  grid-template-columns:repeat(var(--menu-columns,1),minmax(0,1fr));
+  gap:10px;padding:8px;background:#f7f5f2;
 }
-.menu-slide:hover .menu-link{text-decoration:underline;text-underline-offset:3px}
-.menu-visual{
-  background:linear-gradient(135deg,#f6edef,#e9e3e6);display:flex;align-items:center;
-  justify-content:center;position:relative;min-width:0;min-height:0;overflow:hidden
+.menu-stage .wo-card{
+  width:100%;height:100%;min-height:0;min-width:0;overflow:hidden;
+  border-radius:9px;box-shadow:0 1px 5px rgba(35,20,25,.1);transform:none;
 }
-.menu-visual img{width:100%;height:100%;object-fit:contain;display:block}
-.menu-visual.is-placeholder:before{
-  content:"";position:absolute;width:130px;height:130px;border:1px solid rgba(122,20,36,.2);
-  border-radius:50%;transform:scale(1.7);
+.menu-stage .wo-card:hover{transform:none;box-shadow:0 2px 10px rgba(35,20,25,.15)}
+.menu-stage .wo-card-media{
+  width:100%;min-width:0;min-height:0;flex:1 1 auto;
+  /* Fixed height menu: image flexes to the remaining area instead of
+     increasing the iframe height. The image itself uses banner crop rules. */
+  aspect-ratio:auto;
 }
-.menu-visual .menu-symbol{
-  position:relative;font:700 clamp(34px,5vw,62px)/1 Georgia,serif;
-  color:var(--wo-accent);opacity:.55;letter-spacing:-.06em;
+.menu-stage .wo-card-media img{
+  width:100%;height:100%;object-fit:cover;
+  /* Event Manager focus is supplied as an inline object-position by renderCard. */
 }
-.menu-visual.kind-mailing{background:linear-gradient(140deg,#f8ebed,#ece1e6)}
-.menu-visual.kind-magazine{background:linear-gradient(140deg,#eae6ec,#f5eeee)}
-.menu-visual.kind-event{background:linear-gradient(145deg,#f4ebdf,#f8eff1)}
-.menu-copy{
-  min-width:0;padding:clamp(14px,2.5vw,26px);display:flex;flex-direction:column;
-  justify-content:center;align-items:flex-start;gap:9px;
+.menu-stage .wo-card-body{
+  flex:0 0 auto;height:108px;min-height:0;overflow:hidden;
+  display:flex;flex-direction:column;gap:4px;justify-content:center;
+  padding:10px 13px 10px;
+  background:var(--wo-accent);color:#fff;
 }
-.menu-label{color:var(--wo-accent);font-size:10px;letter-spacing:.14em;text-transform:uppercase;font-weight:800;line-height:1.4}
-.menu-title{
-  font:750 clamp(19px,2.7vw,28px)/1.14 var(--wo-heading-font,system-ui,sans-serif);
-  letter-spacing:-.035em;margin:0;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;
+.menu-stage .wo-card-title{
+  margin:0;color:#fff;font-size:clamp(15px,2vw,19px);
+  line-height:1.18;letter-spacing:-.015em;
+  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;
 }
-.menu-meta{color:var(--menu-muted);font-size:clamp(11px,1.7vw,13px);line-height:1.48;margin:0;max-width:100%;
-  overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
-.menu-link{margin-top:4px;font-size:12px;color:var(--wo-accent);font-weight:760;line-height:1.3}
-.menu-link:after{content:"  →";font-size:1.2em;vertical-align:-.05em}
+.menu-stage .wo-card-meta{
+  margin:0;color:var(--wo-accent2);font-size:11.8px;line-height:1.3;
+  font-weight:600;min-height:0;overflow:hidden;
+  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:1;
+}
+.menu-stage .wo-card-meta .wo-icon{color:var(--wo-accent2);width:14px;height:14px}
+.menu-stage .wo-card-link{
+  margin:0;padding:2px 0 0;min-height:0;font-size:12px;
+  color:#fff;font-weight:720;line-height:1.2;
+}
+.menu-stage .wo-date-badge{top:10px;left:10px;min-width:43px;padding:6px 7px}
+.menu-stage .wo-date-badge b{font-size:1.12rem}
+.menu-stage .wo-date-badge span{font-size:.6rem}
+.menu-stage .wo-tag{top:10px;right:10px;font-size:10px}
+.menu-stage .wo-magazine-cover img{
+  /* The banner already keeps the full magazine cover visible. */
+  object-fit:contain;
+}
+.menu-stage .wo-mailing-cover{
+  /* Same special treatment as the main banner so the parish logo is intact. */
+  object-fit:contain;
+}
+.menu-stage .wo-mailing-art .wo-icon{width:42px;height:42px}
+.menu-stage .wo-mailing-art{gap:8px;font-size:12px}
+.menu-stage .wo-magazine-placeholder{font-size:13px}
+.menu-stage .wo-magazine-placeholder .wo-icon{width:36px;height:36px}
+.menu-slide{animation:menu-slide-in .35s ease both}
 .menu-controls{
   flex:0 0 44px;height:44px;min-width:0;background:#fff;border-top:1px solid var(--menu-border);
   display:flex;align-items:center;justify-content:center;gap:8px;padding:4px 9px;
@@ -69,26 +86,22 @@ body{margin:0}
 .menu-dots button:before{content:"";height:6px;width:6px;border-radius:999px;background:#cfc5ca;transition:width .2s,background .2s}
 .menu-dots button[aria-current="true"]:before{width:17px;background:var(--wo-accent)}
 .menu-pause{font-size:13px!important}
-.menu-loading,.menu-unavailable{display:grid;place-items:center;padding:20px;color:var(--menu-muted);
+.menu-loading,.menu-unavailable{display:grid;place-items:center;padding:20px;color:var(--wo-muted);
   text-align:center;font-size:13px;line-height:1.5;height:100%}
 .menu-sr-only{position:absolute!important;width:1px;height:1px;padding:0;overflow:hidden;
   clip:rect(0,0,0,0);white-space:nowrap;border:0}
-@keyframes menu-slide-in{from{opacity:.2;transform:translateX(9px)}to{opacity:1;transform:translateX(0)}}
-@media(max-width:620px){
- .menu-slide{grid-template-columns:1fr;grid-template-rows:minmax(0,48%) minmax(0,52%)}
- .menu-copy{padding:9px 14px;gap:5px;justify-content:center}
- .menu-label{font-size:9px}
- .menu-title{font-size:clamp(17px,5.6vw,21px);-webkit-line-clamp:2;line-height:1.2}
- .menu-meta{font-size:11px;line-height:1.35;-webkit-line-clamp:2}
- .menu-link{font-size:11px;margin-top:0}
- .menu-visual .menu-symbol{font-size:40px}
+@keyframes menu-slide-in{from{opacity:.15;transform:translateX(7px)}to{opacity:1;transform:translateX(0)}}
+@media(max-width:500px){
+  .menu-stage .wo-card-body{height:105px;padding:9px 12px 10px}
+  .menu-stage .wo-card-title{font-size:16px}
+  .menu-stage .wo-card-meta{font-size:11px}
+  .menu-stage .wo-card-link{font-size:11px}
 }
 @media(max-width:360px){
- .menu-controls{gap:2px;padding:4px}
- .menu-title{font-size:17px}
- .menu-copy{padding:8px 11px;gap:4px}
+  .menu-controls{gap:2px;padding:4px}
+  .menu-stage .wo-card-body{height:107px}
 }
 @media(prefers-reduced-motion:reduce){
- .menu-slide{animation:none}
- .menu-dots button:before{transition:none}
+  .menu-slide{animation:none}
+  .menu-dots button:before{transition:none}
 }
