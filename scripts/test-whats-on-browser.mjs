@@ -31,7 +31,7 @@ const data = {
   to: shiftMonth(current, 4) + '-01T00:00:00Z',
  },
  details: { demo: { summary: '', html: '', gallery: [], attachments: [],
-   image: {src:'assets/sample-fair.svg',small:'assets/sample-fair.svg',position:'62% 40%',width:800,height:500},
+   image: {src:'assets/test-card-art.svg',small:'assets/test-card-art.svg',position:'62% 40%',width:800,height:500},
  } },
  events: [
   makeEvent('prior-month', previous, '10'),
@@ -57,6 +57,16 @@ const server = createServer(async (req, res) => {
   if(event.data.type==='hello')event.source.postMessage({source:'whatson-host',type:'hello',page:location.href},'*');
  });
 </script></body></html>`);
+   return;
+  }
+  if (url.pathname === '/assets/test-card-art.svg') {
+   res.writeHead(200,{'Content-Type':'image/svg+xml'});
+   res.end(`<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500" viewBox="0 0 800 500">
+     <rect width="800" height="500" fill="#e9d1d3"/><rect width="800" height="180" fill="#8d1e34"/>
+     <circle cx="610" cy="280" r="135" fill="#c7ad69"/>
+     <text x="36" y="112" fill="white" font-size="58" font-family="Arial">FEATURED EVENT</text>
+     <text x="36" y="420" fill="#542536" font-size="44" font-family="Arial">Sample poster artwork</text>
+   </svg>`);
    return;
   }
   if (url.pathname === '/mailings.json') {
@@ -177,38 +187,43 @@ try {
  await page.locator('.menu-slide').waitFor({timeout:15000});
  fs.mkdirSync('ui-review',{recursive:true});
  await page.waitForTimeout(500); // Capture fully visible slide, not the entrance fade.
- await page.screenshot({path:'ui-review/menu-highlights-wide.png'});
+ await page.locator('.menu-shell').screenshot({path:'ui-review/menu-highlights-wide.png'});
  assert.equal(await page.locator('#menuDots button').count(),3,
   'one featured event, one weekly mailing and one magazine must rotate');
- assert.match(await page.locator('.menu-slide').textContent(), /only featured/i);
- assert.equal(await page.locator('.menu-slide.wo-card').count(),1,
+ assert.equal(await page.locator('.menu-slide.wo-card').count(),3,
+  'wide dropdown should show three normal banner-sized cards');
+ assert.match(await page.locator('.menu-slide').first().textContent(), /only featured/i);
+ assert.ok(await page.locator('.menu-slide.wo-card').count()>=1,
   'menu uses the shared banner card, not a separate hero layout');
  assert.equal(await page.locator('.menu-slide .wo-date-badge').count(),1,
   'event date badge matches the banner');
- const crop=await page.locator('.menu-slide .wo-card-media img').evaluate(img=>({
+ const crop=await page.locator('.menu-slide').first().locator('.wo-card-media img').evaluate(img=>({
    fit:getComputedStyle(img).objectFit,
    position:getComputedStyle(img).objectPosition,
    media:img.parentElement.getBoundingClientRect().toJSON(),
    image:img.getBoundingClientRect().toJSON(),
+   loaded:img.complete && img.naturalWidth>0,
  }));
+ assert.equal(crop.loaded,true,'test artwork must actually load to validate crop appearance');
  assert.equal(crop.fit,'cover','featured image must crop exactly as the banner');
  assert.equal(crop.position,'62% 40%','honour Event Manager crop position');
  assert.ok(Math.abs(crop.media.width-crop.image.width)<2 && Math.abs(crop.media.height-crop.image.height)<2,
   'image fills its media panel without letterboxing');
- assert.equal(await page.locator('.menu-stage .wo-card-body').count(),1,
+ assert.equal(await page.locator('.menu-stage .wo-card-body').count(),3,
   'event details use banner information band');
  assert.equal(Math.round((await page.locator('.menu-shell').boundingBox()).height),300);
- assert.match(await page.locator('.menu-slide').getAttribute('href'),/www\.stjohnsoldmalden\.org\.uk\/events-calendar\?event=only-featured/);
+ assert.match(await page.locator('.menu-slide').first().getAttribute('href'),/www\.stjohnsoldmalden\.org\.uk\/events-calendar\?event=only-featured/);
  await page.locator('#menuNext').click();
- assert.match(await page.locator('.menu-slide').textContent(),/Parish Weekly Mailing/);
+ assert.match(await page.locator('.menu-slide').first().textContent(),/Parish Weekly Mailing/);
  await page.locator('#menuNext').click();
- assert.match(await page.locator('.menu-slide').textContent(),/Parish Magazine — November/);
+ assert.match(await page.locator('.menu-slide').first().textContent(),/Parish Magazine — November/);
  await page.waitForTimeout(500);
- await page.screenshot({path:'ui-review/menu-highlights-magazine.png'});
- assert.match(await page.locator('.menu-slide').getAttribute('href'),/www\.stjohnsoldmalden\.org\.uk\/magazine/);
+ await page.locator('.menu-shell').screenshot({path:'ui-review/menu-highlights-magazine.png'});
+ assert.match(await page.locator('.menu-slide').first().getAttribute('href'),/www\.stjohnsoldmalden\.org\.uk\/magazine/);
  await page.locator('#menuPrevious').click();
- assert.match(await page.locator('.menu-slide').textContent(),/Parish Weekly Mailing/);
+ assert.match(await page.locator('.menu-slide').first().textContent(),/Parish Weekly Mailing/);
  await page.setViewportSize({width:360,height:620});
+ await page.waitForFunction(()=>document.querySelectorAll('.menu-slide').length===1);
  const stacked=await page.locator('.menu-slide').evaluate(el=>{
   const art=el.querySelector('.wo-card-media').getBoundingClientRect();
   const copy=el.querySelector('.wo-card-body').getBoundingClientRect();
@@ -218,7 +233,7 @@ try {
  assert.ok(stacked.below,'banner card image must sit above the text band');
  assert.ok(Math.abs(stacked.mediaWidth-stacked.cardWidth)<2,'image spans the narrow menu card');
  await page.waitForTimeout(500);
- await page.screenshot({path:'ui-review/menu-highlights-narrow.png'});
+ await page.locator('.menu-shell').screenshot({path:'ui-review/menu-highlights-narrow.png'});
  assert.equal(stacked.overflow,false,'menu widget must not overflow the menu column');
 
  // The timer pauses for hover, keyboard focus and reduced-motion, so
@@ -239,14 +254,14 @@ try {
  console.log('Carousel autoplay preconditions:',JSON.stringify(conditions));
  assert.deepEqual(conditions,{hidden:false,reducedMotion:false,hovered:false,
    focused:false,pauseLabel:'false',slideCount:3});
- const initial=await page.locator('.menu-slide').textContent();
+ const initial=await page.locator('.menu-slide').first().textContent();
  await page.waitForFunction((first)=>document.querySelector('.menu-slide')?.textContent!==first,
    initial,{timeout:7000});
  await page.locator('#menuPause').click();
  assert.equal(await page.locator('#menuPause').getAttribute('aria-pressed'),'true');
- const paused=await page.locator('.menu-slide').textContent();
+ const paused=await page.locator('.menu-slide').first().textContent();
  await page.waitForTimeout(3400);
- assert.equal(await page.locator('.menu-slide').textContent(),paused,'manual pause must prevent auto-rotation');
+ assert.equal(await page.locator('.menu-slide').first().textContent(),paused,'manual pause must prevent auto-rotation');
 
  assert.deepEqual(pageErrors, [], 'no JavaScript page exceptions');
  console.log('PASS: month navigation and card sizing, plus all embed loading defaults and selective eager/lazy overrides in Chromium');
