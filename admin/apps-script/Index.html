@@ -211,6 +211,137 @@ input[aria-invalid=true],select[aria-invalid=true]{border-color:#ba4254!importan
 .editor-refresh-status strong{font-variant-numeric:tabular-nums;color:var(--accent);font-size:13px}
 .editor-refresh-status a{color:var(--accent);font-weight:650;text-decoration:underline;text-underline-offset:2px}
 .editor-refresh-status .refresh-note{flex-basis:100%;font-size:11px;color:var(--muted)}
+
+/* Events workspace — progressive enhancement without external UI dependencies. */
+:root{--canvas:#f6f7f8;--surface:#fff;--ink:#272329;--line:#e6e2e5;--muted:#6e6871;--accent:#7a1424;--accent-deep:#5d0d1a;--accent-soft:#fcf0f3;color:var(--ink);background:var(--canvas)}
+body{background:var(--canvas)}
+header.app-topbar{background:#fff;border-bottom:1px solid var(--line);padding:15px max(20px,calc((100vw - 1450px)/2))}
+.app-topbar .brand{justify-content:flex-start;gap:12px}
+.brand-monogram{width:43px;height:43px;flex:none;display:grid;place-items:center;background:var(--accent);border-radius:12px;font-size:13px;font-weight:800;color:#fff;letter-spacing:.02em}
+.brand-copy{display:grid;gap:4px}.brand-copy strong{font-size:16px;letter-spacing:-.035em;color:var(--ink)}.brand-copy small{font-size:12px;color:var(--muted)}
+.header-meta{margin-left:auto;display:flex;align-items:center;gap:14px}
+.header-label{font-size:10px;text-transform:uppercase;font-weight:800;letter-spacing:.13em;color:var(--muted)}
+#connection{display:inline-flex;gap:8px;align-items:center;border:1px solid #daeadf;background:#f3f9f5;color:#39764e;font-size:12px;font-weight:650;padding:8px 12px}
+#connection:before{content:'';width:7px;height:7px;flex:none;border-radius:50%;background:#4b9668}
+main.workspace{max-width:1450px;padding:30px 24px 72px}
+.workspace-intro{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin:0 0 17px}
+.workspace-intro h1{font-size:clamp(30px,3vw,39px);line-height:1.16;font-weight:760;letter-spacing:-.05em;margin:0 0 8px}
+.eyebrow{margin:0 0 8px;color:var(--accent);font-size:10px;text-transform:uppercase;letter-spacing:.16em;font-weight:800}
+.workspace-intro .sub{font-size:14px;color:var(--muted);line-height:1.5;margin:0}
+.workspace-actions{display:flex;gap:9px;padding-top:17px}
+.btn{border-radius:9px;padding:10px 13px;min-height:39px;font-size:12.5px;transition:background-color .15s,border-color .15s}
+.btn:hover:not(:disabled){background:#f5f0f2;border-color:#d5c5cc}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 2px 6px #7a142426}
+.btn.primary:hover:not(:disabled){background:var(--accent-deep);border-color:var(--accent-deep)}
+.btn:focus-visible{outline:3px solid #dbaab4;outline-offset:2px}
+.editor-refresh-status{display:flex;align-items:center;gap:9px 14px;flex-wrap:wrap;padding:11px 15px;margin:0 0 19px;background:#fff;border:1px solid var(--line);border-radius:11px;font-size:12px;line-height:1.55}
+.editor-refresh-status strong{font-size:12px}
+.editor-refresh-status a{margin-left:auto;text-decoration:none}
+.editor-refresh-status a:hover{text-decoration:underline}
+.editor-refresh-status .refresh-note{flex-basis:100%;padding-left:21px;font-size:11px}
+.sync-light{width:8px;height:8px;border-radius:50%;background:#419467;flex:none;box-shadow:0 0 0 3px #e5f3e9}
+.workspace-grid{display:grid;grid-template-columns:minmax(0,1fr) 305px;gap:20px;align-items:start}
+.panel{border-radius:13px;border-color:var(--line);box-shadow:0 2px 13px #2c1c2e0a}
+.cal-panel{margin-bottom:0}
+.cal-panel>.panel-body{padding:21px}
+.cal-head{margin-bottom:17px;gap:16px}
+#calTitle{color:var(--ink);font-size:24px;font-weight:760;letter-spacing:-.035em}
+.cal-head .tools{gap:6px}.cal-head .btn{min-width:37px;padding:8px 11px;min-height:37px}
+.view-switch{margin-left:7px;background:#f2f0f1;padding:4px;border-radius:9px}
+.view-switch button{border-radius:7px;padding:8px 12px;font-weight:650;color:#615963}
+.view-switch button[aria-pressed=true]{color:var(--accent)}
+.calendar-filters{display:grid;grid-template-columns:minmax(150px,1fr) minmax(155px,210px) auto;gap:9px;align-items:end;margin:0 0 12px}
+.filter-field{display:grid;gap:5px;min-width:0}
+.filter-field label{font-size:11px;font-weight:750;color:#554b55}
+.calendar-filters input,.calendar-filters select{min-height:40px!important;background:#fcfbfc!important;border-color:#e1dade!important}
+.calendar-filters .btn{min-height:40px}
+.calendar-count{font-size:11px;color:var(--muted);margin:0 0 11px}
+.weekheads{padding:11px 0;font-weight:750;color:#716b72}
+.month-grid{border-radius:10px;border-color:var(--line);background:#eee9ec}
+.cal-day{min-height:115px;padding:8px}
+.cal-day.off{background:#faf9fa}.cal-day.today{background:#fff6f7;box-shadow:inset 0 0 0 1px #ebcbd2}
+.date-btn{font-size:12px;padding:5px 8px;border-radius:7px}
+.cal-day.today .date-btn{background:var(--accent);color:#fff}
+.event-pill{padding:6px 7px;margin:4px 0;border-left-width:3px;border-radius:5px;line-height:1.3;font-size:11px;min-height:26px}
+.event-pill:hover{filter:brightness(.975)}
+.cal-panel .help{margin:15px 0 0}
+.week-day{border-radius:9px}.week-events .event-pill{min-height:36px}
+.agenda-panel{position:sticky;top:16px}
+.agenda-panel .panel-heading{padding:19px 18px 13px}
+.agenda-panel .panel-heading h2{font-size:17px;letter-spacing:-.02em}
+.agenda-panel .panel-heading p{font-size:12px;line-height:1.5}
+.agenda-panel .panel-body{padding:10px 12px 16px}
+.agenda-count{margin:4px 8px 11px;color:var(--accent);font-size:11px;font-weight:760}
+.agenda-list{display:grid;gap:4px}
+.agenda-item{display:flex;gap:10px;align-items:flex-start;border:1px solid transparent;border-radius:9px;background:transparent;width:100%;padding:10px;text-align:left;color:var(--ink);cursor:pointer}
+.agenda-item:hover,.agenda-item:focus-visible{background:#fcf6f8;border-color:#eddee3}
+.agenda-mark{width:4px;flex:none;min-height:34px;align-self:stretch;border-radius:4px;background:#998089}
+.agenda-item[data-category=worship] .agenda-mark{background:#954d5c}
+.agenda-item[data-category=community] .agenda-mark{background:#be9356}
+.agenda-item[data-category=music] .agenda-mark{background:#8c76b1}
+.agenda-item[data-category=families] .agenda-mark{background:#759775}
+.agenda-item[data-category=heritage] .agenda-mark{background:#688f83}
+.agenda-item[data-category=fundraising] .agenda-mark{background:#b87885}
+.agenda-content{min-width:0;display:grid;gap:4px}
+.agenda-item-title{font-size:12.5px;line-height:1.4;font-weight:740}
+.agenda-item-date{font-size:11px;color:var(--muted);line-height:1.4}
+.agenda-empty{font-size:12px;line-height:1.55;color:var(--muted);text-align:center;padding:24px 12px}
+.agenda-extra{font-size:11px;color:var(--muted);padding:0 10px}
+.editor-dialog{width:min(1210px,calc(100vw - 32px));max-width:1210px;max-height:92dvh;overflow:hidden;border-radius:16px}
+.editor-dialog[open]{display:flex;flex-direction:column}
+.editor-dialog>.layout{min-height:0;flex:1;overflow:auto;align-items:start;grid-template-columns:minmax(0,1.07fr) minmax(0,.93fr)}
+.editor-dialog .layout>.panel:first-child{min-width:0}
+.dialog-bar{flex:none;padding:17px 22px;background:#fff;box-shadow:0 2px 9px #241a2408}
+.dialog-bar h2{font-size:20px;letter-spacing:-.03em;color:var(--ink)}
+.dialog-kicker{display:block;text-transform:uppercase;letter-spacing:.13em;color:var(--accent);font-size:10px;font-weight:800;margin:0 0 5px}
+.dialog-close{border-radius:9px;min-height:37px}
+.editor-dialog .layout>.panel:first-child .panel-heading{padding:17px 21px;background:#fcfbfc}
+.editor-dialog .layout>.panel:first-child .panel-body{padding:21px 22px 27px}
+.editor-dialog .preview{position:sticky;top:0}
+.editor-dialog .preview .panel-heading{background:#fcfbfc}
+.preview-card{border-radius:11px;box-shadow:0 2px 13px #00000009}
+.form-group-heading{display:flex;gap:11px;align-items:center;margin:20px 0 16px;border-top:1px solid var(--line);padding-top:19px}
+.form-group-heading:first-child{margin-top:0;padding-top:0;border-top:0}
+.section-number{display:grid;place-items:center;flex:none;width:30px;height:30px;border-radius:9px;background:#f8edf0;color:var(--accent);font-weight:800;font-size:11px}
+.form-group-heading h3{font-size:14px;line-height:1.2;letter-spacing:-.015em;margin:0 0 3px}
+.form-group-heading p{font-size:11px;line-height:1.4;color:var(--muted);margin:0}
+.field{margin-bottom:17px}.field label{font-size:12px;color:#50474f}
+input:not([type=checkbox]):not([type=radio]),select,textarea{min-height:39px}
+input:focus,select:focus,textarea:focus{border-color:#b78996!important;box-shadow:0 0 0 3px #7a142417;outline:none}
+.featured-setting,#scopeBox,.upload-form{border-radius:10px}
+.editor-footer{display:flex;align-items:center;justify-content:space-between;gap:14px;flex:none;padding:13px 20px;background:#fff;border-top:1px solid var(--line);box-shadow:0 -4px 16px #221b230a}
+.editor-footer .status{margin:0;min-height:0;flex:1;max-width:390px;line-height:1.4}
+.editor-footer .form-actions{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:12px;margin:0}
+.editor-footer .form-actions>.tools{gap:8px}
+.editor-footer #save{min-width:117px}
+@media(max-width:1200px){.workspace-grid{grid-template-columns:1fr}.agenda-panel{position:static}.agenda-list{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}}
+@media(max-width:930px){.editor-dialog .layout{grid-template-columns:1fr}.editor-dialog .preview{position:static}.editor-dialog .layout>.panel:first-child{border-right:0;border-bottom:1px solid var(--line)}}
+@media(max-width:650px){
+ header.app-topbar{padding:12px}
+ .header-label{display:none}
+ main.workspace{padding:20px 12px 50px}
+ .workspace-intro h1{font-size:30px}
+ .workspace-actions{width:100%;padding-top:0}
+ .workspace-actions .btn{flex:1}
+ .editor-refresh-status{padding:11px;gap:9px}
+ .editor-refresh-status a{margin-left:0}
+ .editor-refresh-status .refresh-note{padding-left:0}
+ .calendar-filters{grid-template-columns:1fr 1fr}
+ .calendar-filters .filter-field:first-child{grid-column:1/-1}
+ .cal-panel>.panel-body{padding:14px 10px}
+ #calTitle{font-size:20px}
+ .cal-day{min-height:65px;padding:3px}
+ .cal-day .event-pill{min-height:7px}
+ .agenda-list{grid-template-columns:1fr}
+ .editor-dialog{width:calc(100vw - 12px);max-height:96dvh}
+ .editor-dialog .layout>.panel:first-child .panel-body{padding:16px 14px 25px}
+ .editor-footer{padding:10px 12px;gap:8px}
+ .editor-footer .status{max-width:none;flex-basis:100%}
+ .editor-footer .form-actions{width:100%;justify-content:space-between;gap:7px}
+ .editor-footer .btn{padding:9px 10px}
+}
+@media(prefers-reduced-motion:reduce){.btn{transition:none}}
+
 </style>
 </head>
 <body>
