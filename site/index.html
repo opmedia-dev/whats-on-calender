@@ -114,10 +114,10 @@
 
     <section class="panel">
       <h2>3a. What's On menu — rotating highlights</h2>
-      <p class="muted">A separate, compact carousel for the <strong>What's On navigation menu</strong> rather than another full-width page banner. Banner-style cards rotate together: up to three at a time in a wide menu, two at medium width, or one in a narrow menu. Uses the same card layout as the featured banner: event posters crop to the card and honour the image focus chosen in Event Manager, while mailing artwork and magazine covers remain uncropped.</p>
+      <p class="muted">A separate, compact carousel for the <strong>What's On navigation menu</strong> rather than another full-width page banner. Banner-style cards automatically rotate without a surrounding frame or visible controls: up to three at a time in a wide menu, two at medium width, or one in a narrow menu. Featured events appear in date order, followed by the latest mailing and magazine. Uses the same card layout as the featured banner: event posters crop to the card and honour the image focus chosen in Event Manager, while mailing artwork and magazine covers remain uncropped.</p>
       <div class="grid2">
         <div><label for="menuHeight">Menu embed height (pixels)</label><input id="menuHeight" type="number" min="220" max="560" step="10" value="320"><p class="muted">Match the available space inside the actual menu. Width automatically follows the menu column; no fixed desktop width.</p></div>
-        <div><label for="menuAutoplay">Rotate automatically every (seconds; 0 = paused)</label><input id="menuAutoplay" type="number" min="0" max="60" value="8"><p class="muted">Pause on hover, focus, reduced-motion settings and manual Pause. Arrows and dots remain available.</p></div>
+        <div><label for="menuAutoplay">Rotate automatically every (seconds; 0 = static)</label><input id="menuAutoplay" type="number" min="0" max="60" value="8"><p class="muted">The existing transition remains automatic. Pauses on hover, keyboard focus, inactive tabs and reduced-motion settings; there are no arrows, dots or outer control bar.</p></div>
         <div><label for="menuMax">Maximum upcoming featured event slides</label><input id="menuMax" type="number" min="1" max="12" value="4"></div>
         <div><label for="menuDays">Featured events lookahead (days)</label><input id="menuDays" type="number" min="1" max="400" value="400"></div>
         <div><label class="inline" for="menuMailing"><input id="menuMailing" type="checkbox" checked> Include the latest weekly mailing</label></div>
