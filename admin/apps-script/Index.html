@@ -365,19 +365,91 @@ input:focus,select:focus,textarea:focus{border-color:#b78996!important;box-shado
  .editor-dialog .layout>.panel.preview{position:static;height:auto}
 }
 
+
+/* UX polish: compact header sync, consistent native controls, tighter calendar rhythm. */
+.app-topbar .brand{flex-wrap:wrap}
+.header-meta{gap:11px}
+.header-sync{display:flex;align-items:center;gap:8px;min-height:38px;padding:6px 9px 6px 12px;border:1px solid #e5dce0;background:#faf8f9;border-radius:9px;white-space:nowrap;font-size:12px}
+.header-sync .sync-light{width:7px;height:7px;box-shadow:none}
+.header-sync-caption{color:#716870;font-size:11px}
+.header-sync strong{font-size:12.5px;color:var(--accent);font-variant-numeric:tabular-nums}
+.header-sync-time{font-size:11px;color:#706870;border-left:1px solid #e5dce0;padding-left:8px;font-variant-numeric:tabular-nums}
+.header-sync a{display:grid;place-items:center;width:27px;height:27px;border-radius:6px;color:var(--accent);text-decoration:none;font-size:17px}
+.header-sync a:hover,.header-sync a:focus-visible{background:#f3e7ea}
+.workspace-intro{margin-bottom:18px}
+.workspace-intro h1{font-size:clamp(29px,3vw,37px)}
+.workspace-grid{gap:16px}
+.cal-panel>.panel-body{padding:19px}
+.cal-head{margin-bottom:14px}
+.calendar-filters{grid-template-columns:minmax(180px,1fr) minmax(185px,230px) 80px;gap:11px;align-items:end;margin:0 0 14px}
+.filter-field{gap:7px}
+.filter-field label{font-size:12px;font-weight:690;color:#59505a}
+.calendar-filters .filter-field input,
+.calendar-filters .filter-field select{
+ display:block;width:100%;height:42px!important;min-height:42px!important;max-height:42px;
+ box-sizing:border-box;padding:0 12px!important;font:400 13px/normal system-ui,-apple-system,"Segoe UI",sans-serif!important;
+ color:var(--ink)!important;background-color:#fff!important;border:1px solid #dcd7db!important;
+ border-radius:9px!important;box-shadow:none!important;
+}
+.calendar-filters .filter-field select{
+ -webkit-appearance:none;appearance:none;
+ padding-right:37px!important;
+ background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236a5e68' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")!important;
+ background-repeat:no-repeat!important;background-size:16px!important;background-position:right 12px center!important;
+}
+.calendar-filters .btn{height:42px;min-height:42px;padding:0 11px;align-self:end}
+.editor-dialog .field input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+.editor-dialog .field select,
+.editor-dialog .repeat-config input:not([type="checkbox"]):not([type="radio"]),
+.editor-dialog .repeat-config select,
+.editor-dialog .upload-placement select{
+ box-sizing:border-box;min-height:42px;height:42px;padding:9px 12px;
+ border:1px solid #dcd7db;border-radius:9px;background-color:#fff;
+ font-size:13px;line-height:1.3;color:#332e35;
+}
+.editor-dialog .field select,
+.editor-dialog .repeat-config select,
+.editor-dialog .upload-placement select{
+ -webkit-appearance:none;appearance:none;padding-right:38px;
+ background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236a5e68' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+ background-repeat:no-repeat;background-position:right 12px center;background-size:16px;
+}
+.editor-dialog .field small{display:block;margin-top:6px;line-height:1.45}
+.editor-dialog .field label{font-size:12px;font-weight:680}
+.editor-dialog .two{gap:14px}
+.cal-day{min-height:94px;padding:6px}
+.cal-head .btn,.cal-head .view-switch button{min-height:39px}
+.view-switch{margin-left:4px}
+.editor-dialog .formatbar button{min-height:33px;padding:6px 10px;border-radius:6px}
+.editor-dialog .scope-option{min-height:38px}
+.editor-dialog .weekday-choices label{min-height:37px;border-radius:7px}
+.editor-dialog .form-group-heading{margin:22px 0 15px}
+.editor-dialog .form-group-heading.first{margin-top:0}
+@media(max-width:960px){
+ .header-meta{flex-wrap:wrap;justify-content:flex-end}
+}
+@media(max-width:650px){
+ .app-topbar .brand{gap:10px}
+ .brand-copy{flex:1}
+ .header-meta{width:100%;justify-content:space-between;gap:8px;margin:2px 0 0}
+ .header-sync{flex:1;min-width:0;justify-content:flex-start}
+ .header-sync-caption{font-size:11px}
+ .header-sync-time{display:none}
+ #connection{flex:none;padding:8px 9px;font-size:11px}
+ .workspace-intro{margin-bottom:14px}
+ .calendar-filters{grid-template-columns:minmax(0,1fr) 78px;gap:10px}
+ .calendar-filters .filter-field:first-child{grid-column:1/-1}
+ .calendar-filters .filter-field:nth-child(2){min-width:0}
+ .cal-day{min-height:66px;padding:3px}
+}
+
 </style>
 </head>
 <body>
-<header class="app-topbar"><div class="brand"><span class="brand-monogram" aria-hidden="true">SJ</span><div class="brand-copy"><strong>St John's · What's On</strong><small>Parish events workspace</small></div><div class="header-meta"><span class="header-label">Content management</span><span id="connection">Connecting…</span></div></div></header>
+<header class="app-topbar"><div class="brand"><span class="brand-monogram" aria-hidden="true">SJ</span><div class="brand-copy"><strong>St John's · What's On</strong><small>Parish events workspace</small></div><div class="header-meta"><div class="header-sync" title="Estimated external refresh check; site publishing happens when content changes"><span class="sync-light" aria-hidden="true"></span><span class="header-sync-caption">Next check</span><strong id="refresh-countdown" role="timer" aria-live="off">calculating…</strong><span id="refresh-time" class="header-sync-time">—</span><a id="refresh-history" href="https://github.com/opmedia-dev/whats-on-calender/actions/workflows/deploy.yml" target="_blank" rel="noopener noreferrer" title="View refresh history" aria-label="View refresh history">↗</a></div><span id="connection">Connecting…</span></div></div></header>
 <main class="workspace">
 <div class="workspace-intro"><div><p class="eyebrow">Event management</p><h1>Events</h1><p class="sub">Plan parish activities, manage information and preview how each event will appear online.</p></div>
  <div class="workspace-actions"><button id="refresh" type="button" class="btn">↻ Refresh events</button><button id="newEvent" type="button" class="btn primary">+ Create event</button></div></div>
-<div class="editor-refresh-status" role="note">
- <span class="sync-light" aria-hidden="true"></span><span>Next website sync check in <strong id="refresh-countdown" role="timer" aria-live="off">calculating…</strong></span>
- <span>· <strong id="refresh-time">—</strong> UK time</span>
- <a id="refresh-history" href="https://github.com/opmedia-dev/whats-on-calender/actions/workflows/deploy.yml" target="_blank" rel="noopener noreferrer">Refresh history</a>
- <span class="refresh-note">External cron-job.org checks at :03, :18, :33 and :48 each hour. Publishing occurs only when content changes.</span>
-</div>
 <div class="workspace-grid">
 <section class="panel cal-panel">
  <div class="panel-body">
