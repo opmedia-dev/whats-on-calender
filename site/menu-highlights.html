@@ -10,7 +10,7 @@
 </head>
 <body>
  <main class="menu-shell" id="menuWidget" aria-label="What's On highlights">
-   <div class="menu-stage" id="menuStage" aria-roledescription="carousel" aria-label="Featured events and publications">
+   <div class="menu-stage wo-cards is-band" id="menuStage" aria-roledescription="carousel" aria-label="Featured events and publications">
      <p class="menu-loading" role="status">Loading parish highlights…</p>
    </div>
    <nav class="menu-controls" id="menuControls" aria-label="Featured item controls" hidden>
@@ -22,8 +22,8 @@
    <span class="menu-sr-only" id="menuAnnouncement" aria-live="polite" aria-atomic="true"></span>
  </main>
  <script type="module">
- import { init, loadEvents, param, flag, isUpcoming, nextPerSeries, formatWhen, h, reportHeight } from './assets/wo.js';
- import { loadMailings } from './assets/mailings.js';
+ import { init, loadEvents, param, flag, isUpcoming, nextPerSeries, formatWhen, renderCard, h, icon, reportHeight } from './assets/wo.js';
+ import { loadMailings, makeMailingCard } from './assets/mailings.js';
  import { loadMagazineIssue, magazineDestination } from './assets/magazine.js';
  import { horizonDays } from './assets/banner-config.js';
  import { menuHeight, menuSeconds, menuEventLimit, menuSlides, canAdvanceMenu } from './assets/menu-carousel.js';
@@ -72,7 +72,7 @@
      const event = item.event;
      const navigation = eventLink(event);
      return {
-       type: 'event', tag: isSample ? 'Sample featured event' : 'Featured event',
+       type: 'event', event, tag: isSample ? 'Sample featured event' : 'Featured event',
        title: event.title,
        meta: formatWhen(event, { clock: param('clock', '12'), year: true, ordinals: false }),
        link: 'Event details', image: visualSource(event.info?.image?.small || event.info?.image?.src),
@@ -86,39 +86,68 @@
        ? new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', day: 'numeric', month: 'short', year: 'numeric' }).format(date)
        : '';
      return {
-       type: 'mailing', tag: mailing.preview ? 'Sample weekly mailing' : 'Latest weekly mailing',
+       type: 'mailing', mailing, tag: mailing.preview ? 'Sample weekly mailing' : 'Latest weekly mailing',
        title: mailing.title, meta: published || mailing.summary || '',
        link: 'Read mailing', image: visualSource(mailing.image),
        href: mailing.url, target: '_blank', symbol: '✉'
      };
    }
    return {
-     type: 'magazine', tag: 'Parish magazine',
+     type: 'magazine', magazine: item.magazine, tag: 'Parish magazine',
      title: item.magazine.title, meta: 'The latest issue of our parish magazine',
      link: magazineLink.usesArchive ? 'View magazine archive' : 'Read the magazine',
      image: visualSource(item.magazine.cover), href: magazineLink.href,
      target: magazineLink.usesArchive ? '_top' : '_blank', symbol: '▤'
    };
  }
- function renderVisual(view) {
-   const visual = h('div', { class: 'menu-visual kind-' + view.type });
-   const placeholder = () => h('span', { class: 'menu-symbol', 'aria-hidden': 'true' }, view.symbol);
-   if (!view.image) {
-     visual.classList.add('is-placeholder');
-     visual.append(placeholder());
+ // Reuse the *same card renderer and cropped artwork* as the featured banner.
+ // Events honour the image.position chosen in the Event Manager. Publications
+ // keep their own banner behaviour: mailing logos and magazine covers are contained.
+ function renderMenuCard(view) {
+   let card;
+   if (view.type === 'event') {
+     card = renderCard(view.event, {
+       showRecurrence: Boolean(view.event.recurring),
+       location: false,
+       more: 'Event details',
+     });
+   } else if (view.type === 'mailing') {
+     card = makeMailingCard(view.mailing, {
+       h, icon, preview: Boolean(view.mailing.preview),
+     });
+     const image = card.querySelector('.wo-mailing-cover');
+     if (image) image.loading = 'eager';
    } else {
-     const photo = h('img', { src: view.image, alt: '', loading: 'eager', decoding: 'async' });
-     photo.addEventListener('error', () => {
-       if (!photo.isConnected) return;
-       visual.classList.add('is-placeholder');
-       visual.replaceChildren(placeholder());
+     const media = h('div', { class: 'wo-card-media wo-magazine-cover' },
+       view.image
+         ? h('img', { src: view.image, alt: 'Cover of ' + view.title, loading: 'eager' })
+         : h('div', { class: 'wo-magazine-placeholder' }, icon('file'), 'Magazine'));
+     card = h('a', { class: 'wo-card wo-magazine-card' },
+       media,
+       h('div', { class: 'wo-card-body wo-magazine-body' },
+         h('h3', { class: 'wo-card-title wo-magazine-title' }, view.title),
+         h('p', { class: 'wo-card-meta' }, icon('file'),
+           h('span', {}, 'Latest parish magazine')),
+         h('span', { class: 'wo-card-link' },
+           view.link, icon('arrow'))));
+     const image = card.querySelector('.wo-magazine-cover img');
+     image?.addEventListener('error', () => {
+       media.replaceChildren(h('div', { class: 'wo-magazine-placeholder' },
+         icon('file'), 'Magazine'));
      }, { once: true });
-     visual.append(photo);
    }
-   return visual;
+   card.href = view.href;
+   if (view.target) card.target = view.target;
+   else card.removeAttribute('target');
+   if (view.target === '_blank') card.rel = 'noopener noreferrer';
+   else card.removeAttribute('rel');
+   card.classList.add('menu-slide');
+   card.setAttribute('aria-label', view.tag + ': ' + view.title);
+   card.setAttribute('aria-roledescription', 'slide');
+   return card;
  }
 
- let slides = [];
+  let slides = [];
  let active = 0;
  let hovered = false;
  let paused = seconds === 0 || reducedMotion.matches;
@@ -127,21 +156,10 @@
  function paint(manual = false) {
    if (!slides.length) return;
    const view = slides[active];
-   const link = h('a', {
-     class: 'menu-slide', href: view.href, target: view.target,
-     rel: view.target === '_blank' ? 'noopener noreferrer' : null,
-     'aria-label': view.tag + ': ' + view.title,
-     'aria-roledescription': 'slide',
-     'aria-posinset': active + 1,
-     'aria-setsize': slides.length,
-   },
-     renderVisual(view),
-     h('div', { class: 'menu-copy' },
-       h('span', { class: 'menu-label' }, view.tag),
-       h('h2', { class: 'menu-title' }, view.title),
-       view.meta ? h('p', { class: 'menu-meta' }, view.meta) : null,
-       h('span', { class: 'menu-link' }, view.link)));
-   stage.replaceChildren(link);
+   const card = renderMenuCard(view);
+   card.setAttribute('aria-posinset', String(active + 1));
+   card.setAttribute('aria-setsize', String(slides.length));
+   stage.replaceChildren(card);
    dots.replaceChildren(...slides.map((entry, index) =>
      h('button', {
        type: 'button', 'aria-label': 'Show ' + (index + 1) + ' of ' + slides.length + ': ' + entry.title,
