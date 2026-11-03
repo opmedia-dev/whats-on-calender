@@ -172,6 +172,7 @@
    if (reducedMotion.matches) paused = true;
    updatePause();
  });
+ if (seconds === 0) pauseButton.hidden = true;
  updatePause();
 
  const hostReady = init();
