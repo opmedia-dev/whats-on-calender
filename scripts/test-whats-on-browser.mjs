@@ -184,7 +184,7 @@ try {
  }));
  await page.setViewportSize({ width: 790, height: 650 });
  await page.goto(base + '/menu-highlights.html?height=300&autoplay=0&link=https%3A%2F%2Fwww.stjohnsoldmalden.org.uk%2Fevents-calendar&flipbookLink=https%3A%2F%2Fwww.stjohnsoldmalden.org.uk%2Fmagazine');
- await page.locator('.menu-slide').waitFor({timeout:15000});
+ await page.locator('.menu-slide').first().waitFor({timeout:15000});
  fs.mkdirSync('ui-review',{recursive:true});
  await page.waitForTimeout(500); // Capture fully visible slide, not the entrance fade.
  await page.locator('.menu-shell').screenshot({path:'ui-review/menu-highlights-wide.png'});
@@ -240,7 +240,7 @@ try {
  // explicitly establish an eligible state before asserting automatic paging.
  await page.emulateMedia({reducedMotion:'no-preference'});
  await page.goto(base+'/menu-highlights.html?height=300&autoplay=3');
- await page.locator('.menu-slide').waitFor();
+ await page.locator('.menu-slide').first().waitFor();
  await page.mouse.move(350,610);
  await page.locator('#menuWidget').evaluate(el=>el.dispatchEvent(new MouseEvent('mouseleave')));
  const conditions=await page.evaluate(()=>({
