@@ -443,6 +443,9 @@ input:focus,select:focus,textarea:focus{border-color:#b78996!important;box-shado
  .cal-day{min-height:66px;padding:3px}
 }
 
+.demo-recurring-hint{margin:0 7px 12px;padding:11px 12px;border:1px solid #eadbe0;background:#fff8fa;border-radius:9px;font-size:11.5px;line-height:1.55;color:#68545d}
+.demo-recurring-hint strong{color:var(--accent);font-weight:720}
+
 </style>
 </head>
 <body>
@@ -469,7 +472,7 @@ input:focus,select:focus,textarea:focus{border-color:#b78996!important;box-shado
   <p class="help">Select a day to create an event, or select an existing event to edit it.</p>
  </div>
 </section>
-<aside class="panel agenda-panel" aria-labelledby="agendaHeading"><div class="panel-heading"><h2 id="agendaHeading">Events in this view</h2><p>Open and edit events directly from this list.</p></div><div class="panel-body"><p id="agendaCount" class="agenda-count">Loading…</p><div id="agendaList" class="agenda-list" aria-live="polite"></div></div></aside>
+<aside class="panel agenda-panel" aria-labelledby="agendaHeading"><div class="panel-heading"><h2 id="agendaHeading">Events in this view</h2><p>Open and edit events directly from this list.</p></div><div class="panel-body"><p id="agendaCount" class="agenda-count">Loading…</p><p id="demoRecurringHint" class="demo-recurring-hint" hidden>Demo tip: open <strong>Choir Practice</strong> (weekly) or <strong>Community Craft Circle</strong> (custom repeat) to explore recurring-event options.</p><div id="agendaList" class="agenda-list" aria-live="polite"></div></div></aside>
 </div>
 </main>
 <dialog id="editorDialog" class="editor-dialog" aria-labelledby="dialogTitle">
@@ -789,11 +792,21 @@ function call(fn){var args=Array.prototype.slice.call(arguments,1);return new Pr
   runner[fn].apply(runner,args);
  }catch(error){finish(reject,error)}
 })}
-function sample(){var s=today();return [
- {id:'demo-1',title:'Sunday Eucharist',start:s+'T09:30:00',category:'worship'},
- {id:'demo-2',title:'Coffee Morning',start:s+'T11:00:00',category:'community'},
- {id:'demo-3',title:'Choir Practice',start:add(s,3)+'T19:00:00',category:'music'}
-]}
+function sample(){
+ // Demonstration-only samples; no Google Calendar writes.
+ var s=today(),month=s.slice(0,7);
+ return [
+  {id:'demo-1',title:'Sunday Eucharist',start:s+'T09:30:00',category:'worship'},
+  {id:'demo-2',title:'Coffee Morning',start:s+'T11:00:00',category:'community'},
+  {id:'demo-3',title:'Choir Practice',start:month+'-06T19:00:00',category:'music',
+    recurring:true,repeat:'weekly',seriesId:'demo-choir-series',seriesStartDate:month+'-06',
+    description:'Weekly choir rehearsal. New singers welcome.',location:'Church choir stalls'},
+  {id:'demo-4',title:'Community Craft Circle',start:month+'-11T14:00:00',category:'community',
+    recurring:true,repeat:'custom',seriesId:'demo-craft-series',seriesStartDate:month+'-11',
+    customRepeat:{unit:'WEEKLY',interval:2,days:['WE'],ends:'count',count:12},
+    description:'A fortnightly craft and conversation session.',location:'Church hall'}
+ ];
+}
 function safeRich(html){
  var parsed=new DOMParser().parseFromString(String(html||''),'text/html');
  var host=document.createElement('div');
@@ -1050,7 +1063,8 @@ function renderAgenda(start){
   const bar=create('span','agenda-mark');bar.setAttribute('aria-hidden','true');
   const info=create('span','agenda-content');
   info.append(create('span','agenda-item-title',e.title));
-  info.append(create('span','agenda-item-date',pretty(eventDay(e),{timeZone:'UTC',weekday:'short',day:'numeric',month:'short'})+' · '+eventTime(e)));
+  var frequency=e.recurring?(e.repeat==='custom'?' · Custom repeat':' · Weekly'):'';
+  info.append(create('span','agenda-item-date',pretty(eventDay(e),{timeZone:'UTC',weekday:'short',day:'numeric',month:'short'})+' · '+eventTime(e)+frequency));
   item.append(bar,info);item.addEventListener('click',function(){openEvent(e.id)});host.append(item);
  });
  if(count>12)host.append(create('p','agenda-extra','Showing the first 12 events. Use the calendar for the rest.'));
@@ -1137,7 +1151,7 @@ function preview(){
  $('previewDescription').innerHTML=v.description.trim()||'Your event description will appear here.';
  refreshImagePreview();
 }
-function eventButton(e,cls){var b=create('button',cls,(eventTime(e)?eventTime(e)+'  ':'')+e.title);
+function eventButton(e,cls){var b=create('button',cls,(eventTime(e)?eventTime(e)+'  ':'')+e.title+(e.recurring?' ↻':''));
  b.type='button';b.title=e.title;b.dataset.category=e.category||'general';
  b.addEventListener('click',function(){openEvent(e.id)});return b}
 function calendar(){
@@ -1226,17 +1240,27 @@ async function openEvent(id,scope){
  if(state.busy)return;pending(true);status('Opening event…');
  try{
   if(linked){put(await call('editorGetEvent',id,scope||'occurrence'))}
-  else{var e=state.events.find(function(v){return v.id===id});if(!e)throw Error('Event not found');var d=eventDay(e);
-   put({id:e.id,selectedId:e.id,title:e.title,category:e.category,categorySource:'suggested',
-    startDate:d,endDate:d,startTime:'10:00',endTime:'11:00',repeat:'none',revision:'demo',
-    description:'Demonstration event. This editor is not connected to Google Calendar.',
-    location:'St John the Baptist, Old Malden',allDay:false,isRecurring:false})}
+  else{
+   // Read-only: simulate the editor's recurrence scope without calling Google.
+   var e=state.events.find(function(v){return v.id===id});if(!e)throw Error('Event not found');
+   var d=eventDay(e),recurring=!!e.recurring,selectedScope=scope||'occurrence';
+   var startTime=eventTime(e)||'10:00',endTime=String(Math.min(23,Number(startTime.slice(0,2))+1)).padStart(2,'0')+startTime.slice(2);
+   put({id:e.id,selectedId:e.id,title:e.title,category:e.category,categorySource:'selected',
+    startDate:d,endDate:d,startTime:startTime,endTime:endTime,repeat:e.repeat||'none',
+    customRepeat:e.customRepeat||null,revision:'demo',editScope:selectedScope,
+    selectedOccurrenceDate:recurring&&selectedScope==='series'?d:undefined,
+    seriesStartDate:e.seriesStartDate||d,seriesId:e.seriesId||'',
+    description:e.description||'Demonstration event. This editor is not connected to Google Calendar.',
+    location:e.location||'St John the Baptist, Old Malden',allDay:false,
+    visibility:'default',isRecurring:recurring,isInstance:recurring&&selectedScope!=='series'});
+  }
  }catch(err){status(err.message||String(err),true);pending(false)}
 }
 async function load(){
  pending(true);$('connection').textContent=linked?'Connecting to Google…':'Preview · no Google connection';
  try{if(linked){var info=await call('editorBootstrap');state.uploadConfigured=!!info.capabilities?.imageUpload;}await range();pending(false);
   $('connection').textContent=linked?'Google Calendar · editor':'Demonstration · read-only';
+  $('demoRecurringHint').hidden=!!linked;
  }catch(err){status(err.message||String(err),true);pending(false);$('connection').textContent='Calendar access unavailable'}
 }
 async function range(){
