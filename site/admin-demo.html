@@ -356,6 +356,15 @@ input:focus,select:focus,textarea:focus{border-color:#b78996!important;box-shado
  .editor-footer .status{order:2;width:100%;flex:none;max-width:none;min-height:0;margin:0;font-size:11px}
 }
 
+
+/* On narrow screens use a natural document flow: never clip the long editor form. */
+@media(max-width:930px){
+ .editor-dialog>.layout{display:block;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain}
+ .editor-dialog .layout>.panel:first-child{height:auto;min-height:max-content;overflow:visible}
+ .editor-dialog .layout>.panel:first-child .panel-body{overflow:visible}
+ .editor-dialog .layout>.panel.preview{position:static;height:auto}
+}
+
 </style>
 </head>
 <body>
