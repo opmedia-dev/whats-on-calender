@@ -202,8 +202,11 @@ try {
  assert.equal(stacked.overflow,false,'menu widget must not overflow the menu column');
 
  await page.goto(base+'/menu-highlights.html?height=300&autoplay=3');
- await page.mouse.move(0,0);
  await page.locator('.menu-slide').waitFor();
+ // Pointer must be OUTSIDE the 300px-high carousel. Hover intentionally pauses it.
+ await page.mouse.move(350,610);
+ assert.equal(await page.locator('#menuPause').getAttribute('aria-pressed'),'false');
+
  const initial=await page.locator('.menu-slide').textContent();
  await page.waitForTimeout(4200);
  assert.notEqual(await page.locator('.menu-slide').textContent(),initial,'unfocused menu should auto-rotate');
