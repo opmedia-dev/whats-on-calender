@@ -201,15 +201,25 @@ try {
  await page.screenshot({path:'ui-review/menu-highlights-narrow.png'});
  assert.equal(stacked.overflow,false,'menu widget must not overflow the menu column');
 
+ // Exercise auto-rotation with explicit no-reduced-motion and pointer outside widget.
+ await page.emulateMedia({reducedMotion:'no-preference'});
  await page.goto(base+'/menu-highlights.html?height=300&autoplay=3');
  await page.locator('.menu-slide').waitFor();
- // Pointer must be OUTSIDE the 300px-high carousel. Hover intentionally pauses it.
  await page.mouse.move(350,610);
  assert.equal(await page.locator('#menuPause').getAttribute('aria-pressed'),'false');
-
  const initial=await page.locator('.menu-slide').textContent();
- await page.waitForTimeout(4200);
- assert.notEqual(await page.locator('.menu-slide').textContent(),initial,'unfocused menu should auto-rotate');
+ const advanceState=await page.evaluate(()=>({
+  hidden:document.hidden,
+  reducedMotion:matchMedia('(prefers-reduced-motion: reduce)').matches,
+  hovered:document.getElementById('menuWidget').matches(':hover'),
+  focused:document.getElementById('menuWidget').contains(document.activeElement),
+  paused:document.getElementById('menuPause').getAttribute('aria-pressed'),
+  items:document.querySelectorAll('#menuDots button').length
+ }));
+ console.log('Automatic rotation conditions:',JSON.stringify(advanceState));
+ assert.deepEqual(advanceState,{hidden:false,reducedMotion:false,hovered:false,focused:false,paused:'false',items:3});
+ await page.waitForFunction(initialText=>document.querySelector('.menu-slide')?.textContent!==initialText,
+   initial,{timeout:6500});
  await page.locator('#menuPause').click();
  assert.equal(await page.locator('#menuPause').getAttribute('aria-pressed'),'true');
  const paused=await page.locator('.menu-slide').textContent();
