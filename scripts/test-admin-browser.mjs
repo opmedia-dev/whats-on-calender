@@ -322,6 +322,11 @@ try {
     buttons.map(button => Math.round(button.getBoundingClientRect().top)));
   assert.ok(Math.max(...footerButtons)-Math.min(...footerButtons)<8,
     'mobile Save, Delete and Reset actions should share one row');
+  const formPanelSize = await page.locator('.editor-dialog .layout>.panel').first().evaluate(el => ({
+    scrollHeight:el.scrollHeight,clientHeight:el.clientHeight,
+  }));
+  assert.ok(formPanelSize.scrollHeight <= formPanelSize.clientHeight+3,
+    'mobile form must expand to contain all editable fields rather than clipping: '+JSON.stringify(formPanelSize));
   await page.screenshot({path:'ui-review/event-manager-editor-mobile.png'});
   assert.deepEqual(errors, [], 'browser must not report runtime errors');
   console.log('PASS: Editor workflow, aligned recurring scope choices, private visibility by scope, mobile modal');
