@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>What's happening</title>
-  <link rel="stylesheet" href="assets/wo.css?v=two-month-posters-20261104">
+  <link rel="stylesheet" href="assets/wo.css?v=monthly-inline-viewer-20261104">
 </head>
 <body>
   <main class="wo-wrap">
@@ -13,11 +13,38 @@
       <div class="wo-banner" id="banner">
         <div class="wo-banner-main"><div id="cards" class="wo-cards is-band"><p class="wo-loading">Loading…</p></div><div class="wo-foot" id="foot"><div id="pager"></div></div></div>
       </div>
+      <section id="monthlyViewer" class="wo-monthly-reader" aria-labelledby="monthlyViewerTitle" hidden>
+        <header class="wo-monthly-reader-header">
+          <button id="monthlyViewerClose" class="wo-monthly-back" type="button">← Back to What's On</button>
+          <div>
+            <p class="wo-monthly-reader-kicker">MONTHLY WHAT'S ON</p>
+            <h2 id="monthlyViewerTitle" tabindex="-1">Monthly notice</h2>
+          </div>
+        </header>
+        <div class="wo-monthly-reader-controls" aria-label="Poster viewing controls">
+          <span>Read or enlarge the poster below</span>
+          <div class="wo-monthly-zoom-controls">
+            <button id="monthlyZoomOut" type="button" aria-label="Zoom out of poster">−</button>
+            <output id="monthlyZoomLevel" aria-live="polite">100%</output>
+            <button id="monthlyZoomIn" type="button" aria-label="Zoom in on poster">+</button>
+          </div>
+        </div>
+        <div id="monthlyViewerMedia" class="wo-monthly-reader-media">
+          <img id="monthlyViewerImage" alt="Monthly events notice">
+        </div>
+        <div class="wo-monthly-reader-pdf-actions">
+          <button id="monthlyViewerFullPdf" type="button" hidden>Read the full PDF within this page</button>
+        </div>
+        <div id="monthlyViewerPdfPanel" class="wo-monthly-reader-pdf" hidden>
+          <iframe id="monthlyViewerPdfFrame" title="Full monthly notice PDF" loading="lazy"></iframe>
+        </div>
+        <p class="wo-monthly-reader-help">Use the Back button to return to the upcoming events.</p>
+      </section>
     </div>
     <div id="detail" hidden></div>
   </main>
   <script type="module">
-    import { init, loadEvents, params, param, num, flag, h, icon, isUpcoming, nextPerSeries, renderCard, renderPager, routeDetails, showError, emptyState } from './assets/wo.js?v=monthly-poster-20261104';
+    import { init, loadEvents, params, param, num, flag, h, icon, isUpcoming, nextPerSeries, renderCard, renderPager, routeDetails, showError, emptyState, postToParent } from './assets/wo.js?v=monthly-poster-20261104';
     import { loadMagazineIssue, magazineDestination } from './assets/magazine.js';
     import { loadMailings, makeMailingCard } from './assets/mailings.js?v=mailchimp-logo-20261102';
     import { horizonDays, autoplaySeconds, mayAutoAdvance, eventSlots, currentAndNextMonths, chronologicalBannerItems } from './assets/banner-config.js?v=two-month-posters-20261104';
@@ -125,16 +152,84 @@
       const [, { events, monthlyNotices = {} }] = await Promise.all([initialisation, loadEvents()]);
       const now = new Date();
       const [currentMonth, nextMonth] = currentAndNextMonths(now);
+      const monthlyViewer = document.getElementById('monthlyViewer');
+      const monthlyImage = document.getElementById('monthlyViewerImage');
+      const monthlyMedia = document.getElementById('monthlyViewerMedia');
+      const pdfPanel = document.getElementById('monthlyViewerPdfPanel');
+      const pdfFrame = document.getElementById('monthlyViewerPdfFrame');
+      const fullPdf = document.getElementById('monthlyViewerFullPdf');
+      let readerTrigger = null;
+      let activePdf = '';
+      let zoom = 100;
+      const setZoom = (value) => {
+        zoom = Math.max(100, Math.min(250, value));
+        monthlyImage.style.width = zoom + '%';
+        document.getElementById('monthlyZoomLevel').textContent = zoom + '%';
+        document.getElementById('monthlyZoomOut').disabled = zoom === 100;
+        document.getElementById('monthlyZoomIn').disabled = zoom === 250;
+      };
+      const closeMonthlyViewer = () => {
+        if (monthlyViewer.hidden) return;
+        monthlyViewer.hidden = true;
+        banner.hidden = false;
+        monthlyImage.removeAttribute('src');
+        pdfFrame.removeAttribute('src');
+        pdfPanel.hidden = true;
+        const previous = readerTrigger;
+        readerTrigger = null;
+        if (previous?.isConnected) previous.focus({ preventScroll: true });
+        // The existing Duda embed listener restores the iframe's position.
+        postToParent({ type: 'scrollToTop' });
+      };
+      const openMonthlyViewer = (notice, monthName, trigger) => {
+        readerTrigger = trigger;
+        monthlyViewer.hidden = false;
+        banner.hidden = true;
+        document.getElementById('monthlyViewerTitle').textContent =
+          "What's On — " + monthName;
+        monthlyImage.src = notice.image.src;
+        monthlyImage.alt = 'Full monthly events poster for ' + monthName;
+        setZoom(100);
+        monthlyMedia.scrollLeft = 0;
+        activePdf = notice.mimeType === 'application/pdf' &&
+          new URL(notice.file, location.href).origin === location.origin ? notice.file : '';
+        fullPdf.hidden = !activePdf;
+        fullPdf.textContent = 'Read the full PDF within this page';
+        pdfPanel.hidden = true;
+        pdfFrame.removeAttribute('src');
+        document.getElementById('monthlyViewerClose').focus({ preventScroll: true });
+        postToParent({ type: 'scrollToTop' });
+      };
+      document.getElementById('monthlyViewerClose')
+        .addEventListener('click', closeMonthlyViewer);
+      document.getElementById('monthlyZoomIn')
+        .addEventListener('click', () => setZoom(zoom + 50));
+      document.getElementById('monthlyZoomOut')
+        .addEventListener('click', () => setZoom(zoom - 50));
+      fullPdf.addEventListener('click', () => {
+        if (!activePdf) return;
+        pdfPanel.hidden = !pdfPanel.hidden;
+        if (pdfPanel.hidden) pdfFrame.removeAttribute('src');
+        else pdfFrame.src = activePdf;
+        fullPdf.textContent = pdfPanel.hidden
+          ? 'Read the full PDF within this page' : 'Hide full PDF';
+      });
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && !monthlyViewer.hidden) {
+          event.preventDefault();
+          closeMonthlyViewer();
+        }
+      });
       const renderMonthlyCard = ({ notice, month }) => {
         const monthName = new Intl.DateTimeFormat('en-GB', {
           month: 'long', year: 'numeric', timeZone: 'UTC',
         }).format(new Date(month + '-01T12:00:00Z'));
         const isCurrent = month === currentMonth;
         const label = isCurrent ? "What's On this Month" : "What's On Next Month";
-        return h('a', {
-          class: 'wo-card wo-monthly-card',
-          href: notice.file, target: '_blank', rel: 'noopener noreferrer',
-          'aria-label': 'Open monthly events poster for ' + monthName,
+        return h('button', {
+          type: 'button', class: 'wo-card wo-monthly-card',
+          'aria-label': 'Read monthly events poster for ' + monthName,
+          onclick: (event) => openMonthlyViewer(notice, monthName, event.currentTarget),
         },
           h('div', { class: 'wo-card-media wo-monthly-cover' },
             h('img', { src: notice.image.src, alt: 'Events poster — ' + monthName, loading: 'eager' })),
@@ -216,7 +311,7 @@
           const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches || false;
           if (mayAutoAdvance({
             pages, hovered, focusWithin, hidden: document.hidden,
-            detailOpen: !document.getElementById('detail').hidden, reducedMotion,
+            detailOpen: !document.getElementById('detail').hidden || !monthlyViewer.hidden, reducedMotion,
           })) {
             page = (page + 1) % pages;
             render();
