@@ -44,7 +44,12 @@ test('editor enforces monthly notice date and format, keeping public visibility'
  assert.throws(()=>env.normalise_({...form,visibility:'private'}),/publicly visible/);
  assert.throws(()=>env.normalise_({...form,repeat:'weekly'}),/non-repeating/);
  assert.match(editor,/id="newMonthly"/);
- assert.match(editor,/id="monthlyNotice"/);
+ assert.match(editor,/id="monthlyDialog"/);
+ assert.match(editor,/id="monthlyForm"/);
+ assert.match(editor,/id="monthlyFile"/);
+ assert.match(editor,/id="monthlyPreviewImage"/);
+ assert.doesNotMatch(editor,/id="monthlyNotice"/);
+ assert.match(editor,/await call\('editorSaveMonthlyPoster',\$\('monthlyForm'\)\)/);
  assert.match(editor,/image\/png,application\/pdf/);
  assert.match(backend,/const EDITOR_UPLOAD_FOLDER_ID = '[A-Za-z0-9_-]+';/);
 });
@@ -52,4 +57,83 @@ test('weekly compact timetable exposes full-calendar button within the fixed her
  assert.match(timetable,/const more = param\('moreLink'\) \|\| new URL\('calendar\.html'/);
  assert.doesNotMatch(timetable,/!flag\('compact', true\) && more &&/);
  assert.match(source('site/assets/wo.css'),/\.wo-hero-compact \.wo-tt-more/);
+});
+
+test('monthly poster manager uses dedicated backend operations rather than event editing fields',()=>{
+ assert.match(backend,/function editorGetMonthlyPoster\(requestedMonth\)/);
+ assert.match(backend,/function editorSaveMonthlyPoster\(form\)/);
+ assert.match(backend,/function editorDeleteMonthlyPoster\(requestedMonth, revision\)/);
+ assert.match(backend,/e\.extendedProperties\?\.shared\?\.\[MONTHLY_NOTICE_KEY\] === 'true'\) continue/);
+ assert.match(editor,/id="monthlyDialog"/);
+ const manager=editor.split('<dialog id="monthlyDialog"')[1].split('</dialog>')[0];
+ for(const id of ['title','category','repeat','startDate','endDate','startTime','endTime','featured','visibility','description']){
+  assert.doesNotMatch(manager,new RegExp('id="'+id+'"'),id+' must not be in monthly notice manager');
+ }
+ assert.match(manager,/name="month"/);
+ assert.match(manager,/name="attachment"/);
+ assert.match(manager,/name="revision"/);
+});
+
+test('dedicated save replaces one monthly file, preserves past months and rejects stale or invalid writes',()=>{
+ const records=[];
+ const actions=[];
+ const calendar={
+  CalendarList:{get:()=>({accessRole:'writer'})},
+  Events:{
+   list:()=>({items:records}),
+   insert:(body)=>{actions.push({kind:'insert',body});const rec={
+     ...body,id:'poster-2026-11',etag:'r1',updated:'2026-11-04T14:00:00Z'};
+     records.push(rec);return rec;},
+   patch:(body,cal,id)=>{actions.push({kind:'patch',body,id});const rec=records.find(x=>x.id===id);
+     Object.assign(rec,body,{etag:'r2',updated:'2026-11-04T14:30:00Z'});return rec;},
+   remove:(cal,id)=>{actions.push({kind:'remove',id});const n=records.findIndex(x=>x.id===id);records.splice(n,1);},
+  },
+ };
+ let nextFile=0;
+ const context=vm.createContext({
+  Calendar:calendar,
+  Drive:{Files:{create:(meta)=>({id:'file-'+(++nextFile),name:meta.name,mimeType:meta.mimeType,
+    webViewLink:'https://drive.google.com/file/d/file-'+nextFile+'/view'})},
+   Permissions:{create:(permission)=>{assert.equal(permission.type,'anyone')}}},
+  Utilities:{formatDate:(date,zone,format)=>{
+   if(format==='yyyy-MM-dd')return new Date(date).toISOString().slice(0,10);
+   if(format==='MMMM yyyy')return 'November 2026';
+   throw Error('Unexpected date format '+format);
+  }},
+  LockService:{getScriptLock:()=>({tryLock:()=>true,releaseLock:()=>{}})},
+ });
+ vm.runInContext(backend,context);
+ const blob=(name,mime)=>({getName:()=>name,getContentType:()=>mime,
+  getBytes:()=>new Uint8Array(1024)});
+ assert.equal(context.editorGetMonthlyPoster('2026-11').exists,false);
+ const first=context.editorSaveMonthlyPoster({
+  month:'2026-11',revision:'',attachment:blob('November.png','image/png')});
+ assert.equal(first.saved,true);
+ assert.equal(first.month,'2026-11');
+ assert.equal(first.revision,'r1');
+ assert.equal(actions[0].kind,'insert');
+ assert.equal(actions[0].body.extendedProperties.shared.woMonthlyNotice,'true');
+ assert.equal(actions[0].body.extendedProperties.shared.woFeatured,'false');
+ assert.equal(actions[0].body.start.date,'2026-11-01');
+ assert.equal(actions[0].body.end.date,'2026-11-02');
+ assert.equal(actions[0].body.transparency,'transparent');
+ assert.equal(actions[0].body.attachments.length,1);
+ assert.equal(actions[0].body.attachments[0].mimeType,'image/png');
+ const later=context.editorSaveMonthlyPoster({
+  month:'2026-11',revision:'r1',attachment:blob('November.pdf','application/pdf')});
+ assert.equal(later.revision,'r2');
+ assert.equal(actions[1].kind,'patch');
+ assert.equal(actions[1].body.attachments.length,1,'replacing a poster removes old attachment from record');
+ assert.equal(actions[1].body.attachments[0].mimeType,'application/pdf');
+ assert.throws(()=>context.editorSaveMonthlyPoster({
+  month:'2026-11',revision:'r1',attachment:blob('late.png','image/png')}),/changed/);
+ assert.throws(()=>context.editorSaveMonthlyPoster({
+  month:'2026-11',revision:'r2',attachment:blob('bad.jpg','image/jpeg')}),/PNG image or PDF/);
+ assert.throws(()=>context.editorGetMonthlyPoster('2026-13'),/valid month/);
+ const listed=context.editorListEvents('2026-11-01','2026-11-30');
+ assert.equal(listed.length,0,'monthly poster is invisible in normal calendar editor');
+ const removed=context.editorDeleteMonthlyPoster('2026-11','r2');
+ assert.equal(removed.removed,true);
+ assert.equal(actions.at(-1).kind,'remove');
+ assert.equal(context.editorGetMonthlyPoster('2026-11').exists,false);
 });
