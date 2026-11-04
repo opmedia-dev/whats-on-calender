@@ -86,7 +86,7 @@ test('editor enforces monthly notice date and format, keeping public visibility'
  assert.match(editor,/id="monthlyFile"/);
  assert.match(editor,/id="monthlyPreviewImage"/);
  assert.doesNotMatch(editor,/id="monthlyNotice"/);
- assert.match(editor,/await call\('editorSaveMonthlyPoster',\$\('monthlyForm'\)\)/);
+ assert.match(editor,/await call\('editorSaveMonthlyPoster',form\)/);
  assert.match(editor,/image\/png,application\/pdf/);
  assert.match(backend,/const EDITOR_UPLOAD_FOLDER_ID = '[A-Za-z0-9_-]+';/);
 });
