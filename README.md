@@ -84,6 +84,8 @@ no featured events. The two-month window advances automatically on the first of 
 month, including December → January. The latest mailing and magazine remain fixed
 banner cards.
 
+Visitors now open either month's poster **inside the existing parish website banner embed**, not in a new tab. The poster view replaces the banner temporarily, includes zoom controls, supports an embedded full PDF when hosted locally, and provides a Back button. The embed's existing height-reporting integration allows the enlarged notice to fit in the Duda page without changing the browser address or requiring replacement of the Duda HTML snippet. The original public media URL is still available to visitors who inspect network requests; this is a branded browsing improvement, not access control.
+
 The manager's ordinary Events calendar and the public calendars do not show these
 poster records; behind the scenes, the existing Google Calendar/Drive publishing
 pipeline still supplies their files. The private editor requires a new Apps Script
