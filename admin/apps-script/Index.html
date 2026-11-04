@@ -1459,6 +1459,142 @@ $('clearFilters').addEventListener('click',function(){$('eventSearch').value='';
 $('month').addEventListener('click',function(){setMode('month')});
 $('week').addEventListener('click',function(){setMode('week')});
 $('newEvent').addEventListener('click',function(){newEntry(today())});
+
+var monthlyState={record:null,busy:false,request:0,previewUrl:''};
+function monthlyLabel(month){
+ if(!/^\d{4}-\d{2}$/.test(month||''))return 'Choose a month';
+ return new Intl.DateTimeFormat('en-GB',{month:'long',year:'numeric',timeZone:'UTC'})
+   .format(new Date(month+'-01T12:00:00Z'));
+}
+function monthlyStatus(message,error){
+ $('monthlyStatus').textContent=message;
+ $('monthlyStatus').classList.toggle('is-error',!!error);
+}
+function monthlyRelease(){
+ if(monthlyState.previewUrl)URL.revokeObjectURL(monthlyState.previewUrl);
+ monthlyState.previewUrl='';
+}
+function monthlyRender(){
+ const file=$('monthlyFile').files[0],old=monthlyState.record?.file,month=$('monthlyMonth').value;
+ $('monthlyPreviewMonth').textContent=monthlyLabel(month);
+ $('monthlyFileName').textContent=file?'Selected: '+file.name:
+   old?'Saved poster: '+old.name:'No new file selected.';
+ $('monthlySave').disabled=!linked||!state.uploadConfigured||monthlyState.busy||!file;
+ $('monthlyRemove').hidden=!monthlyState.record?.exists;
+ $('monthlyRemove').disabled=!linked||monthlyState.busy;
+ for(const id of ['monthlyMonth','monthlyFile','monthlyClose','monthlyCancel'])
+  $(id).disabled=monthlyState.busy;
+ $('monthlyPreviewAction').textContent=
+  (file?.type||old?.mimeType)==='application/pdf'?'Open monthly PDF →':'View monthly poster →';
+ const source=file?.type==='image/png'?monthlyState.previewUrl:
+  (!file?old?.thumbnail||'':'');
+ const img=$('monthlyPreviewImage'),holder=$('monthlyPreviewFallback');
+ img.hidden=!source;holder.hidden=!!source;
+ if(source){img.src=source;img.alt='Poster for '+monthlyLabel(month)}
+ else {
+  img.removeAttribute('src');
+  $('monthlyPlaceholderTitle').textContent=file?.type==='application/pdf'
+   ?'PDF selected: '+file.name:old?.name||'Your monthly poster';
+ }
+ $('monthlyPreviewHint').textContent=file?.type==='application/pdf'
+  ?'The first page of this PDF will become the card image after the next website update.'
+  :'The preview uses the same poster proportions and information band as the live banner.';
+}
+async function monthlyLoad(){
+ const month=$('monthlyMonth').value,request=++monthlyState.request;
+ monthlyRelease();$('monthlyFile').value='';$('monthlyRevision').value='';
+ monthlyState.record=null;monthlyState.busy=!!linked;
+ monthlyStatus(linked?'Looking for a saved poster…':'Read-only demonstration. Select a PNG to preview it.');
+ monthlyRender();
+ if(!linked)return;
+ try{
+  const record=await call('editorGetMonthlyPoster',month);
+  if(request!==monthlyState.request)return;
+  monthlyState.record=record;$('monthlyRevision').value=record.revision||'';
+  monthlyStatus(record.file
+   ?'Poster saved for '+monthlyLabel(month)+'. Choose a file to replace it.'
+   :'No poster saved for '+monthlyLabel(month)+'. Choose a PNG or PDF.');
+ }catch(error){
+  if(request!==monthlyState.request)return;
+  monthlyStatus(error.message||String(error),true);
+ }finally{
+  if(request===monthlyState.request){monthlyState.busy=false;monthlyRender();}
+ }
+}
+function monthlyOpen(){
+ if(state.busy)return;
+ $('monthlyMonth').value=key(state.date).slice(0,7);
+ if(!$('monthlyDialog').open)$('monthlyDialog').showModal();
+ monthlyLoad();
+}
+async function monthlyClose(){
+ if(monthlyState.busy)return;
+ if($('monthlyFile').files.length){
+  const ok=await askAction({title:'Discard selected poster?',message:'Your chosen file has not been saved.',
+   confirmText:'Discard file',danger:true});
+  if(!ok)return;
+ }
+ monthlyState.request++;monthlyRelease();$('monthlyFile').value='';
+ $('monthlyDialog').close();
+}
+$('newMonthly').addEventListener('click',monthlyOpen);
+$('monthlyMonth').addEventListener('change',monthlyLoad);
+$('monthlyClose').addEventListener('click',monthlyClose);
+$('monthlyCancel').addEventListener('click',monthlyClose);
+$('monthlyDialog').addEventListener('cancel',function(event){event.preventDefault();monthlyClose()});
+$('monthlyFile').addEventListener('change',function(){
+ monthlyRelease();
+ const file=this.files[0];
+ if(file&&!['image/png','application/pdf'].includes(file.type)){
+  this.value='';monthlyStatus('Please choose a PNG image or PDF file.',true);monthlyRender();return;
+ }
+ if(file?.size>8*1024*1024){
+  this.value='';monthlyStatus('Choose a file smaller than 8 MB.',true);monthlyRender();return;
+ }
+ if(file?.type==='image/png')monthlyState.previewUrl=URL.createObjectURL(file);
+ monthlyStatus(file?'Ready to save '+monthlyLabel($('monthlyMonth').value)+'.':
+  monthlyState.record?.exists?'The saved poster is unchanged.':'Choose a file to publish.');
+ monthlyRender();
+});
+$('monthlyPreviewImage').addEventListener('error',function(){
+ this.hidden=true;$('monthlyPreviewFallback').hidden=false;
+ $('monthlyPlaceholderTitle').textContent=monthlyState.record?.file?.name||'Your monthly poster';
+});
+$('monthlyForm').addEventListener('submit',async function(event){
+ event.preventDefault();
+ if(!linked||monthlyState.busy||!state.uploadConfigured)return;
+ const file=$('monthlyFile').files[0];
+ if(!file){monthlyStatus('Choose a PNG or PDF before saving.',true);return;}
+ monthlyState.busy=true;monthlyStatus('Saving the monthly poster…');monthlyRender();
+ try{
+  const saved=await call('editorSaveMonthlyPoster',$('monthlyForm'));
+  if(!saved?.saved)throw new Error('The poster was not confirmed as saved.');
+  monthlyRelease();$('monthlyFile').value='';
+  monthlyState.record=saved;$('monthlyRevision').value=saved.revision||'';
+  monthlyStatus('Poster saved for '+monthlyLabel(saved.month)+
+    '. It will appear on the website after the next successful update.');
+  notify('Monthly poster saved.','success');
+ }catch(error){monthlyStatus(error.message||String(error),true);}
+ finally{monthlyState.busy=false;monthlyRender();}
+});
+$('monthlyRemove').addEventListener('click',async function(){
+ if(!linked||monthlyState.busy||!monthlyState.record?.exists)return;
+ const month=$('monthlyMonth').value;
+ const ok=await askAction({title:'Remove monthly poster?',
+  message:'Remove the poster for '+monthlyLabel(month)+'? The original file will remain in Drive.',
+  confirmText:'Remove poster',danger:true});
+ if(!ok)return;
+ monthlyState.busy=true;monthlyStatus('Removing the poster…');monthlyRender();
+ try{
+  await call('editorDeleteMonthlyPoster',month,monthlyState.record.revision);
+  monthlyState.record={month,exists:false,revision:'',file:null};
+  $('monthlyRevision').value='';$('monthlyFile').value='';monthlyRelease();
+  monthlyStatus('Poster removed. The website will update after its next successful refresh.');
+  notify('Monthly poster removed.','success');
+ }catch(error){monthlyStatus(error.message||String(error),true);}
+ finally{monthlyState.busy=false;monthlyRender();}
+});
+
 $('refresh').addEventListener('click',load);
 
 $('eventForm').addEventListener('submit',save);
