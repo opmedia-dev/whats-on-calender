@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>What's happening</title>
-  <link rel="stylesheet" href="assets/wo.css?v=two-month-posters-20261104">
+  <link rel="stylesheet" href="assets/wo.css?v=monthly-poster-detail-20261104">
 </head>
 <body>
   <main class="wo-wrap">
@@ -125,6 +125,19 @@
       const [, { events, monthlyNotices = {} }] = await Promise.all([initialisation, loadEvents()]);
       const now = new Date();
       const [currentMonth, nextMonth] = currentAndNextMonths(now);
+      const posterPage = param('posterPage', param('link', 'https://www.stjohnsoldmalden.org.uk/events-calendar'));
+      // Monthly posters are hidden virtual details on the parish What's On page,
+      // not ordinary calendar events, hosted-file tabs, or in-banner viewers.
+      const posterHref = (month) => {
+        const dest = new URL(posterPage);
+        if (!['http:', 'https:'].includes(dest.protocol)) {
+          throw new Error('The parish What\'s On page link must be HTTP(S).');
+        }
+        dest.hash = '';
+        dest.searchParams.delete('poster');
+        dest.searchParams.set('event', 'poster-' + month);
+        return dest.href;
+      };
       const renderMonthlyCard = ({ notice, month }) => {
         const monthName = new Intl.DateTimeFormat('en-GB', {
           month: 'long', year: 'numeric', timeZone: 'UTC',
@@ -133,8 +146,8 @@
         const label = isCurrent ? "What's On this Month" : "What's On Next Month";
         return h('a', {
           class: 'wo-card wo-monthly-card',
-          href: notice.file, target: '_blank', rel: 'noopener noreferrer',
-          'aria-label': 'Open monthly events poster for ' + monthName,
+          href: posterHref(month), target: '_top',
+          'aria-label': 'Read monthly events poster for ' + monthName + ' on the parish What\'s On page',
         },
           h('div', { class: 'wo-card-media wo-monthly-cover' },
             h('img', { src: notice.image.src, alt: 'Events poster — ' + monthName, loading: 'eager' })),

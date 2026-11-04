@@ -342,11 +342,81 @@ export function currentEventId() {
   return m ? decodeURIComponent(m[1]) : null;
 }
 
+// Render a virtual "hidden event" for monthly publications. These posters are
+// stored in monthlyNotices (not events), so they never appear in event listings,
+// calendar dates, Highlights, search results or event-editor records.
+function renderMonthlyPosterDetail(notice, month, { onBack, backLabel }) {
+  const monthName = new Intl.DateTimeFormat('en-GB', {
+    month: 'long', year: 'numeric', timeZone: 'UTC',
+  }).format(new Date(month + '-01T12:00:00Z'));
+  const title = "What's On — " + monthName;
+  const back = h('button', {
+    class: 'wo-poster-back', type: 'button', onclick: onBack,
+  }, icon('left'), backLabel);
+  const stage = h('div', { class: 'wo-poster-stage' });
+  const image = notice?.image?.src
+    ? h('img', { src: notice.image.src, alt: 'Monthly events notice for ' + monthName,
+      decoding: 'async' })
+    : null;
+  const zoomText = h('output', { 'aria-live': 'polite' }, '100%');
+  const zoomOut = h('button', { type: 'button', 'aria-label': 'Zoom out' }, '−');
+  const zoomIn = h('button', { type: 'button', 'aria-label': 'Zoom in' }, '+');
+  const setZoom = (amount) => {
+    if (!image) return;
+    const value = Math.max(100, Math.min(250, amount));
+    image.style.width = value + '%';
+    zoomText.textContent = value + '%';
+    zoomOut.disabled = value === 100;
+    zoomIn.disabled = value === 250;
+    stage.scrollLeft = 0;
+  };
+  let scale = 100;
+  zoomOut.addEventListener('click', () => { scale = Math.max(100, scale - 50); setZoom(scale); });
+  zoomIn.addEventListener('click', () => { scale = Math.min(250, scale + 50); setZoom(scale); });
+  if (image) { stage.append(image); setZoom(100); }
+
+  const pdf = notice?.mimeType === 'application/pdf' && notice.file
+    ? new URL(notice.file, location.href) : null;
+  // Only embed our own published copies; never embed arbitrary Drive links.
+  const safePdf = pdf?.origin === location.origin && pdf?.protocol === 'https:' ||
+    pdf?.origin === location.origin && location.protocol === 'http:';
+  const frame = h('iframe', { class: 'wo-poster-pdf-frame',
+    title: 'Full monthly activities PDF for ' + monthName, loading: 'lazy' });
+  frame.hidden = true;
+  const pdfButton = h('button', {
+    type: 'button', class: 'wo-poster-pdf-button',
+    onclick: () => {
+      frame.hidden = !frame.hidden;
+      if (frame.hidden) frame.removeAttribute('src');
+      else frame.src = pdf.href;
+      pdfButton.textContent = frame.hidden ? 'Read full PDF here' : 'Hide full PDF';
+    },
+  }, 'Read full PDF here');
+
+  return h('article', { class: 'wo-poster-detail' },
+    h('div', { class: 'wo-poster-detail-head' }, back,
+      h('div', {},
+        h('p', { class: 'wo-poster-eyebrow' }, 'MONTHLY WHAT’S ON'),
+        h('h2', { id: 'poster-title' }, title))),
+    notice?.image?.src
+      ? h('div', { class: 'wo-poster-tools' },
+          h('span', {}, 'Read or enlarge the monthly poster'),
+          h('div', { class: 'wo-poster-zoom' }, zoomOut, zoomText, zoomIn))
+      : null,
+    notice?.image?.src ? stage
+      : h('p', { class: 'wo-panel' }, 'This monthly notice is not available.'),
+    safePdf && notice?.image?.src ? h('div', { class: 'wo-poster-pdf-controls' }, pdfButton) : null,
+    safePdf && notice?.image?.src ? frame : null,
+    h('p', { class: 'wo-poster-description' },
+      'This is a monthly summary of parish activities, not a separate calendar event.'),
+  );
+}
+
 // Wires #event=<id> to an inline detail. The detail's Back control is
 // intentionally "Back to this embed's list", NOT browser history.back(): a
 // visitor can follow several future dates inside a recurring series and should
 // never need to traverse those date pages to return to the calendar/list.
-export function routeDetails({ main, detail, events, backLabel }) {
+export function routeDetails({ main, detail, events, backLabel, monthlyNotices = {} }) {
   let scrollY = 0;
   let showingList = !currentEventId();
   const changeDetail = (id) => {
@@ -357,8 +427,22 @@ export function routeDetails({ main, detail, events, backLabel }) {
   };
   const render = () => {
     const id = currentEventId();
-    const ev = id && (events.find((e) => e.id === id) || findSeriesFallback(events, id));
-    if (ev) {
+    const posterMonth = /^poster-(\d{4}-(?:0[1-9]|1[0-2]))$/.exec(id || '')?.[1];
+    const poster = posterMonth && monthlyNotices[posterMonth];
+    const ev = id && !posterMonth && (events.find((e) => e.id === id) || findSeriesFallback(events, id));
+    if (posterMonth) {
+      if (showingList) scrollY = window.scrollY;
+      showingList = false;
+      detail.replaceChildren(renderMonthlyPosterDetail(poster, posterMonth, {
+        backLabel, onBack: () => changeDetail(null),
+      }));
+      main.hidden = true;
+      detail.hidden = false;
+      window.scrollTo(0, 0);
+      scrollHostToTop();
+      postToParent({ type: 'event', id: 'poster-' + posterMonth,
+        title: "What's On — " + posterMonth });
+    } else if (ev) {
       if (showingList) scrollY = window.scrollY;
       showingList = false;
       detail.replaceChildren(renderDetail(ev, events, {

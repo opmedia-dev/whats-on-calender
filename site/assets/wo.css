@@ -602,3 +602,49 @@ button { font: inherit; color: inherit; }
 .wo-monthly-body .wo-card-meta .wo-icon{color:var(--wo-accent2)}
 .wo-monthly-body .wo-card-link{color:#fff}
 
+
+
+
+/* Virtual monthly poster detail on the main What's On page. The poster is not
+   an event, and never appears in calendar lists or search results. */
+.wo-poster-detail{max-width:1000px;margin:0 auto;padding:8px 0 30px}
+.wo-poster-detail-head{display:flex;align-items:flex-start;gap:18px;
+  flex-wrap:wrap;border-bottom:1px solid var(--wo-border);padding:0 0 20px;margin:0 0 18px}
+.wo-poster-detail-head>div{flex:1;min-width:0}
+.wo-poster-eyebrow{font-size:.72rem;color:var(--wo-accent);font-weight:800;
+  text-transform:uppercase;letter-spacing:.13em;margin:0 0 6px}
+.wo-poster-detail h2{font-family:var(--wo-heading-font);
+  color:var(--wo-title);font-size:clamp(1.45rem,3.4vw,2.3rem);margin:0;line-height:1.25}
+.wo-poster-back{display:inline-flex;align-items:center;gap:7px;
+  font:inherit;font-size:.88rem;font-weight:700;cursor:pointer;border:1px solid var(--wo-border);
+  background:var(--wo-card);color:var(--wo-accent);border-radius:9px;min-height:38px;padding:9px 14px}
+.wo-poster-back:hover{background:var(--wo-day-bg)}
+.wo-poster-back:focus-visible,.wo-poster-zoom button:focus-visible,
+.wo-poster-pdf-button:focus-visible{outline:3px solid var(--wo-accent2);outline-offset:3px}
+.wo-poster-tools{display:flex;flex-wrap:wrap;align-items:center;
+  justify-content:space-between;gap:10px;font-size:.88rem;color:var(--wo-muted);margin:0 0 12px}
+.wo-poster-zoom{display:flex;gap:9px;align-items:center}
+.wo-poster-zoom button{width:38px;height:35px;border:1px solid var(--wo-border);
+  border-radius:9px;background:var(--wo-card);color:var(--wo-accent);
+  cursor:pointer;font:inherit;font-size:1.3rem}
+.wo-poster-zoom button:disabled{opacity:.45;cursor:default}
+.wo-poster-zoom output{min-width:46px;text-align:center;font-weight:700;
+  font-variant-numeric:tabular-nums;color:var(--wo-text)}
+.wo-poster-stage{max-width:100%;overflow-x:auto;overflow-y:hidden;border:1px solid var(--wo-border);
+  border-radius:12px;background:#f8f4f2;padding:14px}
+.wo-poster-stage img{display:block;width:100%;max-width:none;height:auto;
+  margin:0 auto;box-shadow:0 4px 18px rgba(0,0,0,.13)}
+.wo-poster-pdf-controls{display:flex;justify-content:center;margin:16px 0}
+.wo-poster-pdf-button{background:var(--wo-card);color:var(--wo-accent);
+  border:1px solid var(--wo-border);padding:10px 16px;cursor:pointer;
+  border-radius:9px;font:inherit;font-weight:700;font-size:.87rem}
+.wo-poster-pdf-button:hover{background:var(--wo-day-bg)}
+.wo-poster-pdf-frame{height:850px;width:100%;border:1px solid var(--wo-border);border-radius:9px}
+.wo-poster-detail [hidden]{display:none!important}
+.wo-poster-description{font-size:.9rem;color:var(--wo-muted);margin:14px 0 0}
+@media(max-width:600px){
+ .wo-poster-detail-head{flex-direction:column;gap:12px}
+ .wo-poster-stage{padding:6px;border-radius:8px}
+ .wo-poster-pdf-frame{height:620px}
+ .wo-poster-tools{font-size:.78rem}
+}

@@ -189,3 +189,23 @@ test('monthly upload locks interaction without disabling serializable file and m
  assert.match(editor,/const outgoing=new FormData\(form\)/);
  assert.match(editor,/await call\('editorSaveMonthlyPoster',form\)/);
 });
+
+
+test('monthly poster cards open hidden virtual details on parish site, never files or expanding banner',()=>{
+ const whatsOn=source('site/whats-on.html');
+ const shared=source('site/assets/wo.js');
+ assert.match(banner,/const posterPage = param\('posterPage', param\('link', 'https:\/\/www\.stjohnsoldmalden\.org\.uk\/events-calendar'\)\)/);
+ assert.match(banner,/dest\.searchParams\.set\('event', 'poster-' \+ month\)/);
+ assert.match(banner,/href: posterHref\(month\), target: '_top'/);
+ assert.doesNotMatch(banner,/href: notice\.file/);
+ assert.doesNotMatch(banner,/monthlyViewer/);
+ assert.match(whatsOn,/monthlyNotices = \{\}/);
+ assert.match(whatsOn,/events, monthlyNotices, backLabel:/);
+ assert.match(shared,/export function routeDetails\(\{ main, detail, events, backLabel, monthlyNotices = \{\} \}\)/);
+ assert.match(shared,/function renderMonthlyPosterDetail\(notice, month/);
+ assert.match(shared,/const posterMonth =/);
+ assert.match(shared,/type: 'event', id: 'poster-' \+ posterMonth/);
+ assert.match(shared,/backLabel, onBack: \(\) => changeDetail\(null\)/);
+ assert.match(shared,/safePdf && notice\?\.image\?\.src/);
+ assert.match(source('site/assets/wo.css'),/\.wo-poster-detail/);
+});

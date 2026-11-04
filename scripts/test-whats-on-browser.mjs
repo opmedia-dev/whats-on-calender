@@ -36,10 +36,10 @@ const data = {
  monthlyNotices: {
   [current]: {month:current, title:"What's On "+current,
    image:{src:'assets/test-card-art.svg',small:'assets/test-card-art.svg'},
-   file:'https://www.stjohnsoldmalden.org.uk/current-poster.pdf',mimeType:'application/pdf'},
+   file:'files/current-poster.pdf',mimeType:'application/pdf'},
   [next]: {month:next, title:"What's On "+next,
    image:{src:'assets/test-card-art.svg',small:'assets/test-card-art.svg'},
-   file:'https://www.stjohnsoldmalden.org.uk/next-poster.pdf',mimeType:'application/pdf'},
+   file:'files/next-poster.pdf',mimeType:'application/pdf'},
  },
  events: [
   makeEvent('prior-month', previous, '10'),
@@ -62,7 +62,41 @@ const server = createServer(async (req, res) => {
  window.addEventListener('message', function(event){
   if(event.data?.source!=='whatson')return;
   if(event.data.type==='scrollToTop')window.hostScrolls++;
-  if(event.data.type==='hello')event.source.postMessage({source:'whatson-host',type:'hello',page:location.href},'*');
+  if(event.data.type==='hello')event.source.postMessage({source:'whatson-host',type:'hello',
+    page:location.href,event:new URLSearchParams(location.search).get('event')},'*');
+  if(event.data.type==='height')document.getElementById('embed').style.height=event.data.height+'px';
+  if(event.data.type==='event'){
+    const u=new URL(location.href);
+    if(event.data.id)u.searchParams.set('event',event.data.id);
+    else u.searchParams.delete('event');
+    history.replaceState(history.state,'',u.href);
+  }
+ });
+</script></body></html>`);
+   return;
+  }
+  if (url.pathname === '/files/current-poster.pdf' || url.pathname === '/files/next-poster.pdf') {
+   res.writeHead(200,{'Content-Type':'application/pdf','Cache-Control':'no-store'});
+   // Only the reader's embedded-file handling matters to this test.
+   res.end('%PDF-1.4\n% Test monthly poster\n');
+   return;
+  }
+  if (url.pathname === '/shell-banner') {
+   res.writeHead(200,{'Content-Type':'text/html; charset=utf-8'});
+   res.end(`<!doctype html><html><head><meta name="viewport" content="width=device-width"></head>
+<body style="margin:0;padding:0">
+<iframe id="bannerEmbed" data-whatson title="Parish featured events"
+src="/banner.html?mailing=0&flipbook=0&autoplay=0&max=5&perPage=3"
+style="display:block;border:0;width:100%;height:520px"></iframe>
+<script>
+ window.hostMessages=[];
+ window.addEventListener('message',function(event){
+  if(event.data?.source!=='whatson')return;
+  window.hostMessages.push(event.data.type);
+  if(event.data.type==='hello'){
+   event.source.postMessage({source:'whatson-host',type:'hello',page:location.href},'*');
+  }
+  if(event.data.type==='height')document.getElementById('bannerEmbed').style.height=event.data.height+'px';
  });
 </script></body></html>`);
    return;
@@ -152,12 +186,72 @@ try {
    ["What's On this Month","What's On Next Month","only featured"]);
  assert.equal(await page.locator('#cards .wo-monthly-card').count(),2);
  assert.equal(await page.locator('.wo-banner-monthly').count(),0,'monthly poster must not be a fixed column');
+ // A monthly banner card navigates to the ordinary parish What's On page
+ // with a virtual event deep link. Its inline poster detail is NOT a listed
+ // calendar event and does NOT change the banner embed's dimensions.
+ assert.equal(await page.locator('#cards .wo-monthly-card').first().evaluate(el=>el.tagName),'A');
+ assert.equal(await page.locator('#cards .wo-monthly-card').first().getAttribute('target'),'_top');
  assert.equal(await page.locator('#cards .wo-monthly-card').first().getAttribute('href'),
-   'https://www.stjohnsoldmalden.org.uk/current-poster.pdf');
+   'https://www.stjohnsoldmalden.org.uk/events-calendar?event=poster-'+current);
  assert.equal(await page.locator('#cards .wo-monthly-card').nth(1).getAttribute('href'),
-   'https://www.stjohnsoldmalden.org.uk/next-poster.pdf');
+   'https://www.stjohnsoldmalden.org.uk/events-calendar?event=poster-'+next);
+ assert.equal(await page.locator('#monthlyViewer').count(),0,
+   'banner must not contain an expanding poster reader');
  fs.mkdirSync('ui-review',{recursive:true});
  await page.screenshot({path:'ui-review/two-months-banner-desktop.png'});
+
+ // Simulate a Duda-hosted What's On page using its existing ?event deep-link
+ // handshake. No change to the live Duda HTML embed is required.
+ const deepBanner=base+'/banner.html?mailing=0&flipbook=0&autoplay=0&max=5&perPage=3&link='+
+   encodeURIComponent(base+'/shell');
+ await page.goto(deepBanner);
+ await page.locator('#cards .wo-monthly-card').first().waitFor();
+ const initialTabs=page.context().pages().length;
+ await page.locator('#cards .wo-monthly-card').first().click();
+ await page.waitForURL(base+'/shell?event=poster-'+current);
+ const posterFrame=page.frameLocator('#embed');
+ await posterFrame.locator('.wo-poster-detail').waitFor({state:'visible',timeout:10000});
+ assert.equal(await posterFrame.locator('#main').isVisible(),false,
+   'poster occupies hidden detail instead of being a public listed event');
+ assert.equal(await posterFrame.locator('#detail').isVisible(),true);
+ assert.equal(await posterFrame.locator('#cards').isVisible(),false,
+   'ordinary event list stays hidden during virtual poster detail');
+ assert.match(await posterFrame.locator('#poster-title').textContent(),/What's On/);
+ assert.equal(await posterFrame.locator('.wo-poster-stage img').count(),1);
+ assert.equal(page.context().pages().length,initialTabs,'poster opens no new tabs');
+ assert.ok(!page.url().includes('github.io'),'page URL must remain the parish website');
+ await posterFrame.locator('.wo-poster-detail').screenshot({path:'ui-review/monthly-hidden-poster-desktop.png'});
+ await posterFrame.locator('.wo-poster-zoom button').nth(1).click();
+ assert.equal(await posterFrame.locator('.wo-poster-zoom output').textContent(),'150%');
+ await posterFrame.locator('.wo-poster-pdf-button').click();
+ assert.equal(await posterFrame.locator('.wo-poster-pdf-frame').isVisible(),true);
+ assert.match(await posterFrame.locator('.wo-poster-pdf-frame').getAttribute('src'),/files\/current-poster\.pdf/);
+ await posterFrame.locator('.wo-poster-back').click();
+ await page.waitForURL(base+'/shell');
+ assert.equal(await posterFrame.locator('#main').isVisible(),true,'Back returns to the event listings');
+ assert.equal(await posterFrame.locator('.wo-poster-detail').count(),0);
+ assert.equal(await page.context().pages().length,initialTabs);
+
+ // A next-month poster is also a virtual detail, but NEVER an extra event card.
+ await page.goto(deepBanner);
+ await page.locator('#cards .wo-monthly-card').nth(1).waitFor();
+ await page.locator('#cards .wo-monthly-card').nth(1).click();
+ await page.waitForURL(base+'/shell?event=poster-'+next);
+ await posterFrame.locator('.wo-poster-detail').waitFor({state:'visible'});
+ assert.match(await posterFrame.locator('#poster-title').textContent(),new RegExp(next.slice(0,4)));
+ await page.setViewportSize({width:375,height:820});
+ const mobileDims=await posterFrame.locator('body').evaluate(el=>({
+   overflow:document.documentElement.scrollWidth>innerWidth+1,
+   stageWidth:document.querySelector('.wo-poster-stage').getBoundingClientRect().width,
+   viewport:innerWidth,
+ }));
+ assert.equal(mobileDims.overflow,false,'virtual poster must not cause mobile horizontal overflow');
+ assert.ok(mobileDims.stageWidth<=mobileDims.viewport+1);
+ await page.screenshot({path:'ui-review/monthly-hidden-poster-mobile.png',fullPage:true});
+ await posterFrame.locator('.wo-poster-back').click();
+ await page.waitForURL(base+'/shell');
+ await page.setViewportSize({width:1250,height:1000});
+
  await page.goto(base+'/banner.html?mailing=0&flipbook=0&autoplay=0&perPage=1');
  await page.locator('#cards .wo-monthly-card').first().waitFor();
  assert.match(await page.locator('#cards').textContent(),/What's On this Month/);

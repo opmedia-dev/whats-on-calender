@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>What's On</title>
-  <link rel="stylesheet" href="assets/wo.css?v=month-arrows-highlights-20261102">
+  <link rel="stylesheet" href="assets/wo.css?v=monthly-poster-detail-20261104">
 </head>
 <body>
   <main class="wo-wrap">
@@ -40,7 +40,7 @@
     <div id="detail" hidden></div>
   </main>
   <script type="module">
-    import { init, loadEvents, params, param, num, flag, h, dayKey, isUpcoming, nextPerSeries, renderCard, renderPager, routeDetails, scrollHostToTop, showError, emptyState } from './assets/wo.js?v=monthly-highlights-20261102';
+    import { init, loadEvents, params, param, num, flag, h, dayKey, isUpcoming, nextPerSeries, renderCard, renderPager, routeDetails, scrollHostToTop, showError, emptyState } from './assets/wo.js?v=monthly-poster-detail-20261104';
     import { shiftMonth, isValidMonth, clampMonth, eventsInMonth } from './assets/month-selection.js';
 
     const initialisation = init(); // Start the host handshake while event data loads.
@@ -59,7 +59,7 @@
     const summaries = flag('summary', true);
 
     try {
-      const [, { events, range }] = await Promise.all([initialisation, loadEvents()]);
+      const [, { events, range, monthlyNotices = {} }] = await Promise.all([initialisation, loadEvents()]);
       const now = new Date();
       const upcoming = events.filter((e) => isUpcoming(e, now));
       const series = nextPerSeries(upcoming);
@@ -144,7 +144,7 @@
       renderFilters();
       render();
       new ResizeObserver(() => { if (columns() !== cols) render(); }).observe(cardsEl);
-      routeDetails({ main: document.getElementById('main'), detail: document.getElementById('detail'), events, backLabel: param('backText', "Back to What's On") });
+      routeDetails({ main: document.getElementById('main'), detail: document.getElementById('detail'), events, monthlyNotices, backLabel: param('backText', "Back to What's On") });
     } catch (e) {
       console.error(e);
       showError(cardsEl, 'Sorry, events could not be loaded.');
