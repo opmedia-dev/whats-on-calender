@@ -194,6 +194,7 @@ try {
  assert.equal(page.url(),bannerUrl,'viewing a poster must not navigate the browser');
  assert.equal(page.context().pages().length,originalTabs,'no tab or popup should open');
  assert.equal(await page.locator('#monthlyZoomLevel').textContent(),'100%');
+ await page.locator('#monthlyViewer').screenshot({path:'ui-review/monthly-inline-poster-desktop.png'});
  await page.locator('#monthlyZoomIn').click();
  assert.equal(await page.locator('#monthlyZoomLevel').textContent(),'150%');
  assert.equal(await page.locator('#monthlyViewerImage').evaluate(el=>el.style.width),'150%');
@@ -203,7 +204,6 @@ try {
  assert.equal(await page.locator('#monthlyViewerPdfPanel').isVisible(),true);
  assert.match(await page.locator('#monthlyViewerPdfFrame').getAttribute('src'),
    /files\/current-poster\.pdf/);
- await page.screenshot({path:'ui-review/monthly-inline-poster-desktop.png'});
  await page.locator('#monthlyViewerClose').click();
  assert.equal(await page.locator('#monthlyViewer').isVisible(),false);
  assert.equal(await page.locator('#banner').isVisible(),true);
