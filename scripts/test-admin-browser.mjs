@@ -21,6 +21,14 @@ try {
   assert.equal(await page.locator('#editorDialog').isVisible(),false);
   assert.equal(await page.locator('#monthlyForm input').count(),3,
     'monthly manager needs only month, file and revision');
+  const selectedMonth=await page.locator('#monthlyMonth').inputValue();
+  await page.locator('#monthlyNextMonth').click();
+  assert.notEqual(await page.locator('#monthlyMonth').inputValue(),selectedMonth,
+    'staff can select next month in one click');
+  assert.equal(await page.locator('#monthlyNextMonth').getAttribute('aria-pressed'),'true');
+  await page.locator('#monthlyThisMonth').click();
+  assert.equal(await page.locator('#monthlyMonth').inputValue(),selectedMonth);
+  assert.equal(await page.locator('#monthlyThisMonth').getAttribute('aria-pressed'),'true');
   assert.equal(await page.locator('#monthlySave').isDisabled(),true,
     'read-only demonstration cannot publish changes');
   const samplePoster = await sharp(Buffer.from(
