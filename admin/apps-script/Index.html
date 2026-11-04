@@ -1348,7 +1348,7 @@ $('month').addEventListener('click',function(){setMode('month')});
 $('week').addEventListener('click',function(){setMode('week')});
 $('newEvent').addEventListener('click',function(){newEntry(today())});
 $('newMonthly').addEventListener('click',function(){
-  var month=today().slice(0,7),existing=state.events.find(function(e){return e.monthlyNotice===true&&e.start.slice(0,7)===month});
+  var month=key(state.date).slice(0,7),existing=state.events.find(function(e){return e.monthlyNotice===true&&e.start.slice(0,7)===month});
   if(existing){openEvent(existing.id);return}
   newEntry(month+'-01');
   $('title').value="What's On this Month — "+pretty(month+'-01',{timeZone:'UTC',month:'long',year:'numeric'});
