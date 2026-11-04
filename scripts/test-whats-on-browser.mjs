@@ -33,6 +33,14 @@ const data = {
  details: { demo: { summary: '', html: '', gallery: [], attachments: [],
    image: {src:'assets/test-card-art.svg',small:'assets/test-card-art.svg',position:'62% 40%',width:800,height:500},
  } },
+ monthlyNotices: {
+  [current]: {month:current, title:"What's On "+current,
+   image:{src:'assets/test-card-art.svg',small:'assets/test-card-art.svg'},
+   file:'https://www.stjohnsoldmalden.org.uk/current-poster.pdf',mimeType:'application/pdf'},
+  [next]: {month:next, title:"What's On "+next,
+   image:{src:'assets/test-card-art.svg',small:'assets/test-card-art.svg'},
+   file:'https://www.stjohnsoldmalden.org.uk/next-poster.pdf',mimeType:'application/pdf'},
+ },
  events: [
   makeEvent('prior-month', previous, '10'),
   makeEvent('current-month', current, '12'),
@@ -135,6 +143,27 @@ try {
  const narrowWidth = (await embed.locator('#highlights .wo-card').first().boundingBox()).width;
  const narrowSection = (await embed.locator('#highlights').boundingBox()).width;
  assert.ok(narrowWidth <= narrowSection + 1, 'single highlight must fit the mobile container');
+ // Poster cards belong inside the dated event carousel, not in a fixed slot.
+ await page.setViewportSize({width:1280,height:780});
+ await page.goto(base+'/banner.html?mailing=0&flipbook=0&autoplay=0&max=5&perPage=3');
+ await page.locator('#cards .wo-monthly-card').first().waitFor({timeout:15000});
+ const bannerTitles=await page.locator('#cards .wo-card-title').allTextContents();
+ assert.deepEqual(bannerTitles.slice(0,3),
+   ["What's On this Month","What's On Next Month","only featured"]);
+ assert.equal(await page.locator('#cards .wo-monthly-card').count(),2);
+ assert.equal(await page.locator('.wo-banner-monthly').count(),0,'monthly poster must not be a fixed column');
+ assert.equal(await page.locator('#cards .wo-monthly-card').first().getAttribute('href'),
+   'https://www.stjohnsoldmalden.org.uk/current-poster.pdf');
+ assert.equal(await page.locator('#cards .wo-monthly-card').nth(1).getAttribute('href'),
+   'https://www.stjohnsoldmalden.org.uk/next-poster.pdf');
+ fs.mkdirSync('ui-review',{recursive:true});
+ await page.screenshot({path:'ui-review/two-months-banner-desktop.png'});
+ await page.goto(base+'/banner.html?mailing=0&flipbook=0&autoplay=0&perPage=1');
+ await page.locator('#cards .wo-monthly-card').first().waitFor();
+ assert.match(await page.locator('#cards').textContent(),/What's On this Month/);
+ await page.locator('#pager').getByRole('button',{name:'Page 2'}).click();
+ assert.match(await page.locator('#cards').textContent(),/What's On Next Month/);
+
  // Exercise the real embed generator as well as its unit tests.
  // Existing Duda iframes must be replaced to apply a new loading preference.
  await page.goto(base + '/index.html');
