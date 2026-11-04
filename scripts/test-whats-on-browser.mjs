@@ -214,8 +214,8 @@ try {
  assert.equal(await posterFrame.locator('#main').isVisible(),false,
    'poster occupies hidden detail instead of being a public listed event');
  assert.equal(await posterFrame.locator('#detail').isVisible(),true);
- assert.equal(await posterFrame.locator('#cards .wo-card').count(),0,
-   'listed events are not displayed during the virtual poster detail');
+ assert.equal(await posterFrame.locator('#cards').isVisible(),false,
+   'ordinary event list stays hidden during virtual poster detail');
  assert.match(await posterFrame.locator('#poster-title').textContent(),/What's On/);
  assert.equal(await posterFrame.locator('.wo-poster-stage img').count(),1);
  assert.equal(page.context().pages().length,initialTabs,'poster opens no new tabs');
