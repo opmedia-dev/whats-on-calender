@@ -36,10 +36,10 @@ const data = {
  monthlyNotices: {
   [current]: {month:current, title:"What's On "+current,
    image:{src:'assets/test-card-art.svg',small:'assets/test-card-art.svg'},
-   file:'https://www.stjohnsoldmalden.org.uk/current-poster.pdf',mimeType:'application/pdf'},
+   file:'files/current-poster.pdf',mimeType:'application/pdf'},
   [next]: {month:next, title:"What's On "+next,
    image:{src:'assets/test-card-art.svg',small:'assets/test-card-art.svg'},
-   file:'https://www.stjohnsoldmalden.org.uk/next-poster.pdf',mimeType:'application/pdf'},
+   file:'files/next-poster.pdf',mimeType:'application/pdf'},
  },
  events: [
   makeEvent('prior-month', previous, '10'),
@@ -63,6 +63,32 @@ const server = createServer(async (req, res) => {
   if(event.data?.source!=='whatson')return;
   if(event.data.type==='scrollToTop')window.hostScrolls++;
   if(event.data.type==='hello')event.source.postMessage({source:'whatson-host',type:'hello',page:location.href},'*');
+ });
+</script></body></html>`);
+   return;
+  }
+  if (url.pathname === '/files/current-poster.pdf' || url.pathname === '/files/next-poster.pdf') {
+   res.writeHead(200,{'Content-Type':'application/pdf','Cache-Control':'no-store'});
+   // Only the reader's embedded-file handling matters to this test.
+   res.end('%PDF-1.4\n% Test monthly poster\n');
+   return;
+  }
+  if (url.pathname === '/shell-banner') {
+   res.writeHead(200,{'Content-Type':'text/html; charset=utf-8'});
+   res.end(`<!doctype html><html><head><meta name="viewport" content="width=device-width"></head>
+<body style="margin:0;padding:0">
+<iframe id="bannerEmbed" data-whatson title="Parish featured events"
+src="/banner.html?mailing=0&flipbook=0&autoplay=0&max=5&perPage=3"
+style="display:block;border:0;width:100%;height:520px"></iframe>
+<script>
+ window.hostMessages=[];
+ window.addEventListener('message',function(event){
+  if(event.data?.source!=='whatson')return;
+  window.hostMessages.push(event.data.type);
+  if(event.data.type==='hello'){
+   event.source.postMessage({source:'whatson-host',type:'hello',page:location.href},'*');
+  }
+  if(event.data.type==='height')document.getElementById('bannerEmbed').style.height=event.data.height+'px';
  });
 </script></body></html>`);
    return;
@@ -152,12 +178,72 @@ try {
    ["What's On this Month","What's On Next Month","only featured"]);
  assert.equal(await page.locator('#cards .wo-monthly-card').count(),2);
  assert.equal(await page.locator('.wo-banner-monthly').count(),0,'monthly poster must not be a fixed column');
- assert.equal(await page.locator('#cards .wo-monthly-card').first().getAttribute('href'),
-   'https://www.stjohnsoldmalden.org.uk/current-poster.pdf');
- assert.equal(await page.locator('#cards .wo-monthly-card').nth(1).getAttribute('href'),
-   'https://www.stjohnsoldmalden.org.uk/next-poster.pdf');
+ // Monthly cards must open an in-page reader, never a new browser tab
+ // or a GitHub-hosted file URL in the browser's address bar.
+ assert.equal(await page.locator('#cards .wo-monthly-card').first().evaluate(el=>el.tagName),'BUTTON');
+ assert.equal(await page.locator('#cards .wo-monthly-card').count(),2);
+ const bannerUrl=page.url();
+ const originalTabs=page.context().pages().length;
  fs.mkdirSync('ui-review',{recursive:true});
  await page.screenshot({path:'ui-review/two-months-banner-desktop.png'});
+ await page.locator('#cards .wo-monthly-card').first().click();
+ await page.locator('#monthlyViewer').waitFor({state:'visible'});
+ assert.equal(await page.locator('#banner').isVisible(),false);
+ assert.match(await page.locator('#monthlyViewerTitle').textContent(),/What's On/);
+ assert.match(await page.locator('#monthlyViewerImage').getAttribute('src'),/assets\/test-card-art\.svg/);
+ assert.equal(page.url(),bannerUrl,'viewing a poster must not navigate the browser');
+ assert.equal(page.context().pages().length,originalTabs,'no tab or popup should open');
+ assert.equal(await page.locator('#monthlyZoomLevel').textContent(),'100%');
+ await page.locator('#monthlyZoomIn').click();
+ assert.equal(await page.locator('#monthlyZoomLevel').textContent(),'150%');
+ assert.equal(await page.locator('#monthlyViewerImage').evaluate(el=>el.style.width),'150%');
+ assert.equal(await page.locator('#monthlyViewerFullPdf').isVisible(),true,
+   'a locally published PDF can be read inside the viewer');
+ await page.locator('#monthlyViewerFullPdf').click();
+ assert.equal(await page.locator('#monthlyViewerPdfPanel').isVisible(),true);
+ assert.match(await page.locator('#monthlyViewerPdfFrame').getAttribute('src'),
+   /files\/current-poster\.pdf/);
+ await page.screenshot({path:'ui-review/monthly-inline-poster-desktop.png'});
+ await page.locator('#monthlyViewerClose').click();
+ assert.equal(await page.locator('#monthlyViewer').isVisible(),false);
+ assert.equal(await page.locator('#banner').isVisible(),true);
+ assert.equal(page.url(),bannerUrl);
+ await page.locator('#cards .wo-monthly-card').nth(1).click();
+ assert.match(await page.locator('#monthlyViewerTitle').textContent(),new RegExp(next.slice(0,4)));
+ await page.keyboard.press('Escape');
+ assert.equal(await page.locator('#monthlyViewer').isVisible(),false,'Escape closes the poster');
+ assert.equal(page.context().pages().length,originalTabs);
+
+ // Test the existing Duda embed resize handshake as well. This viewer expands
+ // the inline frame instead of opening the hosted file in a new tab.
+ await page.setViewportSize({width:1200,height:900});
+ await page.goto(base+'/shell-banner');
+ const bannerFrame=page.frameLocator('#bannerEmbed');
+ await bannerFrame.locator('#cards .wo-monthly-card').first().waitFor();
+ const originalFrameHeight=await page.locator('#bannerEmbed').evaluate(el=>el.getBoundingClientRect().height);
+ await bannerFrame.locator('#cards .wo-monthly-card').first().click();
+ await bannerFrame.locator('#monthlyViewer').waitFor({state:'visible'});
+ await page.waitForFunction(previous=>document.querySelector('#bannerEmbed').getBoundingClientRect().height>previous+50,
+   originalFrameHeight,{timeout:5000});
+ assert.equal(page.url(),base+'/shell-banner','parent Duda-style page keeps its URL');
+ assert.equal(page.context().pages().length,originalTabs);
+ await bannerFrame.locator('#monthlyViewerClose').click();
+ await bannerFrame.locator('#banner').waitFor({state:'visible'});
+ await page.waitForFunction(previous=>document.querySelector('#bannerEmbed').getBoundingClientRect().height<previous,
+   await page.locator('#bannerEmbed').evaluate(el=>el.getBoundingClientRect().height),{timeout:5000});
+ await page.setViewportSize({width:360,height:780});
+ await bannerFrame.locator('#cards .wo-monthly-card').first().click();
+ await bannerFrame.locator('#monthlyViewer').waitFor({state:'visible'});
+ const mobileOverflow=await bannerFrame.locator('body').evaluate(el=>({
+  overflow:document.documentElement.scrollWidth>innerWidth+1,
+  mediaWidth:document.getElementById('monthlyViewerMedia').getBoundingClientRect().width,
+  viewport:innerWidth,
+ }));
+ assert.equal(mobileOverflow.overflow,false,'the poster viewer must not overflow mobile width');
+ assert.ok(mobileOverflow.mediaWidth<=mobileOverflow.viewport+1);
+ await page.screenshot({path:'ui-review/monthly-inline-poster-mobile.png'});
+ await bannerFrame.locator('#monthlyViewerClose').click();
+
  await page.goto(base+'/banner.html?mailing=0&flipbook=0&autoplay=0&perPage=1');
  await page.locator('#cards .wo-monthly-card').first().waitFor();
  assert.match(await page.locator('#cards').textContent(),/What's On this Month/);
