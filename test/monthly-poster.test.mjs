@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
-import { eventSlots } from '../site/assets/banner-config.js';
+import { eventSlots, currentAndNextMonths, chronologicalBannerItems } from '../site/assets/banner-config.js';
 const root=path.resolve(import.meta.dirname,'..');
 const source=(p)=>fs.readFileSync(path.join(root,p),'utf8');
 const backend=source('admin/apps-script/Code.gs');
@@ -12,15 +12,50 @@ const banner=source('site/banner.html');
 const sync=source('scripts/sync-calendar.mjs');
 const timetable=source('site/timetable.html');
 
-test('monthly notice uses one fixed banner slot and only one rotating event when publications enabled',()=>{
- assert.equal(eventSlots({monthly:true,mailing:true,magazine:true,max:3}),1);
- assert.equal(eventSlots({monthly:true,mailing:true,magazine:false,max:3}),2);
- assert.equal(eventSlots({monthly:true,mailing:false,magazine:false,max:3}),3);
- assert.match(banner,/banner\.insertBefore\(holder, banner\.firstChild\)/);
- assert.match(banner,/monthlyNotices\[currentMonth\]/);
- assert.match(banner,/wo-banner-monthly/);
- assert.match(banner,/mimeType === 'application\/pdf'/);
- assert.match(source('site/assets/wo.css'),/\.wo-banner\.has-monthly\.has-mailing\.has-side \.wo-banner-main \{ grid-column:span 1; \}/);
+test('both monthly posters rotate with events without stealing a fixed banner column',()=>{
+ assert.equal(eventSlots({mailing:true,magazine:true,max:3}),2);
+ assert.equal(eventSlots({mailing:true,magazine:false,max:3}),3);
+ assert.equal(eventSlots({mailing:false,magazine:false,max:3}),3);
+ assert.match(banner,/chronologicalBannerItems\(upcoming, monthlyNotices, \[currentMonth, nextMonth\]\)/);
+ assert.match(banner,/item\.type === 'monthly'/);
+ assert.match(banner,/renderMonthlyCard\(item\)/);
+ assert.match(banner,/monthly\.mimeType|notice\.mimeType === 'application\/pdf'/);
+ assert.doesNotMatch(banner,/banner\.insertBefore\(holder, banner\.firstChild\)/);
+ assert.doesNotMatch(banner,/wo-banner-monthly/);
+ assert.match(source('site/assets/wo.css'),/\.wo-monthly-cover img/);
+});
+test('parish-local month transition includes December and January over New Year',()=>{
+ assert.deepEqual(currentAndNextMonths(new Date('2026-11-04T14:00:00Z')),['2026-11','2026-12']);
+ assert.deepEqual(currentAndNextMonths(new Date('2026-12-31T23:30:00Z')),['2026-12','2027-01']);
+ assert.deepEqual(currentAndNextMonths(new Date('2026-03-31T23:30:00Z')),['2026-04','2026-05']);
+});
+test('a poster precedes every featured event in its month, regardless of feed order',()=>{
+ const event=(id,month,date)=>({id,title:id,startKey:month+'-'+date.slice(8,10),
+   startDate:new Date(date)});
+ const events=[
+  event('dec-two','2026-12','2026-12-20T16:00:00Z'),
+  event('nov-two','2026-11','2026-11-18T12:00:00Z'),
+  event('jan-event','2027-01','2027-01-06T09:00:00Z'),
+  event('nov-one','2026-11','2026-11-10T09:00:00Z'),
+  event('dec-one','2026-12','2026-12-03T09:00:00Z'),
+ ];
+ const poster=(month)=>({month,image:{src:'poster-'+month+'.webp'},
+  file:'file-'+month+'.pdf',mimeType:'application/pdf'});
+ const notices={'2026-11':poster('2026-11'),'2026-12':poster('2026-12'),'2027-01':poster('2027-01')};
+ const items=chronologicalBannerItems(events,notices,['2026-11','2026-12']);
+ assert.deepEqual(items.map(item=>item.type==='monthly'?'poster-'+item.month:item.event.id),
+   ['poster-2026-11','nov-one','nov-two','poster-2026-12','dec-one','dec-two','jan-event']);
+ assert.equal(items.filter(item=>item.type==='monthly').length,2);
+ assert.deepEqual(events.map(item=>item.id),['dec-two','nov-two','jan-event','nov-one','dec-one'],
+   'sorting must not mutate source events');
+});
+test('available posters display even when there are no featured events in that month',()=>{
+ const notices={'2026-11':{image:{src:'a.webp'},file:'a.pdf'},
+  '2026-12':{image:{src:'b.webp'},file:'b.pdf'}};
+ assert.deepEqual(chronologicalBannerItems([],notices,['2026-11','2026-12']).map(item=>item.month),
+   ['2026-11','2026-12']);
+ assert.deepEqual(chronologicalBannerItems([],{'2026-12':notices['2026-12']},
+   ['2026-11','2026-12']).map(item=>item.month),['2026-12']);
 });
 test('monthly poster is published separately and excluded from ordinary public calendar events',()=>{
  assert.match(sync,/woMonthlyNotice === 'true'/);
@@ -45,6 +80,8 @@ test('editor enforces monthly notice date and format, keeping public visibility'
  assert.throws(()=>env.normalise_({...form,repeat:'weekly'}),/non-repeating/);
  assert.match(editor,/id="newMonthly"/);
  assert.match(editor,/id="monthlyDialog"/);
+ assert.match(editor,/id="monthlyThisMonth"/);
+ assert.match(editor,/id="monthlyNextMonth"/);
  assert.match(editor,/id="monthlyForm"/);
  assert.match(editor,/id="monthlyFile"/);
  assert.match(editor,/id="monthlyPreviewImage"/);
