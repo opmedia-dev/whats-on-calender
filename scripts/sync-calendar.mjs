@@ -241,6 +241,7 @@ async function makeImage(att) {
 }
 
 const details = {};
+const monthlyNotices = {};
 const out = [];
 for (const e of events) {
   const master = e.recurringEventId ? masters.get(e.recurringEventId) : null;
@@ -275,6 +276,28 @@ for (const e of events) {
   };
   const key = crypto.createHash('sha1').update(JSON.stringify(detail)).digest('hex').slice(0, 10);
   details[key] = detail;
+  // The monthly artwork is managed by the same private editor and attached
+  // through Drive, but intentionally is NOT an ordinary event in our public
+  // timetable, calendar, search results or Highlights list.
+  const monthlyMarker = e.extendedProperties?.shared?.woMonthlyNotice === 'true';
+  if (monthlyMarker) {
+    const month = String(e.start?.date || '').slice(0, 7);
+    if (/^\d{4}-\d{2}$/.test(month) && e.start?.date === month + '-01' &&
+        !e.recurringEventId && !e.recurrence && image && imageSource?.url) {
+      const candidate = {
+        month, title: (e.summary || "What's On this Month").trim(),
+        image, file: imageSource.url, mimeType: imageSource.mimeType,
+        updated: e.updated || '', id: e.id,
+      };
+      if (!monthlyNotices[month] || candidate.updated > monthlyNotices[month].updated ||
+          (candidate.updated === monthlyNotices[month].updated && candidate.id > monthlyNotices[month].id)) {
+        monthlyNotices[month] = candidate;
+      }
+    } else {
+      warn('Monthly notice '+(e.summary || e.id)+' has no usable PNG/PDF or is not dated on the first day of its month.');
+    }
+    continue;
+  }
   const allDay = !e.start.dateTime;
   out.push({
     id: e.id,
@@ -301,6 +324,7 @@ fs.writeFileSync(path.join(dataDir, 'events.json'), JSON.stringify({
   calendar: { name: meta.summary || '', description: meta.description || '' },
   range: { from: timeMin, to: timeMax },
   events: out,
+  monthlyNotices,
   details,
 }));
 const featured = out.filter((e) => e.featured).length;
