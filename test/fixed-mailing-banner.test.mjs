@@ -18,11 +18,11 @@ test('both fixed publications leave two rotating event slots', () => {
 });
 
 test('weekly mailing remains outside event carousel and no archive footer link is added', () => {
-  assert.match(banner, /const items = upcoming;/);
+  assert.match(banner, /const items = chronologicalBannerItems\(upcoming, monthlyNotices, \[currentMonth, nextMonth\]\);/);
   assert.match(banner, /class: 'wo-banner-mailing'/);
   assert.match(banner, /banner\.insertBefore\(fixedMailing, banner\.querySelector\('\.wo-banner-side'\)\)/);
   assert.match(banner, /makeMailingCard\(latest, \{ preview: mailingData\.preview, h, icon \}\)/);
-  assert.match(banner, /items\.slice\(page \* current, page \* current \+ current\)\s*\.map\(\(event\) => renderCard\(event,/);
+  assert.match(banner, /items\.slice\(page \* current, page \* current \+ current\)\s*\.map\(\(item\) => item\.type === 'monthly'/);
   assert.doesNotMatch(banner, /'Past weekly mailings'/);
   assert.doesNotMatch(banner, /type: 'mailing', mailing:/);
 });
@@ -33,7 +33,7 @@ test('fixed mailing and magazine receive equal desktop column widths and height 
   assert.match(css, /@media \(max-width: 1120px\)/);
   assert.match(css, /@media \(max-width: 760px\)/);
   assert.match(banner, /const syncFixedCardHeights =/);
-  assert.match(banner, /wo-banner-monthly \.wo-card, \.wo-banner-mailing \.wo-card, \.wo-banner-side \.wo-card/);
+  assert.match(banner, /wo-banner-mailing \.wo-card, \.wo-banner-side \.wo-card/);
 });
 
 test('banner autoplay still only advances event pages and respects interaction pauses', () => {

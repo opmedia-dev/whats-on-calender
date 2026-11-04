@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>What's happening</title>
-  <link rel="stylesheet" href="assets/wo.css?v=monthly-poster-20261104">
+  <link rel="stylesheet" href="assets/wo.css?v=two-month-posters-20261104">
 </head>
 <body>
   <main class="wo-wrap">
@@ -20,7 +20,7 @@
     import { init, loadEvents, params, param, num, flag, h, icon, isUpcoming, nextPerSeries, renderCard, renderPager, routeDetails, showError, emptyState } from './assets/wo.js?v=monthly-poster-20261104';
     import { loadMagazineIssue, magazineDestination } from './assets/magazine.js';
     import { loadMailings, makeMailingCard } from './assets/mailings.js?v=mailchimp-logo-20261102';
-    import { horizonDays, autoplaySeconds, mayAutoAdvance, eventSlots } from './assets/banner-config.js';
+    import { horizonDays, autoplaySeconds, mayAutoAdvance, eventSlots, currentAndNextMonths, chronologicalBannerItems } from './assets/banner-config.js?v=two-month-posters-20261104';
 
     const initialisation = init(); // Start the host handshake while event data loads.
     // Mailing and calendar requests are independent; start them together.
@@ -104,7 +104,7 @@
     // when a publication has more text. Reset before measuring to prevent a
     // taller previous slide artificially increasing later slides.
     const syncFixedCardHeights = () => {
-      const fixed = [...banner.querySelectorAll('.wo-banner-monthly .wo-card, .wo-banner-mailing .wo-card, .wo-banner-side .wo-card')];
+      const fixed = [...banner.querySelectorAll('.wo-banner-mailing .wo-card, .wo-banner-side .wo-card')];
       cardsEl.style.minHeight = '';
       fixed.forEach((card) => { card.style.height = ''; });
       if (banner.clientWidth <= 1120) return;
@@ -123,31 +123,27 @@
 
     try {
       const [, { events, monthlyNotices = {} }] = await Promise.all([initialisation, loadEvents()]);
-      const monthParts = Object.fromEntries(new Intl.DateTimeFormat('en-GB', {
-        timeZone: 'Europe/London', year: 'numeric', month: '2-digit',
-      }).formatToParts(new Date()).map((part) => [part.type, part.value]));
-      const currentMonth = monthParts.year + '-' + monthParts.month;
-      const monthly = monthlyNotices[currentMonth];
-      if (monthly?.image?.src && monthly?.file) {
-        const monthName = new Intl.DateTimeFormat('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' })
-          .format(new Date(currentMonth + '-01T12:00:00Z'));
-        const monthlyCard = h('a', {
-          class: 'wo-card wo-monthly-card',
-          href: monthly.file, target: '_blank', rel: 'noopener noreferrer',
-          'aria-label': "Open What's On this Month poster for " + monthName,
-        },
-        h('div', { class: 'wo-card-media wo-monthly-cover' },
-          h('img', { src: monthly.image.src, alt: "What's On this Month — " + monthName, loading: 'eager' })),
-        h('div', { class: 'wo-card-body wo-monthly-body' },
-          h('h3', { class: 'wo-card-title' }, "What's On this Month"),
-          h('p', { class: 'wo-card-meta' }, icon('calendar'), h('span', {}, monthName)),
-          h('span', { class: 'wo-card-link' }, monthly.mimeType === 'application/pdf'
-            ? 'Open monthly PDF' : 'View monthly poster', icon('arrow'))));
-        const holder = h('aside', { class: 'wo-banner-monthly', 'aria-label': "What's On this Month" }, monthlyCard);
-        banner.insertBefore(holder, banner.firstChild);
-        banner.classList.add('has-monthly');
-      }
       const now = new Date();
+      const [currentMonth, nextMonth] = currentAndNextMonths(now);
+      const renderMonthlyCard = ({ notice, month }) => {
+        const monthName = new Intl.DateTimeFormat('en-GB', {
+          month: 'long', year: 'numeric', timeZone: 'UTC',
+        }).format(new Date(month + '-01T12:00:00Z'));
+        const isCurrent = month === currentMonth;
+        const label = isCurrent ? "What's On this Month" : "What's On Next Month";
+        return h('a', {
+          class: 'wo-card wo-monthly-card',
+          href: notice.file, target: '_blank', rel: 'noopener noreferrer',
+          'aria-label': 'Open monthly events poster for ' + monthName,
+        },
+          h('div', { class: 'wo-card-media wo-monthly-cover' },
+            h('img', { src: notice.image.src, alt: 'Events poster — ' + monthName, loading: 'eager' })),
+          h('div', { class: 'wo-card-body wo-monthly-body' },
+            h('h3', { class: 'wo-card-title' }, label),
+            h('p', { class: 'wo-card-meta' }, icon('calendar'), h('span', {}, monthName)),
+            h('span', { class: 'wo-card-link' },
+              notice.mimeType === 'application/pdf' ? 'Open monthly PDF' : 'View monthly poster', icon('arrow'))));
+      };
       const days = horizonDays(param('days')); // Defaults to 400 days; old embeds with ?days=14 remain restricted until updated.
       // Event slots show editorial selections only, not every event with artwork.
       let upcoming = nextPerSeries(events.filter((e) => isUpcoming(e, now) && e.featured === true));
@@ -169,12 +165,13 @@
         banner.classList.add('has-mailing');
       }
 
-      const items = upcoming;
+      // Rotate posters alongside featured events, immediately before each
+      // month's first event (including when the month has no featured event).
+      const items = chronologicalBannerItems(upcoming, monthlyNotices, [currentMonth, nextMonth]);
       let page = 0;
       const perPageMax = eventSlots({
         magazine: banner.classList.contains('has-side'),
         mailing: Boolean(latest),
-        monthly: banner.classList.contains('has-monthly'),
         max: num('perPage', 3),
       });
       const perPage = () => Math.max(1, Math.min(perPageMax, Math.floor(cardsEl.clientWidth / num('minCardWidth', 240)) || 1));
@@ -185,7 +182,9 @@
         page = Math.min(page, Math.max(0, pages - 1));
         cardsEl.style.setProperty('--wo-cols', String(current));
         cardsEl.replaceChildren(...items.slice(page * current, page * current + current)
-          .map((event) => renderCard(event, { showRecurrence: event.recurring })));
+          .map((item) => item.type === 'monthly'
+            ? renderMonthlyCard(item)
+            : renderCard(item.event, { showRecurrence: item.event.recurring })));
         pagerEl.replaceChildren(renderPager(page, pages, (p) => {
           page = p;
           render();
