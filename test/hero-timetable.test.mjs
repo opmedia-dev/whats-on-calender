@@ -134,7 +134,7 @@ test('generator uses 593 × 434 timetable without an internal scrollbar', () => 
   assert.match(page, /maxPerDay: 3/);
   assert.match(css, /\.wo-hero-compact\s*\{[^}]*max-width:\s*593px/);
   assert.match(css, /\.wo-hero-week\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/);
-  assert.match(css, /height:\s*calc\(var\(--wo-hero-height,\s*434px\)\s*-\s*16px\)/);
+  assert.match(css, /height:\s*calc\(var\(--wo-hero-height,\s*434px\)\s*-\s*59px\)/);
   assert.match(css, /@media \(max-width: 520px\)\s*\{\s*\.wo-hero-week\s*\{\s*height:\s*auto/);
   assert.doesNotMatch(css, /\.wo-hero-day\.has-events \.wo-hero-day-head::after/);
   assert.doesNotMatch(css, /inset 3px 0 0 var\(--wo-accent\)/);
