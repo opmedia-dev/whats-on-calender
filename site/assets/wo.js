@@ -158,6 +158,13 @@ export async function loadEvents() {
     for (const g of d.gallery || []) { g.src = resolve(g.src); g.small = resolve(g.small); }
     for (const a of d.attachments || []) a.url = resolve(a.url);
   }
+  for (const notice of Object.values(data.monthlyNotices || {})) {
+    if (notice.image) {
+      notice.image.src = resolve(notice.image.src);
+      notice.image.small = resolve(notice.image.small);
+    }
+    if (notice.file) notice.file = resolve(notice.file);
+  }
   const events = (data.events || []).map((e) => {
     const start = parseStart(e.start, e.allDay);
     let end = e.end ? parseStart(e.end, e.allDay) : start;
