@@ -174,3 +174,16 @@ test('dedicated save replaces one monthly file, preserves past months and reject
  assert.equal(actions.at(-1).kind,'remove');
  assert.equal(context.editorGetMonthlyPoster('2026-11').exists,false);
 });
+
+test('monthly upload locks interaction without disabling serializable file and month inputs',()=>{
+ const start=editor.indexOf('function monthlyRender(){');
+ const end=editor.indexOf('async function monthlyLoad()',start);
+ assert.ok(start>=0&&end>start);
+ const render=editor.slice(start,end);
+ assert.match(render,/\$\('monthlyForm'\)\.inert=monthlyState\.busy/);
+ assert.match(render,/\$\('monthlyForm'\)\.setAttribute\('aria-busy',String\(monthlyState\.busy\)\)/);
+ assert.doesNotMatch(render,/monthlyMonth','monthlyFile'/,
+   'month and file must not be disabled when saving; Apps Script omits disabled controls');
+ assert.match(editor,/const outgoing=new FormData\(form\)/);
+ assert.match(editor,/await call\('editorSaveMonthlyPoster',form\)/);
+});
