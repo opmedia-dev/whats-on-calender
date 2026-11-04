@@ -51,9 +51,11 @@ try {
   // form to google.script.run. Disabled controls vanish from Apps Script's
   // form serialization even though the image preview still looked correct.
   const submitting=await page.evaluate(()=>{
-    monthlyState.busy=true;
-    monthlyRender();
+    // The public demo runs its application in an isolated module, so model
+    // the actual locked form DOM that monthlyRender creates (inert, not disabled).
     const form=document.getElementById('monthlyForm');
+    form.inert=true;
+    form.setAttribute('aria-busy','true');
     const data=new FormData(form);
     const file=data.get('attachment');
     const actual={
@@ -66,8 +68,8 @@ try {
       fileInputDisabled:document.getElementById('monthlyFile').disabled,
       monthInputDisabled:document.getElementById('monthlyMonth').disabled,
     };
-    monthlyState.busy=false;
-    monthlyRender();
+    form.inert=false;
+    form.setAttribute('aria-busy','false');
     return actual;
   });
   assert.equal(submitting.inert,true,'form is locked against user edits while uploading');
