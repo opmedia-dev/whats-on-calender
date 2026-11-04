@@ -1548,7 +1548,9 @@ async function monthlyLoad(){
 }
 function monthlyOpen(){
  if(state.busy)return;
- $('monthlyMonth').value=key(state.date).slice(0,7);
+ // Default to the real parish month, regardless of the month currently
+ // displayed behind the dialog in the Events calendar.
+ $('monthlyMonth').value=monthlyCurrentNext()[0];
  if(!$('monthlyDialog').open)$('monthlyDialog').showModal();
  monthlyLoad();
 }
