@@ -82,6 +82,8 @@ test('editor enforces monthly notice date and format, keeping public visibility'
  assert.match(editor,/id="monthlyDialog"/);
  assert.match(editor,/id="monthlyThisMonth"/);
  assert.match(editor,/id="monthlyNextMonth"/);
+ assert.match(editor,/\$\('monthlyMonth'\)\.value=monthlyCurrentNext\(\)\[0\]/,
+   'monthly manager should open on the real UK month, not the Events calendar view');
  assert.match(editor,/id="monthlyForm"/);
  assert.match(editor,/id="monthlyFile"/);
  assert.match(editor,/id="monthlyPreviewImage"/);
