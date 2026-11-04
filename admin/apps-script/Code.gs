@@ -583,16 +583,24 @@ function editorUploadFile(form) {
   if (!name) throw new Error('Attachment needs a filename.');
   if (!ACCEPTED_UPLOAD_TYPES.includes(mimeType)) throw new Error('This file type is not supported for event attachments.');
   if (!bytes || bytes > MAX_EVENT_UPLOAD_BYTES) throw new Error('Attachments must be smaller than 8 MB.');
-  const role = String(form.imageRole || 'gallery');
+  let role = String(form.imageRole || 'gallery');
   if (!['header', 'gallery'].includes(role)) throw new Error('Invalid image placement.');
-  if (role === 'header' && !mimeType.startsWith('image/')) {
-    throw new Error('Only an image can be used as the header.');
-  }
 
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(15000)) throw new Error('Another calendar update is in progress. Try again.');
   try {
     const record = fetchTarget_(id, scope);
+    const isMonthly = record.target?.extendedProperties?.shared?.[MONTHLY_NOTICE_KEY] === 'true';
+    if (isMonthly) {
+      if (mimeType !== 'image/png' && mimeType !== 'application/pdf') {
+        throw new Error('Monthly posters must be a PNG image or PDF document.');
+      }
+      // A PDF is displayed by its first-page preview; it is not a header-image
+      // field in Google Calendar. Monthly publishing picks the newest attachment.
+      role = 'gallery';
+    } else if (role === 'header' && !mimeType.startsWith('image/')) {
+      throw new Error('Only an image can be used as the header.');
+    }
     const existing = attachmentsFor_(record.target).map(a => ({
       fileUrl: a.fileUrl, title: a.title, mimeType: a.mimeType,
     })); // The read-only Google fileId is deliberately omitted from writes.
