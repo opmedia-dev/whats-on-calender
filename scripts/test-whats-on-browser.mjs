@@ -62,7 +62,15 @@ const server = createServer(async (req, res) => {
  window.addEventListener('message', function(event){
   if(event.data?.source!=='whatson')return;
   if(event.data.type==='scrollToTop')window.hostScrolls++;
-  if(event.data.type==='hello')event.source.postMessage({source:'whatson-host',type:'hello',page:location.href},'*');
+  if(event.data.type==='hello')event.source.postMessage({source:'whatson-host',type:'hello',
+    page:location.href,event:new URLSearchParams(location.search).get('event')},'*');
+  if(event.data.type==='height')document.getElementById('embed').style.height=event.data.height+'px';
+  if(event.data.type==='event'){
+    const u=new URL(location.href);
+    if(event.data.id)u.searchParams.set('event',event.data.id);
+    else u.searchParams.delete('event');
+    history.replaceState(history.state,'',u.href);
+  }
  });
 </script></body></html>`);
    return;
@@ -178,72 +186,71 @@ try {
    ["What's On this Month","What's On Next Month","only featured"]);
  assert.equal(await page.locator('#cards .wo-monthly-card').count(),2);
  assert.equal(await page.locator('.wo-banner-monthly').count(),0,'monthly poster must not be a fixed column');
- // Monthly cards must open an in-page reader, never a new browser tab
- // or a GitHub-hosted file URL in the browser's address bar.
- assert.equal(await page.locator('#cards .wo-monthly-card').first().evaluate(el=>el.tagName),'BUTTON');
- assert.equal(await page.locator('#cards .wo-monthly-card').count(),2);
- const bannerUrl=page.url();
- const originalTabs=page.context().pages().length;
+ // A monthly banner card navigates to the ordinary parish What's On page
+ // with a virtual event deep link. Its inline poster detail is NOT a listed
+ // calendar event and does NOT change the banner embed's dimensions.
+ assert.equal(await page.locator('#cards .wo-monthly-card').first().evaluate(el=>el.tagName),'A');
+ assert.equal(await page.locator('#cards .wo-monthly-card').first().getAttribute('target'),'_top');
+ assert.equal(await page.locator('#cards .wo-monthly-card').first().getAttribute('href'),
+   'https://www.stjohnsoldmalden.org.uk/events-calendar?event=poster-'+current);
+ assert.equal(await page.locator('#cards .wo-monthly-card').nth(1).getAttribute('href'),
+   'https://www.stjohnsoldmalden.org.uk/events-calendar?event=poster-'+next);
+ assert.equal(await page.locator('#monthlyViewer').count(),0,
+   'banner must not contain an expanding poster reader');
  fs.mkdirSync('ui-review',{recursive:true});
  await page.screenshot({path:'ui-review/two-months-banner-desktop.png'});
- await page.locator('#cards .wo-monthly-card').first().click();
- await page.locator('#monthlyViewer').waitFor({state:'visible'});
- assert.equal(await page.locator('#banner').isVisible(),false);
- assert.match(await page.locator('#monthlyViewerTitle').textContent(),/What's On/);
- assert.match(await page.locator('#monthlyViewerImage').getAttribute('src'),/assets\/test-card-art\.svg/);
- assert.equal(page.url(),bannerUrl,'viewing a poster must not navigate the browser');
- assert.equal(page.context().pages().length,originalTabs,'no tab or popup should open');
- assert.equal(await page.locator('#monthlyZoomLevel').textContent(),'100%');
- await page.locator('#monthlyViewer').screenshot({path:'ui-review/monthly-inline-poster-desktop.png'});
- await page.locator('#monthlyZoomIn').click();
- assert.equal(await page.locator('#monthlyZoomLevel').textContent(),'150%');
- assert.equal(await page.locator('#monthlyViewerImage').evaluate(el=>el.style.width),'150%');
- assert.equal(await page.locator('#monthlyViewerFullPdf').isVisible(),true,
-   'a locally published PDF can be read inside the viewer');
- await page.locator('#monthlyViewerFullPdf').click();
- assert.equal(await page.locator('#monthlyViewerPdfPanel').isVisible(),true);
- assert.match(await page.locator('#monthlyViewerPdfFrame').getAttribute('src'),
-   /files\/current-poster\.pdf/);
- await page.locator('#monthlyViewerClose').click();
- assert.equal(await page.locator('#monthlyViewer').isVisible(),false);
- assert.equal(await page.locator('#banner').isVisible(),true);
- assert.equal(page.url(),bannerUrl);
- await page.locator('#cards .wo-monthly-card').nth(1).click();
- assert.match(await page.locator('#monthlyViewerTitle').textContent(),new RegExp(next.slice(0,4)));
- await page.keyboard.press('Escape');
- assert.equal(await page.locator('#monthlyViewer').isVisible(),false,'Escape closes the poster');
- assert.equal(page.context().pages().length,originalTabs);
 
- // Test the existing Duda embed resize handshake as well. This viewer expands
- // the inline frame instead of opening the hosted file in a new tab.
- await page.setViewportSize({width:1200,height:900});
- await page.goto(base+'/shell-banner');
- const bannerFrame=page.frameLocator('#bannerEmbed');
- await bannerFrame.locator('#cards .wo-monthly-card').first().waitFor();
- const originalFrameHeight=await page.locator('#bannerEmbed').evaluate(el=>el.getBoundingClientRect().height);
- await bannerFrame.locator('#cards .wo-monthly-card').first().click();
- await bannerFrame.locator('#monthlyViewer').waitFor({state:'visible'});
- await page.waitForFunction(previous=>document.querySelector('#bannerEmbed').getBoundingClientRect().height>previous+50,
-   originalFrameHeight,{timeout:5000});
- assert.equal(page.url(),base+'/shell-banner','parent Duda-style page keeps its URL');
- assert.equal(page.context().pages().length,originalTabs);
- const expandedFrameHeight=await page.locator('#bannerEmbed').evaluate(el=>el.getBoundingClientRect().height);
- await bannerFrame.locator('#monthlyViewerClose').click();
- await bannerFrame.locator('#banner').waitFor({state:'visible'});
- await page.waitForFunction(previous=>document.querySelector('#bannerEmbed').getBoundingClientRect().height<previous-50,
-   expandedFrameHeight,{timeout:5000});
- await page.setViewportSize({width:360,height:780});
- await bannerFrame.locator('#cards .wo-monthly-card').first().click();
- await bannerFrame.locator('#monthlyViewer').waitFor({state:'visible'});
- const mobileOverflow=await bannerFrame.locator('body').evaluate(el=>({
-  overflow:document.documentElement.scrollWidth>innerWidth+1,
-  mediaWidth:document.getElementById('monthlyViewerMedia').getBoundingClientRect().width,
-  viewport:innerWidth,
+ // Simulate a Duda-hosted What's On page using its existing ?event deep-link
+ // handshake. No change to the live Duda HTML embed is required.
+ const deepBanner=base+'/banner.html?mailing=0&flipbook=0&autoplay=0&max=5&perPage=3&link='+
+   encodeURIComponent(base+'/shell');
+ await page.goto(deepBanner);
+ await page.locator('#cards .wo-monthly-card').first().waitFor();
+ const initialTabs=page.context().pages().length;
+ await page.locator('#cards .wo-monthly-card').first().click();
+ await page.waitForURL(base+'/shell?event=poster-'+current);
+ const posterFrame=page.frameLocator('#embed');
+ await posterFrame.locator('.wo-poster-detail').waitFor({state:'visible',timeout:10000});
+ assert.equal(await posterFrame.locator('#main').isVisible(),false,
+   'poster occupies hidden detail instead of being a public listed event');
+ assert.equal(await posterFrame.locator('#detail').isVisible(),true);
+ assert.equal(await posterFrame.locator('#cards .wo-card').count(),0,
+   'listed events are not displayed during the virtual poster detail');
+ assert.match(await posterFrame.locator('#poster-title').textContent(),/What's On/);
+ assert.equal(await posterFrame.locator('.wo-poster-stage img').count(),1);
+ assert.equal(page.context().pages().length,initialTabs,'poster opens no new tabs');
+ assert.ok(!page.url().includes('github.io'),'page URL must remain the parish website');
+ await posterFrame.locator('.wo-poster-detail').screenshot({path:'ui-review/monthly-hidden-poster-desktop.png'});
+ await posterFrame.locator('.wo-poster-zoom button').nth(1).click();
+ assert.equal(await posterFrame.locator('.wo-poster-zoom output').textContent(),'150%');
+ await posterFrame.locator('.wo-poster-pdf-button').click();
+ assert.equal(await posterFrame.locator('.wo-poster-pdf-frame').isVisible(),true);
+ assert.match(await posterFrame.locator('.wo-poster-pdf-frame').getAttribute('src'),/files\/current-poster\.pdf/);
+ await posterFrame.locator('.wo-poster-back').click();
+ await page.waitForURL(base+'/shell');
+ assert.equal(await posterFrame.locator('#main').isVisible(),true,'Back returns to the event listings');
+ assert.equal(await posterFrame.locator('.wo-poster-detail').count(),0);
+ assert.equal(await page.context().pages().length,initialTabs);
+
+ // A next-month poster is also a virtual detail, but NEVER an extra event card.
+ await page.goto(deepBanner);
+ await page.locator('#cards .wo-monthly-card').nth(1).waitFor();
+ await page.locator('#cards .wo-monthly-card').nth(1).click();
+ await page.waitForURL(base+'/shell?event=poster-'+next);
+ await posterFrame.locator('.wo-poster-detail').waitFor({state:'visible'});
+ assert.match(await posterFrame.locator('#poster-title').textContent(),new RegExp(next.slice(0,4)));
+ await page.setViewportSize({width:375,height:820});
+ const mobileDims=await posterFrame.locator('body').evaluate(el=>({
+   overflow:document.documentElement.scrollWidth>innerWidth+1,
+   stageWidth:document.querySelector('.wo-poster-stage').getBoundingClientRect().width,
+   viewport:innerWidth,
  }));
- assert.equal(mobileOverflow.overflow,false,'the poster viewer must not overflow mobile width');
- assert.ok(mobileOverflow.mediaWidth<=mobileOverflow.viewport+1);
- await page.screenshot({path:'ui-review/monthly-inline-poster-mobile.png'});
- await bannerFrame.locator('#monthlyViewerClose').click();
+ assert.equal(mobileDims.overflow,false,'virtual poster must not cause mobile horizontal overflow');
+ assert.ok(mobileDims.stageWidth<=mobileDims.viewport+1);
+ await page.screenshot({path:'ui-review/monthly-hidden-poster-mobile.png',fullPage:true});
+ await posterFrame.locator('.wo-poster-back').click();
+ await page.waitForURL(base+'/shell');
+ await page.setViewportSize({width:1250,height:1000});
 
  await page.goto(base+'/banner.html?mailing=0&flipbook=0&autoplay=0&perPage=1');
  await page.locator('#cards .wo-monthly-card').first().waitFor();
