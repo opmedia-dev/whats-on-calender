@@ -251,10 +251,17 @@ for (const e of events) {
   const headerFileId = e.extendedProperties?.shared?.woHeaderImageId ||
     master?.extendedProperties?.shared?.woHeaderImageId || '';
   const imageCandidates = attachments.filter((a) => IMAGE_TYPES.test(a.mimeType) && a.local);
-  const imageSource = headerFileId === 'none' ? null :
-    imageCandidates.find((a) => a.fileId === headerFileId) ||
-    imageCandidates[0] ||
-    attachments.find((a) => a.mimeType === 'application/pdf' && a.local);
+  const monthlyMarker = e.extendedProperties?.shared?.woMonthlyNotice === 'true';
+  const monthlyMedia = attachments.filter((a) =>
+    a.local && (a.mimeType === 'image/png' || a.mimeType === 'application/pdf'));
+  // Staff may replace a monthly poster multiple times. The most recently
+  // attached PNG/PDF takes precedence without making them remove an old file.
+  const imageSource = monthlyMarker
+    ? monthlyMedia.at(-1) || null
+    : headerFileId === 'none' ? null :
+      imageCandidates.find((a) => a.fileId === headerFileId) ||
+      imageCandidates[0] ||
+      attachments.find((a) => a.mimeType === 'application/pdf' && a.local);
   const image = imageSource ? await makeImage(imageSource) : null;
   const gallery = (await Promise.all(imageCandidates.filter((a) => a !== imageSource)
     .map(async a => {
@@ -279,7 +286,6 @@ for (const e of events) {
   // The monthly artwork is managed by the same private editor and attached
   // through Drive, but intentionally is NOT an ordinary event in our public
   // timetable, calendar, search results or Highlights list.
-  const monthlyMarker = e.extendedProperties?.shared?.woMonthlyNotice === 'true';
   if (monthlyMarker) {
     const month = String(e.start?.date || '').slice(0, 7);
     if (/^\d{4}-\d{2}$/.test(month) && e.start?.date === month + '-01' &&
