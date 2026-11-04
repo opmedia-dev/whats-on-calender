@@ -84,7 +84,7 @@ no featured events. The two-month window advances automatically on the first of 
 month, including December → January. The latest mailing and magazine remain fixed
 banner cards.
 
-Visitors now open either month's poster **inside the existing parish website banner embed**, not in a new tab. The poster view replaces the banner temporarily, includes zoom controls, supports an embedded full PDF when hosted locally, and provides a Back button. The embed's existing height-reporting integration allows the enlarged notice to fit in the Duda page without changing the browser address or requiring replacement of the Duda HTML snippet. The original public media URL is still available to visitors who inspect network requests; this is a branded browsing improvement, not access control.
+Visitors select either month’s poster from the homepage banner and are taken to a **dedicated virtual detail on the parish What’s On page**, using the existing event-link protocol (`?event=poster-YYYY-MM`). This is **not a real Google Calendar event**: it is absent from public event lists, search, Highlights, the event manager and the timetable. The full poster detail has zoom controls, an optional embedded full PDF and a Back to What’s On button. The banner stays compact and its slideshow remains unchanged. The existing Duda What’s On embed already forwards `?event=` to the content reader, so no Duda HTML snippet replacement is required. The image or PDF is still publicly hosted, so this change keeps the GitHub URL out of normal browser navigation, not out of technical network inspection.
 
 The manager's ordinary Events calendar and the public calendars do not show these
 poster records; behind the scenes, the existing Google Calendar/Drive publishing
