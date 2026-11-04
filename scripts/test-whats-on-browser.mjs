@@ -227,10 +227,11 @@ try {
    originalFrameHeight,{timeout:5000});
  assert.equal(page.url(),base+'/shell-banner','parent Duda-style page keeps its URL');
  assert.equal(page.context().pages().length,originalTabs);
+ const expandedFrameHeight=await page.locator('#bannerEmbed').evaluate(el=>el.getBoundingClientRect().height);
  await bannerFrame.locator('#monthlyViewerClose').click();
  await bannerFrame.locator('#banner').waitFor({state:'visible'});
- await page.waitForFunction(previous=>document.querySelector('#bannerEmbed').getBoundingClientRect().height<previous,
-   await page.locator('#bannerEmbed').evaluate(el=>el.getBoundingClientRect().height),{timeout:5000});
+ await page.waitForFunction(previous=>document.querySelector('#bannerEmbed').getBoundingClientRect().height<previous-50,
+   expandedFrameHeight,{timeout:5000});
  await page.setViewportSize({width:360,height:780});
  await bannerFrame.locator('#cards .wo-monthly-card').first().click();
  await bannerFrame.locator('#monthlyViewer').waitFor({state:'visible'});
