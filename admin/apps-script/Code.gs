@@ -14,6 +14,7 @@ const CATEGORY_KEY = 'woCategory';
 const HEADER_IMAGE_KEY = 'woHeaderImageId';
 const IMAGE_FOCUS_KEY = 'woImageFocus';
 const FEATURED_KEY = 'woFeatured';
+const MONTHLY_NOTICE_KEY = 'woMonthlyNotice';
 const CATEGORIES = ['general', 'worship', 'community', 'music', 'families', 'heritage', 'fundraising'];
 const WRITE_ROLES = ['writer', 'owner'];
 // Set to a dedicated parish-controlled Google Drive folder before enabling uploads.
@@ -153,6 +154,7 @@ function localEvent_(e, master) {
     attachments: attachmentsFor_(e),
     headerImageId: e.extendedProperties?.shared?.[HEADER_IMAGE_KEY] || master?.extendedProperties?.shared?.[HEADER_IMAGE_KEY] || '',
     featured: featuredOf_(e, master),
+    monthlyNotice: e.extendedProperties?.shared?.[MONTHLY_NOTICE_KEY] === 'true',
     imageFocus: imageFocus_(e.extendedProperties?.shared?.[IMAGE_FOCUS_KEY] ||
       master?.extendedProperties?.shared?.[IMAGE_FOCUS_KEY]),
   };
@@ -197,6 +199,7 @@ function editorListEvents(from, through) {
         allDay: Boolean(e.start.date),
         category: category.id, categorySource: category.source,
         visibility: e.visibility || 'default',
+        monthlyNotice: e.extendedProperties?.shared?.[MONTHLY_NOTICE_KEY] === 'true',
       });
     }
     pageToken = response.nextPageToken;
@@ -329,13 +332,19 @@ function normalise_(form) {
   const end = allDay
     ? { date: addDay_(endDate, 1) }
     : { dateTime: endDate + 'T' + endTime + ':00', timeZone: EDITOR_ZONE };
+  const monthlyNotice = form.monthlyNotice === true;
+  if (monthlyNotice && (repeat !== 'none' || !allDay || !/^\d{4}-\d{2}-01$/.test(startDate) || startDate !== endDate)) {
+    throw new Error('Monthly notices must be all-day, non-repeating entries on the first day of their month.');
+  }
   const visibility = String(form.visibility || 'default');
+  if (monthlyNotice && visibility === 'private') throw new Error('The monthly notice must be publicly visible to the website publisher.');
   if (!['default','public','private'].includes(visibility)) throw new Error('Select a valid visibility.');
   const body = {
     summary: title, location, start, end, visibility,
     extendedProperties: { shared: {
       [CATEGORY_KEY]: category_(form.category),
-      [FEATURED_KEY]: form.visibility === 'private' ? 'false' : (form.featured === true ? 'true' : 'false'),
+      [FEATURED_KEY]: monthlyNotice ? 'false' : (form.visibility === 'private' ? 'false' : (form.featured === true ? 'true' : 'false')),
+      [MONTHLY_NOTICE_KEY]: monthlyNotice ? 'true' : 'false',
       [IMAGE_FOCUS_KEY]: imageFocus_(form.imageFocus),
     } },
   };
@@ -519,7 +528,8 @@ function editorSaveEvent(form) {
       record.target.extendedProperties?.shared || {});
     parsed.body.extendedProperties.shared = Object.assign({}, existingShared, {
       [CATEGORY_KEY]: category_(form.category), [HEADER_IMAGE_KEY]: headerChoice,
-      [FEATURED_KEY]: form.visibility === 'private' ? 'false' : (form.featured === true ? 'true' : 'false'),
+      [FEATURED_KEY]: form.monthlyNotice === true ? 'false' : (form.visibility === 'private' ? 'false' : (form.featured === true ? 'true' : 'false')),
+      [MONTHLY_NOTICE_KEY]: form.monthlyNotice === true ? 'true' : 'false',
       [IMAGE_FOCUS_KEY]: imageFocus_(form.imageFocus),
     });
     if (scope === 'occurrence' && record.recurring) {
