@@ -18,11 +18,11 @@ test('both fixed publications leave two rotating event slots', () => {
 });
 
 test('weekly mailing remains outside event carousel and no archive footer link is added', () => {
-  assert.match(banner, /const items = upcoming;/);
+  assert.match(banner, /const items = chronologicalBannerItems\(upcoming, monthlyNotices, \[currentMonth, nextMonth\]\);/);
   assert.match(banner, /class: 'wo-banner-mailing'/);
   assert.match(banner, /banner\.insertBefore\(fixedMailing, banner\.querySelector\('\.wo-banner-side'\)\)/);
   assert.match(banner, /makeMailingCard\(latest, \{ preview: mailingData\.preview, h, icon \}\)/);
-  assert.match(banner, /items\.slice\(page \* current, page \* current \+ current\)\s*\.map\(\(event\) => renderCard\(event,/);
+  assert.match(banner, /items\.slice\(page \* current, page \* current \+ current\)\s*\.map\(\(item\) => item\.type === 'monthly'/);
   assert.doesNotMatch(banner, /'Past weekly mailings'/);
   assert.doesNotMatch(banner, /type: 'mailing', mailing:/);
 });
