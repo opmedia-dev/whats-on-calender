@@ -104,7 +104,7 @@
     // when a publication has more text. Reset before measuring to prevent a
     // taller previous slide artificially increasing later slides.
     const syncFixedCardHeights = () => {
-      const fixed = [...banner.querySelectorAll('.wo-banner-mailing .wo-card, .wo-banner-side .wo-card')];
+      const fixed = [...banner.querySelectorAll('.wo-banner-monthly .wo-card, .wo-banner-mailing .wo-card, .wo-banner-side .wo-card')];
       cardsEl.style.minHeight = '';
       fixed.forEach((card) => { card.style.height = ''; });
       if (banner.clientWidth <= 1120) return;
@@ -122,7 +122,31 @@
     }
 
     try {
-      const [, { events }] = await Promise.all([initialisation, loadEvents()]);
+      const [, { events, monthlyNotices = {} }] = await Promise.all([initialisation, loadEvents()]);
+      const monthParts = Object.fromEntries(new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Europe/London', year: 'numeric', month: '2-digit',
+      }).formatToParts(new Date()).map((part) => [part.type, part.value]));
+      const currentMonth = monthParts.year + '-' + monthParts.month;
+      const monthly = monthlyNotices[currentMonth];
+      if (monthly?.image?.src && monthly?.file) {
+        const monthName = new Intl.DateTimeFormat('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' })
+          .format(new Date(currentMonth + '-01T12:00:00Z'));
+        const monthlyCard = h('a', {
+          class: 'wo-card wo-monthly-card',
+          href: monthly.file, target: '_blank', rel: 'noopener noreferrer',
+          'aria-label': "Open What's On this Month poster for " + monthName,
+        },
+        h('div', { class: 'wo-card-media wo-monthly-cover' },
+          h('img', { src: monthly.image.src, alt: "What's On this Month — " + monthName, loading: 'eager' })),
+        h('div', { class: 'wo-card-body wo-monthly-body' },
+          h('h3', { class: 'wo-card-title' }, "What's On this Month"),
+          h('p', { class: 'wo-card-meta' }, icon('calendar'), h('span', {}, monthName)),
+          h('span', { class: 'wo-card-link' }, monthly.mimeType === 'application/pdf'
+            ? 'Open monthly PDF' : 'View monthly poster', icon('arrow'))));
+        const holder = h('aside', { class: 'wo-banner-monthly', 'aria-label': "What's On this Month" }, monthlyCard);
+        banner.insertBefore(holder, banner.firstChild);
+        banner.classList.add('has-monthly');
+      }
       const now = new Date();
       const days = horizonDays(param('days')); // Defaults to 400 days; old embeds with ?days=14 remain restricted until updated.
       // Event slots show editorial selections only, not every event with artwork.
@@ -150,6 +174,7 @@
       const perPageMax = eventSlots({
         magazine: banner.classList.contains('has-side'),
         mailing: Boolean(latest),
+        monthly: banner.classList.contains('has-monthly'),
         max: num('perPage', 3),
       });
       const perPage = () => Math.max(1, Math.min(perPageMax, Math.floor(cardsEl.clientWidth / num('minCardWidth', 240)) || 1));
