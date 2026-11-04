@@ -67,6 +67,29 @@ Google Calendar shared event metadata; no description tags are needed. The publi
 sync now exports category metadata, but actual category placeholders in public
 event cards remain a separate release.
 
+## Managing Monthly What's On posters
+
+The Event Manager has a **separate Monthly What's On manager** rather than
+editing a monthly notice through the ordinary event form. Use **Monthly poster**,
+then **This month** or **Next month**, choose a PNG/PDF (up to 8 MB), and save.
+Each month has one replaceable poster; saved posters can also be removed.
+The original Drive files remain available. Staff may prepare next month's poster
+in advance.
+
+In the homepage What's On banner, the posters join the **chronological featured-event
+carousel**. The current month's poster appears before that month's first featured
+event, and next month's poster appears before the next month's first featured event.
+Missing posters are simply skipped, and a poster can appear even when its month has
+no featured events. The two-month window advances automatically on the first of each
+month, including December → January. The latest mailing and magazine remain fixed
+banner cards.
+
+The manager's ordinary Events calendar and the public calendars do not show these
+poster records; behind the scenes, the existing Google Calendar/Drive publishing
+pipeline still supplies their files. The private editor requires a new Apps Script
+deployment after merging changes to `admin/apps-script/`. The website embeds update
+through the normal GitHub Pages deployment without replacing Duda embed HTML.
+
 ## Managing events (in Google Calendar)
 
 - **Any event** in the calendar appears in the timetable and the monthly calendar within about
