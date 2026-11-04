@@ -1250,7 +1250,7 @@ function newEntry(date){
 function adjustAllDay(){var off=$('allDay').checked;$('timeFields').hidden=off;$('startTime').disabled=off;$('endTime').disabled=off}
 function values(){var v={};fields.forEach(function(id){v[id]=$(id).value});v.allDay=$('allDay').checked;v.id=state.id;
  v.editScope=state.id?state.scope:'';v.revision=state.revision;v.descriptionChanged=state.changed;
- v.description=richHTML();v.headerImageId=state.headerImageId;v.featured=$('featured').checkedv.imageFocus=state.imageFocus;v.visibility=$('visibility').value;
+ v.description=richHTML();v.headerImageId=state.headerImageId;v.featured=$('featured').checked;v.imageFocus=state.imageFocus;v.visibility=$('visibility').value;
  v.customRepeat={unit:$('repeatUnit').value,interval:Number($('repeatInterval').value),
   days:Array.from(document.querySelectorAll('[name=repeatDay]:checked')).map(function(el){return el.value}),
   ends:$('repeatEnds').value,count:Number($('repeatCount').value),until:$('repeatUntil').value};
