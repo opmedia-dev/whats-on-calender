@@ -33,7 +33,7 @@ test('fixed mailing and magazine receive equal desktop column widths and height 
   assert.match(css, /@media \(max-width: 1120px\)/);
   assert.match(css, /@media \(max-width: 760px\)/);
   assert.match(banner, /const syncFixedCardHeights =/);
-  assert.match(banner, /wo-banner-mailing \.wo-card, \.wo-banner-side \.wo-card/);
+  assert.match(banner, /wo-banner-monthly \.wo-card, \.wo-banner-mailing \.wo-card, \.wo-banner-side \.wo-card/);
 });
 
 test('banner autoplay still only advances event pages and respects interaction pauses', () => {

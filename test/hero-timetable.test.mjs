@@ -110,7 +110,7 @@ test('compact hero removes the legacy agenda grid class instead of relying solel
   assert.match(css, /\.wo-hero-week\s*\{[^}]*gap:\s*0;/);
   // A new stylesheet URL also invalidates GitHub Pages / Safari's older
   // cached CSS for embed previews that were open before the deployment.
-  assert.match(html, /href="assets\/wo\.css\?v=hero-rail-20261031"/);
+  assert.match(html, /href="assets\/wo\.css\?v=monthly-poster-20261104"/);
 });
 
 test('compact hero overrides the generic timetable gap to keep a continuous seven-day date rail', () => {
@@ -134,7 +134,7 @@ test('generator uses 593 × 434 timetable without an internal scrollbar', () => 
   assert.match(page, /maxPerDay: 3/);
   assert.match(css, /\.wo-hero-compact\s*\{[^}]*max-width:\s*593px/);
   assert.match(css, /\.wo-hero-week\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/);
-  assert.match(css, /height:\s*calc\(var\(--wo-hero-height,\s*434px\)\s*-\s*16px\)/);
+  assert.match(css, /height:\s*calc\(var\(--wo-hero-height,\s*434px\)\s*-\s*59px\)/);
   assert.match(css, /@media \(max-width: 520px\)\s*\{\s*\.wo-hero-week\s*\{\s*height:\s*auto/);
   assert.doesNotMatch(css, /\.wo-hero-day\.has-events \.wo-hero-day-head::after/);
   assert.doesNotMatch(css, /inset 3px 0 0 var\(--wo-accent\)/);

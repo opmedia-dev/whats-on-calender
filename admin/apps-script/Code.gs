@@ -14,12 +14,13 @@ const CATEGORY_KEY = 'woCategory';
 const HEADER_IMAGE_KEY = 'woHeaderImageId';
 const IMAGE_FOCUS_KEY = 'woImageFocus';
 const FEATURED_KEY = 'woFeatured';
+const MONTHLY_NOTICE_KEY = 'woMonthlyNotice';
 const CATEGORIES = ['general', 'worship', 'community', 'music', 'families', 'heritage', 'fundraising'];
 const WRITE_ROLES = ['writer', 'owner'];
 // Set to a dedicated parish-controlled Google Drive folder before enabling uploads.
 // Editors need permission to add files to that folder. File links are made public
 // because the public What's On website displays event posters and downloads.
-const EDITOR_UPLOAD_FOLDER_ID = '';
+const EDITOR_UPLOAD_FOLDER_ID = '1iADzl4bLA3F4Slqd20U2mCN-5XDlmwGL';
 const MAX_EVENT_UPLOAD_BYTES = 8 * 1024 * 1024;
 const ACCEPTED_UPLOAD_TYPES = [
   'image/jpeg', 'image/png', 'image/webp', 'image/gif',
@@ -153,6 +154,7 @@ function localEvent_(e, master) {
     attachments: attachmentsFor_(e),
     headerImageId: e.extendedProperties?.shared?.[HEADER_IMAGE_KEY] || master?.extendedProperties?.shared?.[HEADER_IMAGE_KEY] || '',
     featured: featuredOf_(e, master),
+    monthlyNotice: e.extendedProperties?.shared?.[MONTHLY_NOTICE_KEY] === 'true',
     imageFocus: imageFocus_(e.extendedProperties?.shared?.[IMAGE_FOCUS_KEY] ||
       master?.extendedProperties?.shared?.[IMAGE_FOCUS_KEY]),
   };
@@ -197,6 +199,7 @@ function editorListEvents(from, through) {
         allDay: Boolean(e.start.date),
         category: category.id, categorySource: category.source,
         visibility: e.visibility || 'default',
+        monthlyNotice: e.extendedProperties?.shared?.[MONTHLY_NOTICE_KEY] === 'true',
       });
     }
     pageToken = response.nextPageToken;
@@ -329,13 +332,19 @@ function normalise_(form) {
   const end = allDay
     ? { date: addDay_(endDate, 1) }
     : { dateTime: endDate + 'T' + endTime + ':00', timeZone: EDITOR_ZONE };
+  const monthlyNotice = form.monthlyNotice === true;
+  if (monthlyNotice && (repeat !== 'none' || !allDay || !/^\d{4}-\d{2}-01$/.test(startDate) || startDate !== endDate)) {
+    throw new Error('Monthly notices must be all-day, non-repeating entries on the first day of their month.');
+  }
   const visibility = String(form.visibility || 'default');
+  if (monthlyNotice && visibility === 'private') throw new Error('The monthly notice must be publicly visible to the website publisher.');
   if (!['default','public','private'].includes(visibility)) throw new Error('Select a valid visibility.');
   const body = {
     summary: title, location, start, end, visibility,
     extendedProperties: { shared: {
       [CATEGORY_KEY]: category_(form.category),
-      [FEATURED_KEY]: form.visibility === 'private' ? 'false' : (form.featured === true ? 'true' : 'false'),
+      [FEATURED_KEY]: monthlyNotice ? 'false' : (form.visibility === 'private' ? 'false' : (form.featured === true ? 'true' : 'false')),
+      [MONTHLY_NOTICE_KEY]: monthlyNotice ? 'true' : 'false',
       [IMAGE_FOCUS_KEY]: imageFocus_(form.imageFocus),
     } },
   };
@@ -519,7 +528,8 @@ function editorSaveEvent(form) {
       record.target.extendedProperties?.shared || {});
     parsed.body.extendedProperties.shared = Object.assign({}, existingShared, {
       [CATEGORY_KEY]: category_(form.category), [HEADER_IMAGE_KEY]: headerChoice,
-      [FEATURED_KEY]: form.visibility === 'private' ? 'false' : (form.featured === true ? 'true' : 'false'),
+      [FEATURED_KEY]: form.monthlyNotice === true ? 'false' : (form.visibility === 'private' ? 'false' : (form.featured === true ? 'true' : 'false')),
+      [MONTHLY_NOTICE_KEY]: form.monthlyNotice === true ? 'true' : 'false',
       [IMAGE_FOCUS_KEY]: imageFocus_(form.imageFocus),
     });
     if (scope === 'occurrence' && record.recurring) {
@@ -573,16 +583,24 @@ function editorUploadFile(form) {
   if (!name) throw new Error('Attachment needs a filename.');
   if (!ACCEPTED_UPLOAD_TYPES.includes(mimeType)) throw new Error('This file type is not supported for event attachments.');
   if (!bytes || bytes > MAX_EVENT_UPLOAD_BYTES) throw new Error('Attachments must be smaller than 8 MB.');
-  const role = String(form.imageRole || 'gallery');
+  let role = String(form.imageRole || 'gallery');
   if (!['header', 'gallery'].includes(role)) throw new Error('Invalid image placement.');
-  if (role === 'header' && !mimeType.startsWith('image/')) {
-    throw new Error('Only an image can be used as the header.');
-  }
 
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(15000)) throw new Error('Another calendar update is in progress. Try again.');
   try {
     const record = fetchTarget_(id, scope);
+    const isMonthly = record.target?.extendedProperties?.shared?.[MONTHLY_NOTICE_KEY] === 'true';
+    if (isMonthly) {
+      if (mimeType !== 'image/png' && mimeType !== 'application/pdf') {
+        throw new Error('Monthly posters must be a PNG image or PDF document.');
+      }
+      // A PDF is displayed by its first-page preview; it is not a header-image
+      // field in Google Calendar. Monthly publishing picks the newest attachment.
+      role = 'gallery';
+    } else if (role === 'header' && !mimeType.startsWith('image/')) {
+      throw new Error('Only an image can be used as the header.');
+    }
     const existing = attachmentsFor_(record.target).map(a => ({
       fileUrl: a.fileUrl, title: a.title, mimeType: a.mimeType,
     })); // The read-only Google fileId is deliberately omitted from writes.

@@ -241,6 +241,7 @@ async function makeImage(att) {
 }
 
 const details = {};
+const monthlyNotices = {};
 const out = [];
 for (const e of events) {
   const master = e.recurringEventId ? masters.get(e.recurringEventId) : null;
@@ -250,10 +251,17 @@ for (const e of events) {
   const headerFileId = e.extendedProperties?.shared?.woHeaderImageId ||
     master?.extendedProperties?.shared?.woHeaderImageId || '';
   const imageCandidates = attachments.filter((a) => IMAGE_TYPES.test(a.mimeType) && a.local);
-  const imageSource = headerFileId === 'none' ? null :
-    imageCandidates.find((a) => a.fileId === headerFileId) ||
-    imageCandidates[0] ||
-    attachments.find((a) => a.mimeType === 'application/pdf' && a.local);
+  const monthlyMarker = e.extendedProperties?.shared?.woMonthlyNotice === 'true';
+  const monthlyMedia = attachments.filter((a) =>
+    a.local && (a.mimeType === 'image/png' || a.mimeType === 'application/pdf'));
+  // Staff may replace a monthly poster multiple times. The most recently
+  // attached PNG/PDF takes precedence without making them remove an old file.
+  const imageSource = monthlyMarker
+    ? monthlyMedia.at(-1) || null
+    : headerFileId === 'none' ? null :
+      imageCandidates.find((a) => a.fileId === headerFileId) ||
+      imageCandidates[0] ||
+      attachments.find((a) => a.mimeType === 'application/pdf' && a.local);
   const image = imageSource ? await makeImage(imageSource) : null;
   const gallery = (await Promise.all(imageCandidates.filter((a) => a !== imageSource)
     .map(async a => {
@@ -275,6 +283,27 @@ for (const e of events) {
   };
   const key = crypto.createHash('sha1').update(JSON.stringify(detail)).digest('hex').slice(0, 10);
   details[key] = detail;
+  // The monthly artwork is managed by the same private editor and attached
+  // through Drive, but intentionally is NOT an ordinary event in our public
+  // timetable, calendar, search results or Highlights list.
+  if (monthlyMarker) {
+    const month = String(e.start?.date || '').slice(0, 7);
+    if (/^\d{4}-\d{2}$/.test(month) && e.start?.date === month + '-01' &&
+        !e.recurringEventId && !e.recurrence && image && imageSource?.url) {
+      const candidate = {
+        month, title: (e.summary || "What's On this Month").trim(),
+        image, file: imageSource.url, mimeType: imageSource.mimeType,
+        updated: e.updated || '', id: e.id,
+      };
+      if (!monthlyNotices[month] || candidate.updated > monthlyNotices[month].updated ||
+          (candidate.updated === monthlyNotices[month].updated && candidate.id > monthlyNotices[month].id)) {
+        monthlyNotices[month] = candidate;
+      }
+    } else {
+      warn('Monthly notice '+(e.summary || e.id)+' has no usable PNG/PDF or is not dated on the first day of its month.');
+    }
+    continue;
+  }
   const allDay = !e.start.dateTime;
   out.push({
     id: e.id,
@@ -301,6 +330,7 @@ fs.writeFileSync(path.join(dataDir, 'events.json'), JSON.stringify({
   calendar: { name: meta.summary || '', description: meta.description || '' },
   range: { from: timeMin, to: timeMax },
   events: out,
+  monthlyNotices,
   details,
 }));
 const featured = out.filter((e) => e.featured).length;

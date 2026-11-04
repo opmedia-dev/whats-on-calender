@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Weekly timetable</title>
-  <link rel="stylesheet" href="assets/wo.css?v=hero-rail-20261031">
+  <link rel="stylesheet" href="assets/wo.css?v=monthly-poster-20261104">
 </head>
 <body>
   <main class="wo-wrap">
@@ -61,8 +61,10 @@
           list.style.maxHeight = `${num('maxHeight', 0)}px`;
         }
       }
-      const more = param('moreLink');
-      if (!flag('compact', true) && more && /^https?:\/\//.test(more)) {
+      // In the compact seven-day hero, keep all rows visible and reserve a
+      // discreet footer for the direct link to the main calendar.
+      const more = param('moreLink') || new URL('calendar.html', location.href).href;
+      if (/^https?:\/\//.test(more)) {
         list.after(h('p', { class: 'wo-tt-more' }, h('a', { class: 'wo-btn', href: more, target: '_top' }, icon('calendar'), param('moreText', 'See our full calendar'))));
       }
       routeDetails({ main: document.getElementById('main'), detail: document.getElementById('detail'), events, backLabel: param('backText', 'Back to timetable') });

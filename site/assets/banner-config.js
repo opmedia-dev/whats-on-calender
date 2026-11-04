@@ -14,9 +14,9 @@ export function mayAutoAdvance({ pages, hovered, focusWithin, hidden, detailOpen
 // One fixed publication leaves three event slots in the four-column banner;
 // showing both publications leaves exactly two rotating event slots.
 // Preserve the user's maximum when neither publication is enabled.
-export function eventSlots({ magazine = false, mailing = false, max = 3 } = {}) {
+export function eventSlots({ magazine = false, mailing = false, monthly = false, max = 3 } = {}) {
   const requested = Number.isInteger(Number(max)) && Number(max) >= 1
     ? Math.min(6, Number(max)) : 3;
-  const fixed = Number(Boolean(magazine)) + Number(Boolean(mailing));
+  const fixed = Number(Boolean(magazine)) + Number(Boolean(mailing)) + Number(Boolean(monthly));
   return Math.min(requested, fixed ? 4 - fixed : requested);
 }
