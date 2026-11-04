@@ -188,7 +188,7 @@ function editorListEvents(from, through) {
       showDeleted: false, pageToken: pageToken,
     });
     for (const e of (response.items || [])) {
-      if (!e.start || e.status === 'cancelled') continue;
+      if (!e.start || e.status === 'cancelled' || e.extendedProperties?.shared?.[MONTHLY_NOTICE_KEY] === 'true') continue;
       const category = categoryOf_(e);
       items.push({
         id: e.id, seriesId: e.recurringEventId || e.id,
@@ -228,6 +228,9 @@ function fetchTarget_(id, scope) {
 function editorGetEvent(id, scope) {
   editorAccess_();
   const data = fetchTarget_(id, scope || 'occurrence');
+  if (data.target?.extendedProperties?.shared?.[MONTHLY_NOTICE_KEY] === 'true') {
+    throw new Error('This is a monthly poster. Please use the Monthly What’s On manager instead.');
+  }
   // When the user chooses "All events in the series", the Calendar API
   // returns the master whose start can be years before the clicked occurrence.
   // Show the clicked date as *context*, but retain the master's clock, pattern,
@@ -496,6 +499,9 @@ function editorSaveEvent(form) {
     }
     const scope = String(form.editScope || '');
     const record = fetchTarget_(form.id, scope);
+    if (record.target?.extendedProperties?.shared?.[MONTHLY_NOTICE_KEY] === 'true') {
+      throw new Error('Use the Monthly What’s On manager to replace a monthly poster.');
+    }
     if (form.revision !== record.target.etag) {
       throw new Error('This event changed in Google Calendar. Reload it before saving to avoid overwriting another editor.');
     }
@@ -712,3 +718,147 @@ function editorDeleteEvent(id, scope, revision) {
     lock.releaseLock();
   }
 }
+
+// Dedicated monthly-poster storage interface. The record is a publishing
+// marker in the existing Google Calendar, never an editable parish event.
+// Keeping this marker lets the existing read-only website publisher fetch
+// artwork without exposing privileged Drive or Calendar write credentials.
+function monthlyPosterMonth_(value) {
+  const month = String(value || '');
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) {
+    throw new Error('Select a valid month.');
+  }
+  isoDate_(month + '-01', 'Month');
+  return month;
+}
+
+function monthlyPosterRecord_(month) {
+  const first = month + '-01';
+  const from = addDay_(first, -1) + 'T00:00:00Z';
+  const until = addDay_(addDay_(first, 33).slice(0, 7) + '-01', 2) + 'T00:00:00Z';
+  let token;
+  const found = [];
+  do {
+    const res = Calendar.Events.list(EDITOR_CALENDAR_ID, {
+      timeMin: from, timeMax: until, singleEvents: true,
+      maxResults: 250, showDeleted: false, pageToken: token,
+    });
+    for (const entry of res.items || []) {
+      if (entry.status !== 'cancelled' &&
+          entry.start?.date === first &&
+          !entry.recurringEventId && !(entry.recurrence || []).length &&
+          entry.extendedProperties?.shared?.[MONTHLY_NOTICE_KEY] === 'true') found.push(entry);
+    }
+    token = res.nextPageToken;
+  } while (token);
+  found.sort((a, b) => String(b.updated || '').localeCompare(String(a.updated || '')) ||
+    String(b.id || '').localeCompare(String(a.id || '')));
+  return found[0] || null;
+}
+
+function monthlyPosterInfo_(month, entry) {
+  if (!entry) return { month, exists: false, revision: '', file: null };
+  const files = attachmentsFor_(entry).filter((a) =>
+    a.mimeType === 'image/png' || a.mimeType === 'application/pdf');
+  const current = files.at(-1);
+  return {
+    month, exists: true, revision: entry.etag || '',
+    file: current ? {
+      name: current.title || 'Monthly poster',
+      mimeType: current.mimeType,
+      url: current.fileUrl || '',
+      thumbnail: current.fileId ?
+        'https://drive.google.com/thumbnail?id=' + encodeURIComponent(current.fileId) + '&sz=w1000' : '',
+    } : null,
+  };
+}
+
+function editorGetMonthlyPoster(requestedMonth) {
+  editorAccess_();
+  const month = monthlyPosterMonth_(requestedMonth);
+  return monthlyPosterInfo_(month, monthlyPosterRecord_(month));
+}
+
+function editorSaveMonthlyPoster(form) {
+  editorAccess_();
+  if (!EDITOR_UPLOAD_FOLDER_ID) throw new Error('The parish poster upload folder is not configured.');
+  if (!form || !form.attachment) throw new Error('Choose a PNG image or PDF document to upload.');
+  const month = monthlyPosterMonth_(form.month);
+  const blob = form.attachment;
+  const mime = String(blob.getContentType() || '').toLowerCase();
+  if (mime !== 'image/png' && mime !== 'application/pdf') {
+    throw new Error('Please choose a PNG image or PDF document.');
+  }
+  const name = String(blob.getName() || '').trim().replace(/[\\\/\u0000-\u001f]/g, '_').slice(0, 170);
+  if (!name) throw new Error('The poster needs a filename.');
+  const bytes = blob.getBytes().length;
+  if (!bytes || bytes > MAX_EVENT_UPLOAD_BYTES) throw new Error('The poster must be under 8 MB.');
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(15000)) throw new Error('Another update is in progress. Please try again.');
+  try {
+    const existing = monthlyPosterRecord_(month);
+    const revision = String(form.revision || '');
+    if ((existing?.etag || '') !== revision) {
+      throw new Error('This month’s poster has changed since you opened it. Reload before replacing it.');
+    }
+    // Both operations run inside one backend request. Only the newly uploaded
+    // file is attached; older Drive files remain intact for historical safety.
+    const file = Drive.Files.create({
+      name, mimeType: mime, parents: [EDITOR_UPLOAD_FOLDER_ID],
+    }, blob, { fields: 'id,name,mimeType,webViewLink' });
+    Drive.Permissions.create({ role: 'reader', type: 'anyone' }, file.id, { fields: 'id' });
+    const title = "What's On this Month — " +
+      Utilities.formatDate(new Date(month + '-01T12:00:00Z'), 'UTC', 'MMMM yyyy');
+    const attachment = {
+      fileUrl: file.webViewLink || 'https://drive.google.com/file/d/' +
+        encodeURIComponent(file.id) + '/view',
+      title: file.name || name, mimeType: file.mimeType || mime,
+    };
+    const record = {
+      summary: title,
+      start: { date: month + '-01' },
+      end: { date: addDay_(month + '-01', 1) },
+      transparency: 'transparent', visibility: 'public',
+      attachments: [attachment],
+      extendedProperties: { shared: Object.assign({},
+        existing?.extendedProperties?.shared || {}, {
+          [MONTHLY_NOTICE_KEY]: 'true',
+          [FEATURED_KEY]: 'false',
+          [CATEGORY_KEY]: 'general',
+          [HEADER_IMAGE_KEY]: 'none',
+        }) },
+    };
+    const saved = existing
+      ? Calendar.Events.patch(record, EDITOR_CALENDAR_ID, existing.id,
+          { sendUpdates: 'none', supportsAttachments: true })
+      : Calendar.Events.insert(record, EDITOR_CALENDAR_ID,
+          { sendUpdates: 'none', supportsAttachments: true });
+    return { saved: true, ...monthlyPosterInfo_(month, saved),
+      // Some API mocks and providers omit the full updated attachments.
+      file: {
+        name: attachment.title, mimeType: attachment.mimeType,
+        url: attachment.fileUrl,
+        thumbnail: 'https://drive.google.com/thumbnail?id=' +
+          encodeURIComponent(file.id) + '&sz=w1000',
+      },
+    };
+  } finally { lock.releaseLock(); }
+}
+
+function editorDeleteMonthlyPoster(requestedMonth, revision) {
+  editorAccess_();
+  const month = monthlyPosterMonth_(requestedMonth);
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(15000)) throw new Error('Another update is in progress. Please try again.');
+  try {
+    const existing = monthlyPosterRecord_(month);
+    if (!existing) return { removed: true, month };
+    if (existing.etag !== revision) {
+      throw new Error('This month’s poster has changed. Reload before removing it.');
+    }
+    Calendar.Events.remove(EDITOR_CALENDAR_ID, existing.id, { sendUpdates: 'none' });
+    // Unlink rather than delete the historical file in Drive.
+    return { removed: true, month };
+  } finally { lock.releaseLock(); }
+}
+
