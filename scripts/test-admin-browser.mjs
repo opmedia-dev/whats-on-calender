@@ -46,7 +46,38 @@ try {
   });
   assert.equal(await page.locator('#monthlyPreviewImage').isVisible(),true);
   assert.match(await page.locator('#monthlyFileName').textContent(),/november-poster\.png/);
-  assert.match(await page.locator('#monthlyPreviewMonth').textContent(),/20\d\d/);
+  assert.match(await page.locator('#monthlyPreviewMonth').textContent(),/20\\d\\d/);
+  // Regression: the upload used to disable month/file BEFORE passing the
+  // form to google.script.run. Disabled controls vanish from Apps Script's
+  // form serialization even though the image preview still looked correct.
+  const submitting=await page.evaluate(()=>{
+    monthlyState.busy=true;
+    monthlyRender();
+    const form=document.getElementById('monthlyForm');
+    const data=new FormData(form);
+    const file=data.get('attachment');
+    const actual={
+      inert:form.inert,
+      busy:form.getAttribute('aria-busy'),
+      month:data.get('month'),
+      fileName:file?.name,
+      fileType:file?.type,
+      fileSize:file?.size,
+      fileInputDisabled:document.getElementById('monthlyFile').disabled,
+      monthInputDisabled:document.getElementById('monthlyMonth').disabled,
+    };
+    monthlyState.busy=false;
+    monthlyRender();
+    return actual;
+  });
+  assert.equal(submitting.inert,true,'form is locked against user edits while uploading');
+  assert.equal(submitting.busy,'true');
+  assert.match(submitting.month,/^\\d{4}-\\d{2}$/,'the selected month must survive serialization');
+  assert.equal(submitting.fileName,'november-poster.png','selected file must survive serialization');
+  assert.equal(submitting.fileType,'image/png');
+  assert.equal(submitting.fileSize,samplePoster.byteLength,'upload must preserve full file content');
+  assert.equal(submitting.fileInputDisabled,false);
+  assert.equal(submitting.monthInputDisabled,false);
   await page.screenshot({path:'ui-review/monthly-poster-desktop.png'});
   await page.setViewportSize({width:420,height:860});
   await page.screenshot({path:'ui-review/monthly-poster-mobile.png'});
