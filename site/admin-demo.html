@@ -452,7 +452,7 @@ input:focus,select:focus,textarea:focus{border-color:#b78996!important;box-shado
 <header class="app-topbar"><div class="brand"><span class="brand-monogram" aria-hidden="true">SJ</span><div class="brand-copy"><strong>St John's · What's On</strong><small>Parish events workspace</small></div><div class="header-meta"><div class="header-sync" title="Estimated external refresh check; site publishing happens when content changes"><span class="sync-light" aria-hidden="true"></span><span class="header-sync-caption">Next check</span><strong id="refresh-countdown" role="timer" aria-live="off">calculating…</strong><span id="refresh-time" class="header-sync-time">—</span><a id="refresh-history" href="https://github.com/opmedia-dev/whats-on-calender/actions/workflows/deploy.yml" target="_blank" rel="noopener noreferrer" title="View refresh history" aria-label="View refresh history">↗</a></div><span id="connection">Connecting…</span></div></div></header>
 <main class="workspace">
 <div class="workspace-intro"><div><p class="eyebrow">Event management</p><h1>Events</h1><p class="sub">Plan parish activities, manage information and preview how each event will appear online.</p></div>
- <div class="workspace-actions"><button id="refresh" type="button" class="btn">↻ Refresh events</button><button id="newEvent" type="button" class="btn primary">+ Create event</button></div></div>
+ <div class="workspace-actions"><button id="refresh" type="button" class="btn">↻ Refresh events</button><button id="newMonthly" type="button" class="btn">Monthly poster</button><button id="newEvent" type="button" class="btn primary">+ Create event</button></div></div>
 <div class="workspace-grid">
 <section class="panel cal-panel">
  <div class="panel-body">
@@ -554,6 +554,9 @@ input:focus,select:focus,textarea:focus{border-color:#b78996!important;box-shado
     </div>
      <div class="featured-setting"><label class="check" for="featured"><input id="featured" type="checkbox"> <strong>Feature this event</strong></label>
       <p class="help">Show this event in the homepage banner and What's On Highlights. Other events remain in the calendar and full listings. For recurring events, choose whether this applies to one date or the whole series.</p>
+     </div>
+     <div class="featured-setting monthly-setting"><label class="check" for="monthlyNotice"><input id="monthlyNotice" type="checkbox"> <strong>Use as the month's What's On poster</strong></label>
+       <p class="help">For monthly summaries only. Make an all-day entry on the first of the month with no repetition. Attach a PNG or PDF below. This poster becomes the first banner card and is excluded from public event lists, although the summary entry also exists in the underlying Google Calendar.</p>
      </div>
     <div class="form-group-heading"><span class="section-number" aria-hidden="true">03</span><div><h3>Description</h3><p>Information for visitors</p></div></div>
     <div class="field"><label id="descriptionLabel" for="description">Description</label>
@@ -774,7 +777,7 @@ function askAction(options){
  });
 }
 
-function pending(v){state.busy=v;$('save').disabled=v||!linked;$('delete').disabled=v||!linked||!state.id;$('newEvent').disabled=v;$('refresh').disabled=v;updateUploadUI()}
+function pending(v){state.busy=v;$('save').disabled=v||!linked;$('delete').disabled=v||!linked||!state.id;$('newEvent').disabled=v;$('newMonthly').disabled=v;$('refresh').disabled=v;updateUploadUI()}
 function call(fn){var args=Array.prototype.slice.call(arguments,1);return new Promise(function(resolve,reject){
  if(!linked){reject(new Error('This is a demonstration, not connected to Google Calendar.'));return}
  // A missing callback must not leave the editor controls disabled indefinitely.
@@ -1062,7 +1065,7 @@ function renderAgenda(start){
   const item=create('button','agenda-item');item.type='button';item.dataset.category=e.category||'general';
   const bar=create('span','agenda-mark');bar.setAttribute('aria-hidden','true');
   const info=create('span','agenda-content');
-  info.append(create('span','agenda-item-title',e.title));
+  info.append(create('span','agenda-item-title',(e.monthlyNotice?'Monthly poster · ':'')+e.title));
   var frequency=e.recurring?(e.repeat==='custom'?' · Custom repeat':' · Weekly'):'';
   info.append(create('span','agenda-item-date',pretty(eventDay(e),{timeZone:'UTC',weekday:'short',day:'numeric',month:'short'})+' · '+eventTime(e)+frequency));
   item.append(bar,info);item.addEventListener('click',function(){openEvent(e.id)});host.append(item);
@@ -1118,7 +1121,7 @@ function newEntry(date){
  state.id='';state.revision='';state.active=null;state.scope='occurrence';state.changed=false;state.dirty=false;
  HTMLFormElement.prototype.reset.call($('eventForm'));
  $('description').replaceChildren();state.headerImageId='';state.imageFocus='50,50';resetDraftImage();attachmentList([]);
- $('title').value='';$('category').value='general';$('repeat').value='none';
+ $('title').value='';$('category').value='general';$('repeat').value='none';$('monthlyNotice').checked=false;
  $('startDate').value=$('endDate').value=date||today();$('startTime').value='10:00';$('endTime').value='11:00';
  $('scopeBox').hidden=true;$('repeat').disabled=false;$('visibility').disabled=false;
  $('startDate').disabled=false;$('endDate').disabled=false;$('seriesDateHint').hidden=true;
@@ -1132,7 +1135,7 @@ function newEntry(date){
 function adjustAllDay(){var off=$('allDay').checked;$('timeFields').hidden=off;$('startTime').disabled=off;$('endTime').disabled=off}
 function values(){var v={};fields.forEach(function(id){v[id]=$(id).value});v.allDay=$('allDay').checked;v.id=state.id;
  v.editScope=state.id?state.scope:'';v.revision=state.revision;v.descriptionChanged=state.changed;
- v.description=richHTML();v.headerImageId=state.headerImageId;v.featured=$('featured').checked;v.imageFocus=state.imageFocus;v.visibility=$('visibility').value;
+ v.description=richHTML();v.headerImageId=state.headerImageId;v.featured=$('featured').checked;v.monthlyNotice=$('monthlyNotice').checked;v.imageFocus=state.imageFocus;v.visibility=$('visibility').value;
  v.customRepeat={unit:$('repeatUnit').value,interval:Number($('repeatInterval').value),
   days:Array.from(document.querySelectorAll('[name=repeatDay]:checked')).map(function(el){return el.value}),
   ends:$('repeatEnds').value,count:Number($('repeatCount').value),until:$('repeatUntil').value};
@@ -1145,13 +1148,14 @@ function preview(){
  $('artTitle').textContent=name;$('artDate').textContent=when;
  $('pvTitle').textContent=name;$('pvDate').textContent=when+' · '+time;
  if(v.featured)$('pvDate').textContent+=' · Featured';
+ if(v.monthlyNotice)$('pvDate').textContent+=' · Monthly poster';
  if(v.repeat==='custom')$('pvDate').textContent+=' · Every '+v.customRepeat.interval+' '+v.customRepeat.unit.toLowerCase();
  else if(v.repeat==='weekly'||v.repeat==='monthly')$('pvDate').textContent+=' · '+v.repeat;
  $('pvLocation').textContent=v.location;$('pvLocation').hidden=!v.location.trim();
  $('previewDescription').innerHTML=v.description.trim()||'Your event description will appear here.';
  refreshImagePreview();
 }
-function eventButton(e,cls){var b=create('button',cls,(eventTime(e)?eventTime(e)+'  ':'')+e.title+(e.recurring?' ↻':''));
+function eventButton(e,cls){var b=create('button',cls,(eventTime(e)?eventTime(e)+'  ':'')+e.title+(e.monthlyNotice?' · MONTHLY POSTER':e.recurring?' ↻':''));
  b.type='button';b.title=e.title;b.dataset.category=e.category||'general';
  b.addEventListener('click',function(){openEvent(e.id)});return b}
 function calendar(){
@@ -1213,6 +1217,7 @@ function put(e){
  $('visibility').value=e.visibility||'default';
  $('description').innerHTML=safeRich(e.description||'');$('allDay').checked=!!e.allDay;
  $('featured').checked=e.featured===true;
+ $('monthlyNotice').checked=e.monthlyNotice===true;
  state.headerImageId=e.headerImageId||'';state.imageFocus=e.imageFocus||'50,50';
  resetDraftImage();attachmentList(e.attachments||[]);
  $('scopeBox').hidden=!e.isRecurring;
@@ -1341,6 +1346,18 @@ $('clearFilters').addEventListener('click',function(){$('eventSearch').value='';
 $('month').addEventListener('click',function(){setMode('month')});
 $('week').addEventListener('click',function(){setMode('week')});
 $('newEvent').addEventListener('click',function(){newEntry(today())});
+$('newMonthly').addEventListener('click',function(){
+  var month=today().slice(0,7),existing=state.events.find(function(e){return e.monthlyNotice===true&&e.start.slice(0,7)===month});
+  if(existing){openEvent(existing.id);return}
+  newEntry(month+'-01');
+  $('title').value="What's On this Month — "+pretty(month+'-01',{timeZone:'UTC',month:'long',year:'numeric'});
+  $('monthlyNotice').checked=true;$('featured').checked=false;
+  $('allDay').checked=true;$('repeat').value='none';$('visibility').value='public';
+  $('startDate').value=$('endDate').value=month+'-01';
+  adjustAllDay();preview();state.dirty=true;
+  status(state.uploadConfigured?'Attach this month’s PNG or PDF below, then save.':'To upload a poster, the parish Drive upload folder must first be configured.');
+  showEditor("What's On this Month");
+});
 $('refresh').addEventListener('click',load);
 
 $('eventForm').addEventListener('submit',save);
@@ -1503,7 +1520,17 @@ $('uploadClear').addEventListener('click',function(){
  });
 })();
 $('allDay').addEventListener('change',function(){state.dirty=true;adjustAllDay();preview()});
-$('featured').addEventListener('change',function(){state.dirty=true;preview()});
+$('featured').addEventListener('change',function(){if(this.checked)$('monthlyNotice').checked=false;state.dirty=true;preview()});
+$('monthlyNotice').addEventListener('change',function(){
+ if(this.checked){
+  $('featured').checked=false;$('repeat').value='none';$('allDay').checked=true;
+  var month=$('startDate').value.slice(0,7)||today().slice(0,7);
+  $('startDate').value=$('endDate').value=month+'-01';
+  if($('visibility').value==='private')$('visibility').value='public';
+  adjustAllDay();repeatPanel();
+ }
+ state.dirty=true;preview();
+});
 $('visibility').addEventListener('change',function(){state.dirty=true;if(this.value==='private')$('featured').checked=false;preview()});
 ['repeatInterval','repeatUnit','repeatEnds','repeatUntil','repeatCount'].forEach(function(id){
  $(id).addEventListener('input',function(){state.dirty=true;repeatPanel();preview()})
