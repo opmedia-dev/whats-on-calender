@@ -20,7 +20,7 @@ const WRITE_ROLES = ['writer', 'owner'];
 // Set to a dedicated parish-controlled Google Drive folder before enabling uploads.
 // Editors need permission to add files to that folder. File links are made public
 // because the public What's On website displays event posters and downloads.
-const EDITOR_UPLOAD_FOLDER_ID = '';
+const EDITOR_UPLOAD_FOLDER_ID = '1iADzl4bLA3F4Slqd20U2mCN-5XDlmwGL';
 const MAX_EVENT_UPLOAD_BYTES = 8 * 1024 * 1024;
 const ACCEPTED_UPLOAD_TYPES = [
   'image/jpeg', 'image/png', 'image/webp', 'image/gif',
