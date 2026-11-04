@@ -459,6 +459,9 @@ input:focus,select:focus,textarea:focus{border-color:#b78996!important;box-shado
 .monthly-field{margin-bottom:22px}
 .monthly-field label{display:block;font-size:13px;font-weight:720;margin-bottom:8px}
 .monthly-field input[type="month"]{width:100%;height:44px;min-width:0;border:1px solid #d8cfd2;border-radius:9px;padding:8px 12px;font:inherit;background:#fff;color:var(--text)}
+.monthly-quick-months{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.monthly-quick-months .btn{font-size:12px;min-height:32px;padding:6px 11px}
+.monthly-quick-months .btn[aria-pressed="true"]{border-color:var(--accent);color:var(--accent);background:#fff6f8;font-weight:750}
 .monthly-field input:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .monthly-field .help{margin:7px 0 0}
 .monthly-drop{border:1.5px dashed #d5bfc5;border-radius:12px;background:#fff9fa;padding:20px 14px 15px;text-align:center;display:flex;flex-direction:column;gap:5px;align-items:center;position:relative}
@@ -709,7 +712,11 @@ input:focus,select:focus,textarea:focus{border-color:#b78996!important;box-shado
         <div class="monthly-field">
           <label for="monthlyMonth">Month to display</label>
           <input id="monthlyMonth" name="month" type="month" required>
-          <p class="help">You can prepare a future month's notice now. It will appear automatically during that month.</p>
+          <div class="monthly-quick-months" role="group" aria-label="Choose poster month">
+            <button id="monthlyThisMonth" type="button" class="btn">This month</button>
+            <button id="monthlyNextMonth" type="button" class="btn">Next month</button>
+          </div>
+          <p class="help">Both posters can appear in the banner. Each is shown before the featured events for its month.</p>
         </div>
         <div class="monthly-field">
           <label for="monthlyFile">Monthly notice</label>
@@ -1473,7 +1480,21 @@ function monthlyRelease(){
  if(monthlyState.previewUrl)URL.revokeObjectURL(monthlyState.previewUrl);
  monthlyState.previewUrl='';
 }
+function monthlyCurrentNext(){
+ const pieces=Object.fromEntries(new Intl.DateTimeFormat('en-GB',{
+  timeZone:'Europe/London',year:'numeric',month:'2-digit',
+ }).formatToParts(new Date()).map(part=>[part.type,part.value]));
+ const year=Number(pieces.year),month=Number(pieces.month);
+ return [pieces.year+'-'+pieces.month,month===12?(year+1)+'-01':
+  year+'-'+String(month+1).padStart(2,'0')];
+}
+function monthlyQuickSelection(){
+ const [thisMonth,nextMonth]=monthlyCurrentNext();
+ $('monthlyThisMonth').setAttribute('aria-pressed',String($('monthlyMonth').value===thisMonth));
+ $('monthlyNextMonth').setAttribute('aria-pressed',String($('monthlyMonth').value===nextMonth));
+}
 function monthlyRender(){
+ monthlyQuickSelection();
  const file=$('monthlyFile').files[0],old=monthlyState.record?.file,month=$('monthlyMonth').value;
  $('monthlyPreviewMonth').textContent=monthlyLabel(month);
  $('monthlyFileName').textContent=file?'Selected: '+file.name:
@@ -1481,7 +1502,7 @@ function monthlyRender(){
  $('monthlySave').disabled=!linked||!state.uploadConfigured||monthlyState.busy||!file;
  $('monthlyRemove').hidden=!monthlyState.record?.exists;
  $('monthlyRemove').disabled=!linked||monthlyState.busy;
- for(const id of ['monthlyMonth','monthlyFile','monthlyClose','monthlyCancel'])
+ for(const id of ['monthlyMonth','monthlyFile','monthlyClose','monthlyCancel','monthlyThisMonth','monthlyNextMonth'])
   $(id).disabled=monthlyState.busy;
  $('monthlyPreviewAction').textContent=
   (file?.type||old?.mimeType)==='application/pdf'?'Open monthly PDF →':'View monthly poster →';
@@ -1538,6 +1559,11 @@ async function monthlyClose(){
 }
 $('newMonthly').addEventListener('click',monthlyOpen);
 $('monthlyMonth').addEventListener('change',monthlyLoad);
+for(const [id,index] of [['monthlyThisMonth',0],['monthlyNextMonth',1]]){
+ $(id).addEventListener('click',function(){
+  $('monthlyMonth').value=monthlyCurrentNext()[index];monthlyLoad();
+ });
+}
 $('monthlyClose').addEventListener('click',monthlyClose);
 $('monthlyCancel').addEventListener('click',monthlyClose);
 $('monthlyDialog').addEventListener('cancel',function(event){event.preventDefault();monthlyClose()});
