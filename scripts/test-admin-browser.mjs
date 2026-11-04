@@ -46,7 +46,7 @@ try {
   });
   assert.equal(await page.locator('#monthlyPreviewImage').isVisible(),true);
   assert.match(await page.locator('#monthlyFileName').textContent(),/november-poster\.png/);
-  assert.match(await page.locator('#monthlyPreviewMonth').textContent(),/20\\d\\d/);
+  assert.match(await page.locator('#monthlyPreviewMonth').textContent(),/20\d\d/);
   // Regression: the upload used to disable month/file BEFORE passing the
   // form to google.script.run. Disabled controls vanish from Apps Script's
   // form serialization even though the image preview still looked correct.
@@ -72,7 +72,7 @@ try {
   });
   assert.equal(submitting.inert,true,'form is locked against user edits while uploading');
   assert.equal(submitting.busy,'true');
-  assert.match(submitting.month,/^\\d{4}-\\d{2}$/,'the selected month must survive serialization');
+  assert.match(submitting.month,/^\d{4}-\d{2}$/,'the selected month must survive serialization');
   assert.equal(submitting.fileName,'november-poster.png','selected file must survive serialization');
   assert.equal(submitting.fileType,'image/png');
   assert.equal(submitting.fileSize,samplePoster.byteLength,'upload must preserve full file content');
