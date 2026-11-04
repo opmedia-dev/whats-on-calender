@@ -110,7 +110,7 @@ test('compact hero removes the legacy agenda grid class instead of relying solel
   assert.match(css, /\.wo-hero-week\s*\{[^}]*gap:\s*0;/);
   // A new stylesheet URL also invalidates GitHub Pages / Safari's older
   // cached CSS for embed previews that were open before the deployment.
-  assert.match(html, /href="assets\/wo\.css\?v=hero-rail-20261031"/);
+  assert.match(html, /href="assets\/wo\.css\?v=monthly-poster-20261104"/);
 });
 
 test('compact hero overrides the generic timetable gap to keep a continuous seven-day date rail', () => {
