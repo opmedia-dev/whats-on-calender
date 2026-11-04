@@ -834,6 +834,10 @@ function safeRich(html){
 }
 function richHTML(){return safeRich($('description').innerHTML)}
 function updateUploadUI(){
+ const monthly=$('monthlyNotice').checked;
+ $('uploadAttachment').accept=monthly?'image/png,application/pdf,.png,.pdf':'image/jpeg,image/png,image/webp,image/gif,application/pdf,.doc,.docx,.xls,.xlsx,.txt';
+ $('optimiseUpload').disabled=monthly;
+ if(monthly)$('optimiseUpload').checked=false;
  const file=$('uploadAttachment').files[0];
  $('uploadDropzone').classList.toggle('has-file',!!file);
  $('uploadSelected').hidden=!file;
@@ -858,6 +862,7 @@ function resetDraftImage(){
 }
 // Reduce bytes sent through Apps Script, preserving the original local file.
 async function optimiseUpload(){
+ if($('monthlyNotice').checked)return; // Keep monthly artwork as the original PNG or PDF.
  const input=$('uploadAttachment'),file=input.files[0];
  if(!file||!$('optimiseUpload').checked||file.size<700000||
     !/^(image\/jpeg|image\/png|image\/webp)$/.test(file.type))return;
@@ -1218,7 +1223,7 @@ function put(e){
  $('visibility').value=e.visibility||'default';
  $('description').innerHTML=safeRich(e.description||'');$('allDay').checked=!!e.allDay;
  $('featured').checked=e.featured===true;
- $('monthlyNotice').checked=e.monthlyNotice===true;
+ $('monthlyNotice').checked=e.monthlyNotice===true;updateUploadUI();
  state.headerImageId=e.headerImageId||'';state.imageFocus=e.imageFocus||'50,50';
  resetDraftImage();attachmentList(e.attachments||[]);
  $('scopeBox').hidden=!e.isRecurring;
@@ -1351,6 +1356,7 @@ $('newMonthly').addEventListener('click',function(){
   var month=key(state.date).slice(0,7),existing=state.events.find(function(e){return e.monthlyNotice===true&&e.start.slice(0,7)===month});
   if(existing){openEvent(existing.id);return}
   newEntry(month+'-01');
+  $('monthlyNotice').checked=true;updateUploadUI();
   $('title').value="What's On this Month — "+pretty(month+'-01',{timeZone:'UTC',month:'long',year:'numeric'});
   $('monthlyNotice').checked=true;$('featured').checked=false;
   $('allDay').checked=true;$('repeat').value='none';$('visibility').value='public';
@@ -1530,7 +1536,7 @@ $('monthlyNotice').addEventListener('change',function(){
   if($('visibility').value==='private')$('visibility').value='public';
   adjustAllDay();repeatPanel();
  }
- state.dirty=true;preview();
+ updateUploadUI();state.dirty=true;preview();
 });
 $('visibility').addEventListener('change',function(){state.dirty=true;if(this.value==='private')$('featured').checked=false;preview()});
 ['repeatInterval','repeatUnit','repeatEnds','repeatUntil','repeatCount'].forEach(function(id){
