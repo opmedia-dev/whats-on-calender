@@ -1503,7 +1503,12 @@ function monthlyRender(){
  $('monthlySave').disabled=!linked||!state.uploadConfigured||monthlyState.busy||!file;
  $('monthlyRemove').hidden=!monthlyState.record?.exists;
  $('monthlyRemove').disabled=!linked||monthlyState.busy;
- for(const id of ['monthlyMonth','monthlyFile','monthlyClose','monthlyCancel','monthlyThisMonth','monthlyNextMonth'])
+ // google.script.run serialises only enabled form fields. Keep the month and
+ // attachment enabled during upload; lock the form with inert instead.
+ // Disabling either input here silently drops it from the posted form object.
+ $('monthlyForm').inert=monthlyState.busy;
+ $('monthlyForm').setAttribute('aria-busy',String(monthlyState.busy));
+ for(const id of ['monthlyClose','monthlyCancel','monthlyThisMonth','monthlyNextMonth'])
   $(id).disabled=monthlyState.busy;
  $('monthlyPreviewAction').textContent=
   (file?.type||old?.mimeType)==='application/pdf'?'Open monthly PDF →':'View monthly poster →';
@@ -1544,7 +1549,9 @@ async function monthlyLoad(){
 }
 function monthlyOpen(){
  if(state.busy)return;
- $('monthlyMonth').value=key(state.date).slice(0,7);
+ // Default to the real parish month, regardless of the month currently
+ // displayed behind the dialog in the Events calendar.
+ $('monthlyMonth').value=monthlyCurrentNext()[0];
  if(!$('monthlyDialog').open)$('monthlyDialog').showModal();
  monthlyLoad();
 }
@@ -1593,7 +1600,15 @@ $('monthlyForm').addEventListener('submit',async function(event){
  if(!file){monthlyStatus('Choose a PNG or PDF before saving.',true);return;}
  monthlyState.busy=true;monthlyStatus('Saving the monthly poster…');monthlyRender();
  try{
-  const saved=await call('editorSaveMonthlyPoster',$('monthlyForm'));
+  const form=$('monthlyForm');
+  const outgoing=new FormData(form);
+  const chosen=outgoing.get('attachment');
+  if(!outgoing.get('month')||!chosen||!chosen.size){
+   throw new Error('The selected poster could not be included in the upload. Please choose the file again.');
+  }
+  // A native form element must be passed as the ONLY RPC argument so Apps
+  // Script can convert <input type="file"> into a server-side Blob.
+  const saved=await call('editorSaveMonthlyPoster',form);
   if(!saved?.saved)throw new Error('The poster was not confirmed as saved.');
   monthlyRelease();$('monthlyFile').value='';
   monthlyState.record=saved;$('monthlyRevision').value=saved.revision||'';

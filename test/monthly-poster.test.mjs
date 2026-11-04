@@ -82,11 +82,13 @@ test('editor enforces monthly notice date and format, keeping public visibility'
  assert.match(editor,/id="monthlyDialog"/);
  assert.match(editor,/id="monthlyThisMonth"/);
  assert.match(editor,/id="monthlyNextMonth"/);
+ assert.match(editor,/\$\('monthlyMonth'\)\.value=monthlyCurrentNext\(\)\[0\]/,
+   'monthly manager should open on the real UK month, not the Events calendar view');
  assert.match(editor,/id="monthlyForm"/);
  assert.match(editor,/id="monthlyFile"/);
  assert.match(editor,/id="monthlyPreviewImage"/);
  assert.doesNotMatch(editor,/id="monthlyNotice"/);
- assert.match(editor,/await call\('editorSaveMonthlyPoster',\$\('monthlyForm'\)\)/);
+ assert.match(editor,/await call\('editorSaveMonthlyPoster',form\)/);
  assert.match(editor,/image\/png,application\/pdf/);
  assert.match(backend,/const EDITOR_UPLOAD_FOLDER_ID = '[A-Za-z0-9_-]+';/);
 });
@@ -173,4 +175,17 @@ test('dedicated save replaces one monthly file, preserves past months and reject
  assert.equal(removed.removed,true);
  assert.equal(actions.at(-1).kind,'remove');
  assert.equal(context.editorGetMonthlyPoster('2026-11').exists,false);
+});
+
+test('monthly upload locks interaction without disabling serializable file and month inputs',()=>{
+ const start=editor.indexOf('function monthlyRender(){');
+ const end=editor.indexOf('async function monthlyLoad()',start);
+ assert.ok(start>=0&&end>start);
+ const render=editor.slice(start,end);
+ assert.match(render,/\$\('monthlyForm'\)\.inert=monthlyState\.busy/);
+ assert.match(render,/\$\('monthlyForm'\)\.setAttribute\('aria-busy',String\(monthlyState\.busy\)\)/);
+ assert.doesNotMatch(render,/monthlyMonth','monthlyFile'/,
+   'month and file must not be disabled when saving; Apps Script omits disabled controls');
+ assert.match(editor,/const outgoing=new FormData\(form\)/);
+ assert.match(editor,/await call\('editorSaveMonthlyPoster',form\)/);
 });
