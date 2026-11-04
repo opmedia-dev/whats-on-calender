@@ -32,7 +32,7 @@ test('monthly poster is published separately and excluded from ordinary public c
  assert.match(sync,/imageSource\.mimeType|mimeType: imageSource\.mimeType/);
 });
 test('editor enforces monthly notice date and format, keeping public visibility',()=>{
- const env=vm.createContext({});
+ const env=vm.createContext({Utilities:{formatDate:(date,zone,format)=>new Date(date).toISOString().slice(0,10)}});
  vm.runInContext(backend,env);
  const form={title:"What's On this Month",category:'general',startDate:'2026-11-01',endDate:'2026-11-01',
   startTime:'09:00',endTime:'10:00',allDay:true,repeat:'none',monthlyNotice:true,featured:true,visibility:'public'};
