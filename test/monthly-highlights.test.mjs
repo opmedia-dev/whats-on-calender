@@ -54,7 +54,7 @@ test('banner selection requires explicit featured flag and its default horizon n
  assert.equal(horizonDays('14'),14); // Existing explicitly limited banner URLs retain their setting.
  assert.equal(horizonDays('400'),400);
  assert.doesNotMatch(banner,/param\('show', 'featured'\)/);
- assert.match(banner,/wo\.js\?v=monthly-highlights-20261102/);
+ assert.match(banner,/wo\.js\?v=monthly-poster-20261104/);
 });
 
 test('both editor and public month views offer functional overflow expansion', () => {
