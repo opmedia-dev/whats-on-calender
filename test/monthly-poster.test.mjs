@@ -189,3 +189,18 @@ test('monthly upload locks interaction without disabling serializable file and m
  assert.match(editor,/const outgoing=new FormData\(form\)/);
  assert.match(editor,/await call\('editorSaveMonthlyPoster',form\)/);
 });
+
+test('monthly poster cards use an in-page reader rather than external Github file navigation',()=>{
+ assert.match(banner,/id="monthlyViewer"/);
+ assert.match(banner,/id="monthlyViewerImage"/);
+ assert.match(banner,/id="monthlyViewerClose"/);
+ assert.match(banner,/id="monthlyZoomIn"/);
+ assert.match(banner,/id="monthlyViewerFullPdf"/);
+ assert.match(banner,/return h\('button',\s*\{\s*type: 'button', class: 'wo-card wo-monthly-card'/);
+ assert.match(banner,/onclick: \(event\) => openMonthlyViewer\(notice, monthName, event.currentTarget\)/);
+ assert.doesNotMatch(banner,/href: notice\.file,\s*target: '_blank'/);
+ assert.match(banner,/postToParent\(\{ type: 'scrollToTop' \}\)/);
+ assert.match(banner,/detailOpen: !document\.getElementById\('detail'\)\.hidden \|\| !monthlyViewer\.hidden/);
+ assert.match(banner,/pdfFrame\.src = activePdf/);
+ assert.match(source('site/assets/wo.css'),/#banner\[hidden\],#monthlyViewer\[hidden\]/);
+});
