@@ -14,6 +14,38 @@ try {
   page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
   const url = pathToFileURL(path.resolve('site/admin-demo.html')).href;
   await page.goto(url);
+  // A monthly poster must have its OWN compact publishing workflow, not the
+  // event creation dialog with recurrence, location and visibility settings.
+  await page.locator('#newMonthly').click();
+  assert.equal(await page.locator('#monthlyDialog').isVisible(),true);
+  assert.equal(await page.locator('#editorDialog').isVisible(),false);
+  assert.equal(await page.locator('#monthlyForm input').count(),3,
+    'monthly manager needs only month, file and revision');
+  assert.equal(await page.locator('#monthlySave').isDisabled(),true,
+    'read-only demonstration cannot publish changes');
+  const samplePoster = await sharp(Buffer.from(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1100">'+
+    '<rect width="800" height="1100" fill="#f7eae6"/>'+
+    '<rect width="800" height="260" fill="#7a1424"/>'+
+    '<text x="52" y="140" font-size="68" fill="#fff" font-family="Arial">WHAT’S ON</text>'+
+    '<text x="52" y="220" font-size="47" fill="#f3df8f" font-family="Arial">NOVEMBER</text>'+
+    '<text x="52" y="430" font-size="36" fill="#7a1424" font-family="Arial">Weekly parish services</text>'+
+    '<text x="52" y="560" font-size="36" fill="#7a1424" font-family="Arial">Community coffee mornings</text>'+
+    '<text x="52" y="690" font-size="36" fill="#7a1424" font-family="Arial">Music and concerts</text>'+
+    '</svg>')).png().toBuffer();
+  await page.locator('#monthlyFile').setInputFiles({
+    name:'november-poster.png',mimeType:'image/png',buffer:samplePoster,
+  });
+  assert.equal(await page.locator('#monthlyPreviewImage').isVisible(),true);
+  assert.match(await page.locator('#monthlyFileName').textContent(),/november-poster\.png/);
+  assert.match(await page.locator('#monthlyPreviewMonth').textContent(),/20\d\d/);
+  await page.screenshot({path:'ui-review/monthly-poster-desktop.png'});
+  await page.setViewportSize({width:420,height:860});
+  await page.screenshot({path:'ui-review/monthly-poster-mobile.png'});
+  await page.locator('#monthlyFile').setInputFiles([]);
+  await page.locator('#monthlyCancel').click();
+  assert.equal(await page.locator('#monthlyDialog').isVisible(),false);
+  await page.setViewportSize({width:1400,height:940});
   await page.waitForFunction(() => /^[0-9]+m [0-9]{2}s$/.test(document.getElementById('refresh-countdown')?.textContent || ''));
   assert.match(await page.locator('#refresh-time').textContent(), /^[0-9]{2}:[0-9]{2}$/);
   assert.ok((await page.locator('#refresh-history').getAttribute('href')).includes('/actions/workflows/deploy.yml'));
