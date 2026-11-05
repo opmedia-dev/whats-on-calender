@@ -141,3 +141,37 @@ downloadable editor demo proves browser UI state, not live Google uploads.
 6. Keep the parish Google Calendar as a recovery point until the new editing interface has passed these acceptance tests.
 
 Useful Google documentation: <https://developers.google.com/apps-script/guides/web>, <https://developers.google.com/apps-script/concepts/deployments>, and <https://developers.google.com/apps-script/guides/clasp>.
+
+
+## Event Manager service warnings (independent parish status system)
+
+The editor has a small, dismissible service-warning panel beneath the Events heading. It displays **only incidents relevant to event editing, Google Calendar/Drive attachments, What's On publication, the public events calendar or the weekly mailing**. It deliberately excludes Flipbook-only issues, unrelated providers and unconfirmed single-check failures. Warnings are advisory and do not block normal editing.
+
+**This is source code only until the separate Parish Digital Services status Worker and this Apps Script update have both been deployed.** No current editor deployment, Google Calendar permissions, live parish pages or scheduled jobs are changed by this branch.
+
+### Secure connection
+
+The status Worker exposes a private, read-only `GET /api/editor/warnings` endpoint. It requires an independent high-entropy Cloudflare secret `EVENT_MANAGER_FEED_TOKEN`, separate from the staff administration token. Its response contains only three or fewer plain-English warnings; it never includes private incidents, raw provider logs, job URLs or staff notes.
+
+After the Worker is deployed and has a working D1 incident database and KV snapshot, open the **existing Google Apps Script project → Project Settings → Script Properties** and configure:
+
+| Property | Value |
+| --- | --- |
+| `PARISH_STATUS_FEED_URL` | The Worker’s HTTPS address ending in `/api/editor/warnings`, no query parameters |
+| `PARISH_STATUS_FEED_TOKEN` | The matching `EVENT_MANAGER_FEED_TOKEN` Cloudflare secret; do not use the administrator token |
+
+Never enter the token in the browser, GitHub repository, published Calendar event metadata or a public embed. The server-side `editorStatusWarnings` function checks calendar **writer/owner** permissions before using either Script Property, performs one read-only authenticated HTTPS request, bounds and sanitises the response, then returns only the service guidance.
+
+The manifest adds Google’s required `script.external_request` OAuth scope. Editors may need to approve this permission on first use of the updated Apps Script deployment; the existing Calendar and Drive authorisation remains user-bound. Use the established manually triggered **Publish private What's On editor** workflow after source review, credentials and status deployment are ready.
+
+### Behaviour
+
+The panel refreshes when an authorised editor first loads events and then every 15 minutes. If no relevant incident is recorded, it stays hidden. Dismissal applies to the current session until a warning meaningfully changes. If the status feed becomes unavailable while a warning is visible, the existing information is marked potentially out of date rather than falsely resolved. The editor remains usable even when the status service is offline.
+
+The public, no-OAuth editor demo can illustrate two **fictional** status warnings by opening the preview file with `?statusPreview=1`. The panel explicitly says **DEMONSTRATION ONLY** and makes no connection to the live status service. Browser validation captures desktop and mobile screenshots. The regular public What's On embeds never load this warning feed.
+
+### Acceptance checks
+
+Before enabling real warnings, verify access with an authorised calendar editor and a read-only calendar account; the reader must not be able to call the status proxy. Test a controlled publishing incident and its verified recovery, session dismissal, a missing/misconfigured feed token, and a temporary status Worker outage. No actual service outage should be fabricated for acceptance testing.
+
+Google documentation: https://developers.google.com/apps-script/reference/url-fetch and https://developers.google.com/apps-script/guides/properties
