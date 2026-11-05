@@ -500,6 +500,24 @@ input:focus,select:focus,textarea:focus{border-color:#b78996!important;box-shado
 }
 
 .monthly-preview-media img[hidden],.monthly-preview-placeholder[hidden]{display:none}
+/* Targeted operational warnings. Hidden unless an editor-relevant issue exists. */
+.editor-warnings{border:1px solid #dfb5a5;background:#fffaf4;border-radius:11px;padding:14px 18px;margin:0 0 18px;box-shadow:0 2px 8px rgba(71,30,21,.035)}
+.editor-warnings[hidden]{display:none!important}
+.editor-warnings-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.editor-warnings-head strong{font-size:13px;color:#683d2a}
+.editor-warnings-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.editor-warnings-actions button{font:inherit;font-size:11px;border:0;background:transparent;text-decoration:underline;text-underline-offset:2px;color:var(--accent);cursor:pointer;padding:4px}
+.editor-warnings-date{font-size:10px;color:var(--muted);margin:5px 0 0}
+.editor-warning-items{display:grid;gap:9px;margin-top:13px}
+.editor-warning{border-top:1px solid #ecd7cd;padding:10px 0 0;display:grid;grid-template-columns: minmax(0,1fr);gap:3px}
+.editor-warning strong{font-size:12.5px;color:#6f352c}
+.editor-warning p{font-size:12px;line-height:1.5;margin:2px 0;color:#51454b}
+.editor-warning .editor-warning-action{font-size:11.5px;font-weight:650;color:#704c24}
+.editor-warning-extra{font-size:11px;color:#665451;margin:0}
+.editor-warning[data-level="important"]{border-left:3px solid #a82a38;padding-left:11px}
+.editor-warning[data-level="recovering"]{border-left:3px solid #597260;padding-left:11px}
+.editor-warnings.is-stale{background:#f8f6f6;border-color:#d9d2d4}
+@media(max-width:650px){.editor-warnings{padding:12px}.editor-warnings-head{align-items:start;flex-direction:column}.editor-warnings-actions{margin-left:-4px}}
 </style>
 </head>
 <body>
@@ -507,6 +525,16 @@ input:focus,select:focus,textarea:focus{border-color:#b78996!important;box-shado
 <main class="workspace">
 <div class="workspace-intro"><div><p class="eyebrow">Event management</p><h1>Events</h1><p class="sub">Plan parish activities, manage information and preview how each event will appear online.</p></div>
  <div class="workspace-actions"><button id="refresh" type="button" class="btn">↻ Refresh events</button><button id="newMonthly" type="button" class="btn">Monthly poster</button><button id="newEvent" type="button" class="btn primary">+ Create event</button></div></div>
+<section id="editorWarnings" class="editor-warnings" aria-labelledby="editorWarningsHeading" role="status" aria-live="polite" hidden>
+  <div class="editor-warnings-head"><strong id="editorWarningsHeading">Service updates affecting event management</strong>
+    <div class="editor-warnings-actions">
+      <button id="editorWarningsRefresh" type="button">Refresh warnings</button>
+      <button id="editorWarningsDismiss" type="button">Dismiss for this session</button>
+    </div>
+  </div>
+  <p id="editorWarningsDate" class="editor-warnings-date"></p>
+  <div id="editorWarningItems" class="editor-warning-items"></div>
+</section>
 <div class="workspace-grid">
 <section class="panel cal-panel">
  <div class="panel-body">
@@ -914,6 +942,87 @@ function call(fn){var args=Array.prototype.slice.call(arguments,1);return new Pr
   runner[fn].apply(runner,args);
  }catch(error){finish(reject,error)}
 })}
+var latestEditorWarningKey='';
+var dismissedEditorWarningKey='';
+function editorWarningKey(items){
+  return JSON.stringify(items.map(function(item){
+    return [item.category,item.level,item.title];
+  }));
+}
+function renderEditorWarnings(feed){
+  const panel=$('editorWarnings');
+  if(!feed || feed.state==='unavailable'){
+    if(latestEditorWarningKey && !panel.hidden){
+      panel.classList.add('is-stale');
+      $('editorWarningsDate').textContent=
+        'Service updates could not be checked. The warnings below may be out of date.';
+    }
+    return;
+  }
+  if(feed.state!=='attention' || !Array.isArray(feed.warnings) || !feed.warnings.length){
+    latestEditorWarningKey='';dismissedEditorWarningKey='';
+    panel.hidden=true;panel.classList.remove('is-stale');
+    $('editorWarningItems').replaceChildren();return;
+  }
+  const signature=editorWarningKey(feed.warnings);
+  latestEditorWarningKey=signature;
+  panel.classList.remove('is-stale');
+  if(signature===dismissedEditorWarningKey){panel.hidden=true;return}
+  const list=$('editorWarningItems');
+  list.replaceChildren();
+  for(const warning of feed.warnings){
+    const item=document.createElement('article');
+    item.className='editor-warning';
+    item.dataset.level=warning.level;
+    const heading=document.createElement('strong');heading.textContent=warning.title;
+    const summary=document.createElement('p');summary.textContent=warning.message;
+    const action=document.createElement('p');action.className='editor-warning-action';
+    action.textContent='What to do: '+warning.action;
+    item.append(heading,summary,action);list.append(item);
+  }
+  const extra=Number(feed.additionalCount)||0;
+  if(extra>0){
+    const line=document.createElement('p');line.className='editor-warning-extra';
+    line.textContent=extra+' additional service issue'+(extra===1?'':'s')+
+      ' can be reviewed on the staff status dashboard.';
+    list.append(line);
+  }
+  const checked=feed.checkedAt ? new Date(feed.checkedAt) : null;
+  $('editorWarningsDate').textContent=checked && Number.isFinite(checked.getTime()) ?
+    'Last verified '+new Intl.DateTimeFormat('en-GB',{
+      timeZone:'Europe/London',dateStyle:'medium',timeStyle:'short',
+    }).format(checked)+' · Advisory only; the editor remains available when Google permits editing.'
+    : 'Advisory only; editing availability is checked separately.';
+  panel.hidden=false;
+}
+async function loadEditorWarnings(){
+  if(!linked)return;
+  try{renderEditorWarnings(await call('editorStatusWarnings'))}
+  catch(error){renderEditorWarnings({state:'unavailable'})}
+}
+$('editorWarningsRefresh').addEventListener('click',loadEditorWarnings);
+$('editorWarningsDismiss').addEventListener('click',function(){
+  dismissedEditorWarningKey=latestEditorWarningKey;
+  $('editorWarnings').hidden=true;
+});
+if(linked)setInterval(loadEditorWarnings,15*60*1000);
+
+
+if(!linked && new URLSearchParams(location.search).get('statusPreview')==='1'){
+  $('editorWarningsHeading').textContent='DEMONSTRATION ONLY — Example service updates';
+  renderEditorWarnings({
+    version:1,state:'attention',checkedAt:new Date().toISOString(),additionalCount:0,
+    warnings:[{
+      category:'publishing',level:'advisory',title:'Sample: Event updates may be delayed',
+      message:'Illustrative warning — the last publishing check did not succeed. This is not a real parish incident.',
+      action:'Check the next publishing result before telling visitors that a saved edit is online.',
+    },{
+      category:'attachments',level:'advisory',title:'Sample: Image uploads might be affected',
+      message:'Illustrative warning — an upstream Drive issue could delay attachments. Editing existing events may still work.',
+      action:'Save event details separately if necessary, then retry attaching images when the issue clears.',
+    }],
+  });
+}
 function sample(){
  // Demonstration-only samples; no Google Calendar writes.
  var s=today(),month=s.slice(0,7);
@@ -1382,7 +1491,7 @@ async function openEvent(id,scope){
 }
 async function load(){
  pending(true);$('connection').textContent=linked?'Connecting to Google…':'Preview · no Google connection';
- try{if(linked){var info=await call('editorBootstrap');state.uploadConfigured=!!info.capabilities?.imageUpload;}await range();pending(false);
+ try{if(linked){var info=await call('editorBootstrap');state.uploadConfigured=!!info.capabilities?.imageUpload;}await range();pending(false);if(linked)loadEditorWarnings();
   $('connection').textContent=linked?'Google Calendar · editor':'Demonstration · read-only';
   $('demoRecurringHint').hidden=!!linked;
  }catch(err){status(err.message||String(err),true);pending(false);$('connection').textContent='Calendar access unavailable'}

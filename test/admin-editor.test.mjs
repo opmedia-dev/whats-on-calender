@@ -290,6 +290,7 @@ test('Google OAuth stays user-bound, with no write credentials in the GitHub Pag
     'https://www.googleapis.com/auth/calendar.events',
     'https://www.googleapis.com/auth/calendar.calendarlist.readonly',
     'https://www.googleapis.com/auth/drive',
+    'https://www.googleapis.com/auth/script.external_request',
   ]);
   assert.doesNotMatch(published, /ScriptApp\.getOAuthToken|GOOGLE_API_KEY|client_secret|access_token/);
 });

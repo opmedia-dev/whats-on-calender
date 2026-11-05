@@ -862,3 +862,77 @@ function editorDeleteMonthlyPoster(requestedMonth, revision) {
   } finally { lock.releaseLock(); }
 }
 
+
+
+/**
+ * Read-only Event Manager status advisories, proxied server-side.
+ *
+ * The signed-in editor's Calendar writer access is checked BEFORE reading
+ * script properties or fetching the restricted status feed. No feed token,
+ * incident ID, source report or staff-admin API result reaches the browser.
+ *
+ * Setup AFTER Cloudflare deployment in Apps Script Project Settings:
+ *  PARISH_STATUS_FEED_URL: https://<worker-host>/api/editor/warnings
+ *  PARISH_STATUS_FEED_TOKEN: separate high-entropy token matching the
+ *  Cloudflare secret EVENT_MANAGER_FEED_TOKEN.
+ *
+ * Never store the token in Index.html, GitHub, URLs or Calendar events.
+ */
+function editorStatusWarnings() {
+  editorAccess_();
+  const unavailable = { version: 1, state: 'unavailable',
+    checkedAt: null, warnings: [], additionalCount: 0 };
+  let endpoint = '', token = '';
+  try {
+    const settings = PropertiesService.getScriptProperties();
+    endpoint = String(settings.getProperty('PARISH_STATUS_FEED_URL') || '').trim();
+    token = String(settings.getProperty('PARISH_STATUS_FEED_TOKEN') || '');
+  } catch (error) { return unavailable; }
+  // Allow only a full HTTPS hostname and the single dedicated read-only path.
+  if (!/^https:\/\/[a-z0-9.-]+\/api\/editor\/warnings$/i.test(endpoint) ||
+      token.length < 43 || token.length > 256) return unavailable;
+  try {
+    const reply = UrlFetchApp.fetch(endpoint, {
+      method: 'get', followRedirects: false, muteHttpExceptions: true,
+      headers: { Authorization: 'Bearer ' + token, Accept: 'application/json' },
+    });
+    if (reply.getResponseCode() !== 200) return unavailable;
+    const body = reply.getContentText('UTF-8');
+    if (body.length > 16000) return unavailable;
+    const feed = JSON.parse(body);
+    if (!feed || feed.version !== 1 ||
+        ['clear','attention'].indexOf(feed.state) < 0 ||
+        !Array.isArray(feed.warnings) || feed.warnings.length > 3 ||
+        !feed.checkedAt || !Number.isFinite(Date.parse(feed.checkedAt)) ||
+        Date.now() - Date.parse(feed.checkedAt) > 45 * 60000 ||
+        Date.parse(feed.checkedAt) - Date.now() > 60000)
+      return unavailable;
+    const categories = ['editing','publishing','visitor','attachments','mailings'];
+    const levels = ['important','advisory','recovering'];
+    const safe = function(s, limit) {
+      return String(s || '').replace(/<[^>]+>/g, ' ')
+        .replace(/[\u0000-\u001f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, limit);
+    };
+    const warnings = feed.warnings.map(function(item) {
+      if (!item || categories.indexOf(item.category) < 0 ||
+          levels.indexOf(item.level) < 0) return null;
+      return {
+        category: item.category, level: item.level,
+        title: safe(item.title, 120), message: safe(item.message, 380),
+        action: safe(item.action, 300),
+      };
+    }).filter(function(item) {
+      return item && item.title && item.message && item.action;
+    });
+    if (warnings.length !== feed.warnings.length ||
+        (feed.state === 'clear' && warnings.length) ||
+        (feed.state === 'attention' && !warnings.length)) return unavailable;
+    return { version: 1, state: feed.state, checkedAt: feed.checkedAt,
+      warnings: warnings,
+      additionalCount: Number.isInteger(feed.additionalCount) ?
+        Math.min(Math.max(0, feed.additionalCount), 20) : 0 };
+  } catch (error) {
+    // A status API timeout must NOT prevent authorised event editing.
+    return unavailable;
+  }
+}
