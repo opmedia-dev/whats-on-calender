@@ -943,6 +943,72 @@ function call(fn){var args=Array.prototype.slice.call(arguments,1);return new Pr
   runner[fn].apply(runner,args);
  }catch(error){finish(reject,error)}
 })}
+
+var latestEditorWarningKey='';
+var dismissedEditorWarningKey='';
+function editorWarningKey(items){
+  return JSON.stringify(items.map(function(item){
+    return [item.category,item.level,item.title];
+  }));
+}
+function renderEditorWarnings(feed){
+  const panel=$('editorWarnings');
+  if(!feed || feed.state==='unavailable'){
+    if(latestEditorWarningKey && !panel.hidden){
+      panel.classList.add('is-stale');
+      $('editorWarningsDate').textContent=
+        'Service updates could not be checked. The warnings below may be out of date.';
+    }
+    return;
+  }
+  if(feed.state!=='attention' || !Array.isArray(feed.warnings) || !feed.warnings.length){
+    latestEditorWarningKey='';dismissedEditorWarningKey='';
+    panel.hidden=true;panel.classList.remove('is-stale');
+    $('editorWarningItems').replaceChildren();return;
+  }
+  const signature=editorWarningKey(feed.warnings);
+  latestEditorWarningKey=signature;
+  panel.classList.remove('is-stale');
+  if(signature===dismissedEditorWarningKey){panel.hidden=true;return}
+  const list=$('editorWarningItems');
+  list.replaceChildren();
+  for(const warning of feed.warnings){
+    const item=document.createElement('article');
+    item.className='editor-warning';
+    item.dataset.level=warning.level;
+    const heading=document.createElement('strong');heading.textContent=warning.title;
+    const summary=document.createElement('p');summary.textContent=warning.message;
+    const action=document.createElement('p');action.className='editor-warning-action';
+    action.textContent='What to do: '+warning.action;
+    item.append(heading,summary,action);list.append(item);
+  }
+  const extra=Number(feed.additionalCount)||0;
+  if(extra>0){
+    const line=document.createElement('p');line.className='editor-warning-extra';
+    line.textContent=extra+' additional service issue'+(extra===1?'':'s')+
+      ' can be reviewed on the staff status dashboard.';
+    list.append(line);
+  }
+  const checked=feed.checkedAt ? new Date(feed.checkedAt) : null;
+  $('editorWarningsDate').textContent=checked && Number.isFinite(checked.getTime()) ?
+    'Last verified '+new Intl.DateTimeFormat('en-GB',{
+      timeZone:'Europe/London',dateStyle:'medium',timeStyle:'short',
+    }).format(checked)+' · Advisory only; the editor remains available when Google permits editing.'
+    : 'Advisory only; editing availability is checked separately.';
+  panel.hidden=false;
+}
+async function loadEditorWarnings(){
+  if(!linked)return;
+  try{renderEditorWarnings(await call('editorStatusWarnings'))}
+  catch(error){renderEditorWarnings({state:'unavailable'})}
+}
+$('editorWarningsRefresh').addEventListener('click',loadEditorWarnings);
+$('editorWarningsDismiss').addEventListener('click',function(){
+  dismissedEditorWarningKey=latestEditorWarningKey;
+  $('editorWarnings').hidden=true;
+});
+if(linked)setInterval(loadEditorWarnings,15*60*1000);
+
 function sample(){
  // Demonstration-only samples; no Google Calendar writes.
  var s=today(),month=s.slice(0,7);
@@ -1412,7 +1478,7 @@ async function openEvent(id,scope){
 }
 async function load(){
  pending(true);$('connection').textContent=linked?'Connecting to Google…':'Preview · no Google connection';
- try{if(linked){var info=await call('editorBootstrap');state.uploadConfigured=!!info.capabilities?.imageUpload;}await range();pending(false);
+ try{if(linked){var info=await call('editorBootstrap');state.uploadConfigured=!!info.capabilities?.imageUpload;}await range();pending(false);if(linked)loadEditorWarnings();
   $('connection').textContent=linked?'Google Calendar · editor':'Demonstration · read-only';
   $('demoRecurringHint').hidden=!!linked;
  }catch(err){status(err.message||String(err),true);pending(false);$('connection').textContent='Calendar access unavailable'}
