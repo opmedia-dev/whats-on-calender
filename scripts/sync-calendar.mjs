@@ -133,7 +133,7 @@ for (const a of events.flatMap((e) => e.attachments || [])) {
 
 const londonDate = new Intl.DateTimeFormat('en-CA', { timeZone }).format(now);
 const codeVersion = crypto.createHash('sha256')
-  .update(['sync-calendar.mjs', 'lib/description.mjs', 'lib/recurrence.mjs', 'lib/featured.mjs', 'lib/image-focus.mjs']
+  .update(['sync-calendar.mjs', 'render-pdf-page.py', 'lib/description.mjs', 'lib/recurrence.mjs', 'lib/featured.mjs', 'lib/image-focus.mjs']
     .map((f) => fs.readFileSync(path.join(root, 'scripts', f))).join('')).digest('hex').slice(0, 8);
 const fingerprint = crypto.createHash('sha256').update(JSON.stringify([
   londonDate, codeVersion, config,
@@ -160,7 +160,7 @@ prepareCalendarOutput(dataDir);
 fs.mkdirSync(cacheDir, { recursive: true });
 
 const IMAGE_TYPES = /^image\/(jpeg|png|gif|webp|avif|heic|heif|tiff|bmp)$/i;
-const hasPdftoppm = (() => { try { execFileSync('which', ['pdftoppm'], { stdio: 'ignore' }); return true; } catch { return false; } })();
+const pdfPython = process.env.PDF_RENDER_PYTHON || 'python3';
 const maxBytes = (config.maxAttachmentMB ?? 25) * 1024 * 1024;
 
 function safeFileName(name) {
@@ -218,12 +218,13 @@ async function makeImage(att) {
   let result = null;
   try {
     if (att.mimeType === 'application/pdf') {
-      if (!hasPdftoppm) throw new Error('pdftoppm (poppler-utils) not installed');
-      const out = path.join(cacheDir, `${att.id}-page1`);
-      if (!fs.existsSync(`${out}.png`)) {
-        execFileSync('pdftoppm', ['-f', '1', '-l', '1', '-singlefile', '-scale-to', '1600', '-png', att.local, out]);
+      const png = path.join(cacheDir, `${att.id}-page1.png`);
+      if (!fs.existsSync(png)) {
+        execFileSync(pdfPython,
+          [path.join(root, 'scripts', 'render-pdf-page.py'), att.local, png],
+          { timeout: 30_000 });
       }
-      input = `${out}.png`;
+      input = png;
     }
     const base = `media/${att.id}`;
     const img = sharp(input, { animated: false }).rotate();

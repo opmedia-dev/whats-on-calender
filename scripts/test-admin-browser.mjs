@@ -238,6 +238,15 @@ try {
   await page.locator('.event-pill').first().click();
   await assertModal('click existing event');
   assert.equal(await page.locator('#dialogTitle').textContent(), 'Edit event');
+  // The first demo event can be recurring. For a single occurrence the
+  // recurrence selector is intentionally disabled; switch to series scope
+  // before testing its custom-repeat form.
+  if (await page.locator('#repeat').isDisabled()) {
+    assert.equal(await page.locator('#scopeBox').isVisible(), true);
+    await page.locator('input[name="scope"][value="series"]').check();
+    await page.locator('#repeat').waitFor({state:'visible'});
+    assert.equal(await page.locator('#repeat').isEnabled(), true);
+  }
   await page.locator('#repeat').selectOption('custom');
   assert.equal(await page.locator('#customRepeat').isVisible(), true, 'custom repeat should reveal controls');
   await page.locator('#repeatInterval').fill('2');

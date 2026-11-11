@@ -3,3 +3,7 @@ node_modules/
 data/
 .cache/
 .DS_Store
+
+# Offline PDF-renderer wheel cache and installation directory
+.pdf-wheels/
+.pdf-deps/

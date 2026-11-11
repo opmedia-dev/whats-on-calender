@@ -1,0 +1,4 @@
+# Prebuilt PDFium wheels; avoid per-run apt mirror access.
+# Pin versions so the wheel-cache key is reproducible.
+pypdfium2==5.14.0
+Pillow==12.0.0
