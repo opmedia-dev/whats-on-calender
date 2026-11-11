@@ -59,7 +59,8 @@ jobs:
 
       - name: Download pinned PDF renderer wheels on cache miss
         if: steps.pdf-wheels.outputs.cache-hit != 'true'
-        run: python -m pip download --only-binary=:all: --dest .pdf-wheels --retries 3 --timeout 20 -r requirements-pdf.txt
+        run: |
+          python -m pip download --only-binary=:all: --dest .pdf-wheels --retries 3 --timeout 20 -r requirements-pdf.txt
 
       - name: Install PDF renderer offline from cached wheels
         run: |
