@@ -14,6 +14,23 @@ try {
   page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
   const url = pathToFileURL(path.resolve('site/admin-demo.html')).href;
   await page.goto(url);
+  // Opt-in sample-only status warning preview: no Google or Cloudflare calls.
+  const warningPreview=await browser.newPage({viewport:{width:1280,height:850}});
+  const previewErrors=[];
+  warningPreview.on('pageerror',error=>previewErrors.push(error.message));
+  await warningPreview.goto(url+'?statusPreview=1');
+  assert.equal(await warningPreview.locator('#editorWarnings').isVisible(),true,
+    'sample warnings should appear only in the explicit preview mode');
+  assert.match(await warningPreview.locator('#editorWarningsHeading').textContent(),/DEMONSTRATION ONLY/);
+  assert.equal(await warningPreview.locator('.editor-warning').count(),2);
+  await warningPreview.screenshot({path:'ui-review/event-manager-status-warnings-desktop.png'});
+  await warningPreview.setViewportSize({width:390,height:760});
+  assert.equal(await warningPreview.locator('#editorWarnings').isVisible(),true);
+  await warningPreview.screenshot({path:'ui-review/event-manager-status-warnings-mobile.png'});
+  await warningPreview.locator('#editorWarningsDismiss').click();
+  assert.equal(await warningPreview.locator('#editorWarnings').isVisible(),false);
+  assert.deepEqual(previewErrors,[],'sample warning preview should not throw browser errors');
+  await warningPreview.close();
   // A monthly poster must have its OWN compact publishing workflow, not the
   // event creation dialog with recurrence, location and visibility settings.
   await page.locator('#newMonthly').click();
