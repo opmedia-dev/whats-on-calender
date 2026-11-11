@@ -11,7 +11,7 @@ const renderer = path.resolve(import.meta.dirname, '../scripts/render-pdf-page.p
 
 // Construct a genuine one-page PDF without requiring extra fixture libraries.
 function samplePdf() {
-  const stream = '0.2 0.4 0.6 rg 0 0 200 100 re f\\n'.replace('\\n', '\n');
+  const stream = '0.2 0.4 0.6 rg 0 0 200 100 re f\n';
   const objects = [
     '<< /Type /Catalog /Pages 2 0 R >>',
     '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
