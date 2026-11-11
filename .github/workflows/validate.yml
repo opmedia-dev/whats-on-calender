@@ -13,6 +13,28 @@ permissions:
   contents: read
 
 jobs:
+  # Test the real PDF preview engine on GitHub runners, without apt mirrors.
+  # This separate job can pass even if unrelated browser dependencies fail.
+  pdf-renderer:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Install pinned PDF renderer wheels
+        run: |
+          python -m pip install --only-binary=:all: --retries 3 --timeout 20 -r requirements-pdf.txt
+      - name: Render and validate real PDF thumbnails
+        env:
+          PDF_RENDER_REQUIRED: '1'
+        run: node --test test/pdf-renderer.test.mjs
+
   validate:
     runs-on: ubuntu-latest
     steps:
