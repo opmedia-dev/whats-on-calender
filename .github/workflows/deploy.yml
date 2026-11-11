@@ -30,7 +30,7 @@ concurrency:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       changed: ${{ steps.decide.outputs.changed }}
     steps:
@@ -43,8 +43,34 @@ jobs:
 
       - run: npm ci
 
-      - name: Install poppler (PDF posters)
-        run: sudo apt-get update && sudo apt-get install -y poppler-utils
+      # PDF previews use prebuilt PDFium wheels, cached across scheduled runs.
+      # Avoid apt-get: a temporary Ubuntu mirror DNS outage previously broke
+      # every calendar publication and then triggered repeated health alerts.
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Restore PDF renderer wheels
+        id: pdf-wheels
+        uses: actions/cache@v4
+        with:
+          path: .pdf-wheels
+          key: pdfium-wheels-${{ runner.os }}-py312-${{ hashFiles('requirements-pdf.txt') }}
+
+      - name: Download pinned PDF renderer wheels on cache miss
+        if: steps.pdf-wheels.outputs.cache-hit != 'true'
+        run: python -m pip download --only-binary=:all: --dest .pdf-wheels --retries 3 --timeout 20 -r requirements-pdf.txt
+
+      - name: Install PDF renderer offline from cached wheels
+        run: |
+          python -m pip install --no-index --find-links=.pdf-wheels --target=.pdf-deps -r requirements-pdf.txt
+          echo "PYTHONPATH=$GITHUB_WORKSPACE/.pdf-deps" >> "$GITHUB_ENV"
+          echo "PDF_RENDER_PYTHON=$(command -v python)" >> "$GITHUB_ENV"
+
+      - name: Verify PDF poster preview rendering
+        env:
+          PDF_RENDER_REQUIRED: '1'
+        run: node --test test/pdf-renderer.test.mjs
 
       # Downloaded attachments are cached between runs so Google Drive isn't
       # asked for the same posters every 15 minutes.
